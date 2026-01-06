@@ -1,0 +1,11 @@
+# State files (generated at runtime)
+.wf-state/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~

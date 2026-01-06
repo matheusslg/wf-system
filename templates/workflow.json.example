@@ -1,0 +1,37 @@
+{
+  "project": "my-project",
+  "description": "Short project description",
+
+  "github": {
+    "owner": "your-username",
+    "repo": "your-repo"
+  },
+
+  "techLead": {
+    "enabled": true,
+    "defaultAssignee": "your-username",
+    "labelPrefix": "task/",
+    "agents": {
+      "frontend": {
+        "label": "frontend",
+        "description": "React/Next.js UI work"
+      },
+      "backend": {
+        "label": "backend",
+        "description": "API and database work"
+      },
+      "infra": {
+        "label": "infra",
+        "description": "Infrastructure and DevOps"
+      }
+    }
+  },
+
+  "autonomy": {
+    "enabled": false,
+    "maxTasks": 5
+  },
+
+  "progressFile": "progress.md",
+  "standardsFile": "standards.md"
+}
