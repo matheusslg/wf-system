@@ -104,10 +104,10 @@ Create a GitHub Issue or Jira ticket from user story.
 
 ---
 
-## Tech Lead Mode
+## Ticket Breakdown
 
-### `/wf-tech-lead [ticket]`
-Analyze Jira/GitHub issue and break into sub-tasks.
+### `/wf-breakdown [ticket]`
+Break Jira/GitHub issue into sub-tasks.
 
 **Process:**
 1. Analyzes requirements
@@ -116,16 +116,16 @@ Analyze Jira/GitHub issue and break into sub-tasks.
 4. Creates GitHub Issues for each
 5. Assigns to appropriate agents
 
-### `/wf-tech-lead-delegate [issue-number]`
-Execute a GitHub issue sub-task with its assigned agent.
+### `/wf-delegate [issue-number]`
+Execute a sub-task with its assigned agent.
 
 **Features:**
 - Dependency checking
 - Validation against acceptance criteria
 - Progress tracking
 
-### `/wf-tech-lead-status [parent-issue]`
-Check implementation progress for Tech Lead tracked feature.
+### `/wf-ticket-status [parent-issue]`
+Check implementation progress for a tracked ticket.
 
 **Shows:**
 - Task completion status
@@ -158,14 +158,16 @@ Create a conventional commit with proper formatting.
 
 ## Document Processing
 
-### `/wf-read-prd [file|url] [action]`
-Parse Product Requirements Document.
+### `/wf-prd [file-path]`
+Parse PRD and create parent issues.
 
-**Actions:**
-- `summary`: High-level overview
-- `tasks`: Extract actionable tasks
-- `issues`: Create issues from tasks
-- `context`: Generate implementation context
+**Process:**
+1. Locates and reads PRD file
+2. Extracts parent tasks from roadmap
+3. Shows extracted tasks for confirmation
+4. Creates GitHub Issues for approved tasks
+
+**Next Step:** Use `/wf-breakdown #N` to break parent issues into sub-tasks
 
 ---
 

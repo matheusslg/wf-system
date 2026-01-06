@@ -251,7 +251,7 @@ class WFOrchestrator:
                     f"Project: {project_name}\n"
                     f"Jira Project: {jira_project}\n\n"
                     f"Would you like to work on a Jira ticket?\n"
-                    f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-tech-lead`\n"
+                    f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-breakdown`\n"
                     f"- Or describe what you'd like to work on\n"
                     f"- Or run `/wf-start-session` for full context load"
                 )
@@ -274,7 +274,7 @@ class WFOrchestrator:
                         f"SESSION START - Work In Progress Detected\n"
                         f"Repository: {repo_display}\n\n"
                         f"WIP: {wip}\n\n"
-                        f"Recommended: Run `/wf-tech-lead-delegate` to continue with the assigned sub-task, "
+                        f"Recommended: Run `/wf-delegate` to continue with the assigned sub-task, "
                         f"or `/wf-start-session` for full context."
                     )
                 }

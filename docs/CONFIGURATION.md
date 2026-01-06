@@ -14,7 +14,7 @@ The workflow system is configured via `.claude/workflow.json` in your project ro
     "repo": "my-awesome-app"
   },
 
-  "techLead": {
+  "breakdown": {
     "enabled": true,
     "jiraProject": "PROJ",
     "jiraCloudId": "abc123",
@@ -77,12 +77,12 @@ GitHub repository configuration.
 
 ---
 
-### `techLead` (optional)
-Tech Lead mode configuration for ticket breakdown.
+### `breakdown` (optional)
+Breakdown mode configuration for ticket decomposition.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `enabled` | boolean | Enable Tech Lead mode |
+| `enabled` | boolean | Enable breakdown mode |
 | `jiraProject` | string | Jira project key (triggers Jira workflow) |
 | `jiraCloudId` | string | Jira Cloud instance ID |
 | `defaultAssignee` | string | Default assignee for sub-tasks |
@@ -103,7 +103,7 @@ Tech Lead mode configuration for ticket breakdown.
 Agents are used for:
 - Automatic task assignment based on label
 - Specialized context loading
-- Delegation via `/wf-tech-lead-delegate`
+- Delegation via `/wf-delegate`
 
 ---
 
@@ -144,7 +144,7 @@ Figma integration for design context.
 
 The orchestrator automatically detects workflow type:
 
-1. **Jira Workflow**: Has `techLead.jiraProject`
+1. **Jira Workflow**: Has `breakdown.jiraProject`
 2. **GitHub Workflow**: Has `github.owner` without Jira
 3. **Unknown**: Minimal config, suggests `/wf-init-project`
 

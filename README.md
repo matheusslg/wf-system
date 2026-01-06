@@ -6,7 +6,7 @@ A workflow management system for [Claude Code](https://claude.com/claude-code) t
 
 - **Session Management**: Start and end sessions with automatic progress tracking
 - **Context Monitoring**: Auto-triggers session end at 75% context usage
-- **Tech Lead Mode**: Break down tickets into sub-tasks with agent delegation
+- **Ticket Breakdown**: Break down tickets into sub-tasks with agent delegation
 - **Multi-Platform**: Works with both GitHub Issues and Jira
 - **Autonomous Mode**: Optional checkpoint system for multi-task execution
 
@@ -40,11 +40,11 @@ Restart Claude Code after installation.
 | `/wf-refactor` | Restructure code safely |
 | `/wf-review` | Review code changes |
 | `/wf-commit` | Create conventional commit |
-| `/wf-tech-lead` | Break ticket into sub-tasks |
-| `/wf-tech-lead-delegate` | Execute assigned sub-task |
-| `/wf-tech-lead-status` | Check implementation progress |
+| `/wf-prd` | Parse PRD and create parent issues |
+| `/wf-breakdown` | Break ticket into sub-tasks |
+| `/wf-delegate` | Execute assigned sub-task |
+| `/wf-ticket-status` | Check implementation progress |
 | `/wf-create-ticket` | Create GitHub/Jira ticket |
-| `/wf-read-prd` | Parse PRD documents |
 | `/wf-debug` | Deep investigation mode |
 | `/wf-improve` | Enhance existing code |
 | `/wf-init-project` | Bootstrap workflow system |
@@ -62,7 +62,7 @@ Create `.claude/workflow.json` in your project root:
     "owner": "your-username",
     "repo": "your-repo"
   },
-  "techLead": {
+  "breakdown": {
     "enabled": true,
     "agents": {
       "frontend": { "label": "frontend" },

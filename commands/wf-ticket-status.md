@@ -1,12 +1,12 @@
 ---
-description: Check implementation progress for a Tech Lead tracked feature
+description: Check implementation progress for a tracked ticket
 allowed-tools: Read, Bash, Grep, Glob
 argument-hint: <ticket-key or GitHub issue>
 ---
 
-# Tech Lead Status - Check Implementation Progress
+# Ticket Status - Check Implementation Progress
 
-Check implementation progress for a feature tracked by Tech Lead via GitHub Issues.
+Check implementation progress for a feature tracked by breakdown via GitHub Issues.
 
 ## Arguments
 - `$ARGUMENTS` - Identifier for the feature to check
@@ -26,9 +26,9 @@ cat .claude/workflow.json 2>/dev/null || echo "{}"
 ```
 
 Extract:
-- `techLead.jiraProject`: Jira project key prefix
-- `techLead.githubOwner`: GitHub repository owner
-- `techLead.githubRepo`: GitHub repository name
+- `breakdown.jiraProject`: Jira project key prefix
+- `breakdown.githubOwner`: GitHub repository owner
+- `breakdown.githubRepo`: GitHub repository name
 
 ## 1. Handle Flags
 
@@ -39,14 +39,14 @@ Search for all tech-lead parent issues:
 ```
 mcp__github__search_issues(
   query: "label:tech-lead label:tracked -label:sub-task",
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo
 )
 ```
 
 Present summary:
 ```markdown
-## Tech Lead Tracked Features
+## breakdown Tracked Features
 
 | Source | GitHub | Title | Progress | Status |
 |--------|--------|-------|----------|--------|
@@ -62,7 +62,7 @@ Present summary:
 
 **View specific feature**:
 ```bash
-/wf-tech-lead-status {PROJECT}-1023
+/wf-ticket-status {PROJECT}-1023
 ```
 ```
 
@@ -73,8 +73,8 @@ Search for blocked issues:
 ```
 mcp__github__search_issues(
   query: "label:sub-task label:blocked state:open",
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo
 )
 ```
 
@@ -94,8 +94,8 @@ Search GitHub for matching parent issue:
 ```
 mcp__github__search_issues(
   query: "[{PROJECT}-{number}] label:tech-lead -label:sub-task",
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo
 )
 ```
 
@@ -103,8 +103,8 @@ mcp__github__search_issues(
 Fetch the issue directly:
 ```
 mcp__github__get_issue(
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo,
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo,
   issue_number: {number}
 )
 ```
@@ -113,16 +113,16 @@ Verify it's a parent issue (has `tech-lead` label, not `sub-task` label).
 
 **If not found**:
 ```markdown
-Error: Could not find Tech Lead tracked feature for `{input}`
+Error: Could not find tracked feature for `{input}`
 
 **Search options**:
-- By Jira key: `/wf-tech-lead-status PROJECT-1023`
-- By GitHub issue: `/wf-tech-lead-status #123`
-- List all: `/wf-tech-lead-status --all`
+- By Jira key: `/wf-ticket-status PROJECT-1023`
+- By GitHub issue: `/wf-ticket-status #123`
+- List all: `/wf-ticket-status --all`
 
 **Create from Jira ticket**:
 ```bash
-/wf-tech-lead PROJECT-{number}
+/wf-breakdown PROJECT-{number}
 ```
 ```
 
@@ -138,8 +138,8 @@ Search for sub-tasks linked to this parent:
 ```
 mcp__github__search_issues(
   query: "label:sub-task \"Part of #{parent_number}\"",
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo
 )
 ```
 
@@ -151,8 +151,8 @@ Alternative: Parse parent issue body for sub-task links:
 For each sub-task found:
 ```
 mcp__github__get_issue(
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo,
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo,
   issue_number: {sub_task_number}
 )
 ```
@@ -238,7 +238,7 @@ For each open sub-task:
 
 ```bash
 # Execute next ready sub-task
-/wf-tech-lead-delegate {ready_issue_number}
+/wf-delegate {ready_issue_number}
 
 # View specific sub-task
 gh issue view {sub_task_number}
@@ -260,12 +260,12 @@ gh issue view {parent_number}
 This parent issue has no linked sub-tasks.
 
 **Options**:
-1. The issue may have been created manually (not via `/wf-tech-lead`)
+1. The issue may have been created manually (not via `/wf-breakdown`)
 2. Sub-tasks may not be linked properly
 
 **Re-analyze and create sub-tasks**:
 ```bash
-/wf-tech-lead {reference}
+/wf-breakdown {reference}
 ```
 ```
 
@@ -303,7 +303,7 @@ No sub-tasks have been started yet.
 
 **Pick up first task**:
 ```bash
-/wf-tech-lead-delegate {first_sub_task_number}
+/wf-delegate {first_sub_task_number}
 ```
 ```
 
@@ -319,13 +319,13 @@ Check that `github` is enabled in your Claude settings.
 
 ### Missing Configuration
 ```markdown
-Error: Tech Lead configuration not found
+Error: breakdown configuration not found
 
 Add the following to `.claude/workflow.json`:
 
 ```json
 {
-  "techLead": {
+  "breakdown": {
     "jiraProject": "YOUR_PROJECT",
     "githubOwner": "your-org",
     "githubRepo": "your-repo"
@@ -342,6 +342,6 @@ Add the following to `.claude/workflow.json`:
 4. **Progress File**: Also update `progress.md` for session continuity
 
 ## Related Commands
-- `/wf-tech-lead` - Create new sub-tasks from Jira ticket or GitHub issue
-- `/wf-tech-lead-delegate` - Execute a specific sub-task
+- `/wf-breakdown` - Create new sub-tasks from Jira ticket or GitHub issue
+- `/wf-delegate` - Execute a specific sub-task
 - `/wf-overview` - General project status (not just tech-lead issues)

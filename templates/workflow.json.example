@@ -7,7 +7,7 @@
     "repo": "your-repo"
   },
 
-  "techLead": {
+  "breakdown": {
     "enabled": true,
     "defaultAssignee": "your-username",
     "labelPrefix": "task/",

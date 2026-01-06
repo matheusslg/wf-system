@@ -1,12 +1,12 @@
 ---
-description: Execute a GitHub issue sub-task with its assigned agent
+description: Execute a sub-task with its assigned agent
 allowed-tools: Read, Bash, Grep, Glob, Task
 argument-hint: <GitHub issue number>
 ---
 
-# Tech Lead Delegate - Execute Sub-Task
+# Execute Sub-Task
 
-Execute a specific sub-task from a Tech Lead plan by spawning the appropriate specialized agent with full context.
+Execute a specific sub-task from a breakdown plan by spawning the appropriate specialized agent with full context.
 
 ## Arguments
 - `$ARGUMENTS` - GitHub issue number of the sub-task to execute
@@ -23,8 +23,8 @@ cat .claude/workflow.json 2>/dev/null || echo "{}"
 ```
 
 Extract:
-- `techLead.githubOwner`: GitHub repository owner
-- `techLead.githubRepo`: GitHub repository name
+- `breakdown.githubOwner`: GitHub repository owner
+- `breakdown.githubRepo`: GitHub repository name
 - `agents`: Map of available agents
 
 ## 1. Handle List Flag
@@ -35,8 +35,8 @@ Search for tech-lead sub-tasks:
 ```
 mcp__github__search_issues(
   query: "label:sub-task label:tech-lead state:open",
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo
 )
 ```
 
@@ -52,7 +52,7 @@ Present available sub-tasks:
 
 **Pick a sub-task**:
 ```bash
-/wf-tech-lead-delegate 125
+/wf-delegate 125
 ```
 ```
 
@@ -70,8 +70,8 @@ Validate it's a number.
 
 ```
 mcp__github__get_issue(
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo,
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo,
   issue_number: {parsed_number}
 )
 ```
@@ -92,7 +92,7 @@ Verify:
 
 List available sub-tasks:
 ```bash
-/wf-tech-lead-delegate --list
+/wf-delegate --list
 ```
 ```
 
@@ -103,7 +103,7 @@ Issue #{number} is already closed.
 To reopen and work on it:
 ```bash
 gh issue reopen {number}
-/wf-tech-lead-delegate {number}
+/wf-delegate {number}
 ```
 ```
 
@@ -115,15 +115,15 @@ Check issue has required labels:
 
 **If not a sub-task**:
 ```markdown
-Error: Issue #{number} is not a Tech Lead sub-task
+Error: Issue #{number} is not a breakdown sub-task
 
-This command only works with issues created by `/wf-tech-lead`.
+This command only works with issues created by `/wf-breakdown`.
 Sub-tasks have the `sub-task` label.
 
 To create sub-tasks from a source issue:
 ```bash
-/wf-tech-lead SXRX-1023   # From Jira
-/wf-tech-lead #42         # From GitHub issue
+/wf-breakdown SXRX-1023   # From Jira
+/wf-breakdown #42         # From GitHub issue
 ```
 ```
 
@@ -143,7 +143,7 @@ ls .claude/agents/*.md
 gh issue edit {number} --add-label "agent:{project}-backend"
 ```
 
-Then run `/wf-tech-lead-delegate {number}` again.
+Then run `/wf-delegate {number}` again.
 ```
 
 ## 5. Extract Agent Name
@@ -161,8 +161,8 @@ Parse issue body for dependency mentions:
 For each dependency:
 ```
 mcp__github__get_issue(
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo,
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo,
   issue_number: {dependency_number}
 )
 ```
@@ -177,12 +177,12 @@ Issue #{number} depends on:
 
 Complete the blocking issues first:
 ```bash
-/wf-tech-lead-delegate {dep_1}
+/wf-delegate {dep_1}
 ```
 
 Or override if you know what you're doing:
 ```bash
-/wf-tech-lead-delegate {number} --force
+/wf-delegate {number} --force
 ```
 ```
 
@@ -236,7 +236,7 @@ Extract:
 Build comprehensive context for the agent:
 
 ```markdown
-## Task Assignment from Tech Lead
+## Task Assignment from breakdown
 
 ### GitHub Issue
 **Issue**: #{number}
@@ -247,7 +247,7 @@ Build comprehensive context for the agent:
 {issue_body}
 
 ### Agent Instructions
-You are being delegated this task from the Tech Lead.
+You are being delegated this task from the breakdown.
 
 **Your Mission**:
 1. Implement the task as described above
@@ -302,8 +302,8 @@ When agent completes, capture:
 Add completion comment:
 ```
 mcp__github__add_issue_comment(
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo,
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo,
   issue_number: {number},
   body: "{completion_comment}"
 )
@@ -336,7 +336,7 @@ mcp__github__add_issue_comment(
 - [x] Tests pass: `npm run test`
 
 ---
-*Completed by `{agent_name}` via `/wf-tech-lead-delegate`*
+*Completed by `{agent_name}` via `/wf-delegate`*
 ```
 
 ## 13. Close Issue (Optional)
@@ -353,8 +353,8 @@ Task implementation complete.
 If yes:
 ```
 mcp__github__update_issue(
-  owner: techLead.githubOwner,
-  repo: techLead.githubRepo,
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo,
   issue_number: {number},
   state: "closed"
 )
@@ -381,12 +381,12 @@ mcp__github__update_issue(
 
 **Check parent issue progress**:
 ```bash
-/wf-tech-lead-status #{parent_number}
+/wf-ticket-status #{parent_number}
 ```
 
 **Pick up next sub-task**:
 ```bash
-/wf-tech-lead-delegate --list
+/wf-delegate --list
 ```
 ```
 
@@ -431,7 +431,7 @@ Possible causes:
 
 **The issue remains open for retry**:
 ```bash
-/wf-tech-lead-delegate {number}
+/wf-delegate {number}
 ```
 ```
 
@@ -439,11 +439,11 @@ Possible causes:
 
 1. **Dependencies**: Always check dependencies are complete first
 2. **One at a Time**: Complete one sub-task before starting another
-3. **Progress Tracking**: Use `/wf-tech-lead-status` to see overall progress
+3. **Progress Tracking**: Use `/wf-ticket-status` to see overall progress
 4. **Manual Override**: Use `--force` to skip dependency checks if needed
 5. **Re-run**: If agent fails, you can re-run the delegate command
 
 ## Related Commands
-- `/wf-tech-lead` - Create new sub-tasks from Jira ticket or GitHub issue
-- `/wf-tech-lead-status` - Check implementation progress
+- `/wf-breakdown` - Create new sub-tasks from Jira ticket or GitHub issue
+- `/wf-ticket-status` - Check implementation progress
 - `/wf-commit` - Create conventional commit after implementation
