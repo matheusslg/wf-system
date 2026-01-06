@@ -40,7 +40,8 @@ Restart Claude Code after installation.
 | `/wf-refactor` | Restructure code safely |
 | `/wf-review` | Review code changes |
 | `/wf-commit` | Create conventional commit |
-| `/wf-prd` | Parse PRD and create parent issues |
+| `/wf-create-prd` | Create a PRD from scratch with guided questions |
+| `/wf-parse-prd` | Parse existing PRD and create parent issues |
 | `/wf-breakdown` | Break ticket into sub-tasks |
 | `/wf-delegate` | Execute assigned sub-task |
 | `/wf-ticket-status` | Check implementation progress |

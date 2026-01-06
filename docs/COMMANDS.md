@@ -158,8 +158,23 @@ Create a conventional commit with proper formatting.
 
 ## Document Processing
 
-### `/wf-prd [file-path]`
-Parse PRD and create parent issues.
+### `/wf-create-prd [project-name]`
+Create a PRD from scratch with guided questions.
+
+**Options:**
+- **PRD Scope**: Full PRD (complete) or Minimal (task-extraction only)
+- **Guidance Level**: Heavy (10-15 questions) or Light (3-4 questions)
+
+**Process:**
+1. Checks for existing PRD.md (offers overwrite/append/cancel)
+2. Asks scope and guidance preferences
+3. Interactive Q&A based on choices
+4. Generates structured PRD.md
+
+**Output:** PRD.md compatible with `/wf-parse-prd`
+
+### `/wf-parse-prd [file-path]`
+Parse existing PRD and create parent issues.
 
 **Process:**
 1. Locates and reads PRD file
@@ -168,6 +183,11 @@ Parse PRD and create parent issues.
 4. Creates GitHub Issues for approved tasks
 
 **Next Step:** Use `/wf-breakdown #N` to break parent issues into sub-tasks
+
+**Workflow:**
+```
+/wf-create-prd → /wf-parse-prd → /wf-breakdown → /wf-delegate
+```
 
 ---
 

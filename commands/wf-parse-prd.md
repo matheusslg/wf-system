@@ -115,7 +115,7 @@ gh issue list --state all --limit 100 2>/dev/null
 Use `/wf-breakdown #{this_issue_number}` to create sub-tasks.
 
 ---
-*Generated from PRD via `/wf-prd`*
+*Generated from PRD via `/wf-parse-prd`*
 ```
 
 **Labels to apply**:
@@ -171,13 +171,13 @@ Offer to:
 
 **Parse PRD and create issues**:
 ```
-/wf-prd
-/wf-prd docs/PRD.md
+/wf-parse-prd
+/wf-parse-prd docs/PRD.md
 ```
 
 **Typical workflow**:
 ```
-/wf-prd                    # Create parent issues from PRD
+/wf-parse-prd                    # Create parent issues from PRD
 /wf-breakdown #1           # Break first issue into sub-tasks
 /wf-delegate #5            # Execute a sub-task
 /wf-ticket-status #1       # Check progress on parent issue
