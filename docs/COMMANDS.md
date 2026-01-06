@@ -188,10 +188,10 @@ Parse existing PRD and create parent issues.
 
 ```
 # Starting fresh (PRD-first):
-/wf-create-prd → /wf-init → /wf-parse-prd → /wf-breakdown → /wf-delegate
+/wf-init → /wf-create-prd → /wf-parse-prd → /wf-generate → /wf-start-session
 
-# Existing codebase (setup-first):
-/wf-init → /wf-create-prd → /wf-parse-prd → /wf-breakdown → /wf-delegate
+# Existing codebase:
+/wf-init → /wf-generate → /wf-start-session
 ```
 
 **Note**: `/wf-parse-prd` requires `workflow.json` for GitHub integration.
@@ -201,11 +201,46 @@ Parse existing PRD and create parent issues.
 ## Project Setup
 
 ### `/wf-init`
-Bootstrap workflow system for a project.
+Bootstrap minimal workflow structure for a project.
 
 **Creates:**
-- `.claude/workflow.json`
-- `progress.md`
-- `standards.md`
-- Agent definitions
-- Stack-specific skills
+- `.claude/workflow.json` (generic template)
+- `progress.md` (session tracking)
+- `standards.md` (generic conventions)
+- `.claude/agents/` directory (empty)
+- `.claude/session-archive/` directory (empty)
+
+**Does NOT create:**
+- Agents (use `/wf-generate`)
+- Skills (use `/wf-generate`)
+- Stack-specific configurations
+
+**Options:**
+- Optionally configures GitHub owner/repo
+- Optionally commits initial files
+
+### `/wf-generate [--from-prd | --from-code | --ask]`
+Generate agents and skills based on tech stack.
+
+**Prerequisites:** Run `/wf-init` first.
+
+**Stack Detection Sources:**
+1. **PRD.md** - Reads "Technical Considerations" section
+2. **Code detection** - Analyzes package.json, requirements.txt, etc.
+3. **User input** - Ask user directly if neither available
+
+**Modes:**
+- `--from-prd` - Force read from PRD.md
+- `--from-code` - Force detect from existing code
+- `--ask` - Ask user to specify stack
+- (default) - Auto-detect: try PRD first, then code, then ask
+
+**Actions:**
+1. Detects/reads tech stack
+2. Updates `workflow.json` with scopes and agents config
+3. Updates `standards.md` with stack-specific conventions
+4. Creates agents in `.claude/agents/`
+5. Creates skills in `.claude/commands/`
+
+**If re-running with existing agents:**
+- Asks user: Merge (keep existing + add new) or Replace (delete all, start fresh)

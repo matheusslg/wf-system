@@ -35,9 +35,15 @@ Restart Claude Code after installation.
 ## Quick Start
 
 1. Navigate to your project directory
-2. Run `/wf-init` to set up the workflow system
-3. Use `/wf-start-session` to begin working
-4. Use `/wf-end-session` when done (or let the context monitor trigger it)
+2. Run `/wf-init` to create the workflow structure
+3. Run `/wf-generate` to create agents and skills based on your tech stack
+4. Use `/wf-start-session` to begin working
+5. Use `/wf-end-session` when done (or let the context monitor trigger it)
+
+**Alternative (PRD-first workflow)**:
+```
+/wf-init → /wf-create-prd → /wf-parse-prd → /wf-generate → /wf-start-session
+```
 
 ## Commands
 
@@ -61,7 +67,8 @@ Restart Claude Code after installation.
 | `/wf-create-ticket` | Create GitHub/Jira ticket |
 | `/wf-debug` | Deep investigation mode |
 | `/wf-improve` | Enhance existing code |
-| `/wf-init` | Bootstrap workflow system |
+| `/wf-init` | Bootstrap minimal workflow structure |
+| `/wf-generate` | Generate agents and skills based on tech stack |
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed documentation.
 
