@@ -13,9 +13,22 @@ A workflow management system for [Claude Code](https://claude.com/claude-code) t
 ## Installation
 
 ```bash
-git clone https://github.com/cavallini/wf-system.git ~/wf-system
+git clone https://github.com/matheusslg/wf-system.git ~/wf-system
 ~/wf-system/install.sh
 ```
+
+The installer will ask:
+
+1. **Installation scope**:
+   - `Global` (default) → `~/.claude/commands/` - Available in all projects
+   - `Project` → `./.claude/commands/` - Only for current project
+
+2. **Installation method** (global only):
+   - `Symlink` (default) → Auto-updates when you `git pull`
+   - `Copy` → Standalone, no dependency on cloned repo
+
+**Global install** includes the orchestrator hook for context monitoring.
+**Project install** only copies commands (no hook).
 
 Restart Claude Code after installation.
 
