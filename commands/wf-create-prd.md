@@ -8,6 +8,8 @@ argument-hint: [project-name]
 
 Generate a Product Requirements Document (PRD) through an interactive Q&A flow. The output is structured for compatibility with `/wf-parse-prd`.
 
+**Note**: Can be run before or after `/wf-init-project`. However, `/wf-parse-prd` requires `workflow.json` for GitHub integration, so run `/wf-init-project` before parsing the PRD.
+
 ## Arguments
 
 - `$ARGUMENTS` - Optional project name. If not provided, will be asked.

@@ -184,10 +184,17 @@ Parse existing PRD and create parent issues.
 
 **Next Step:** Use `/wf-breakdown #N` to break parent issues into sub-tasks
 
-**Workflow:**
+**Typical Workflows:**
+
 ```
-/wf-create-prd → /wf-parse-prd → /wf-breakdown → /wf-delegate
+# Starting fresh (PRD-first):
+/wf-create-prd → /wf-init-project → /wf-parse-prd → /wf-breakdown → /wf-delegate
+
+# Existing codebase (setup-first):
+/wf-init-project → /wf-create-prd → /wf-parse-prd → /wf-breakdown → /wf-delegate
 ```
+
+**Note**: `/wf-parse-prd` requires `workflow.json` for GitHub integration.
 
 ---
 
