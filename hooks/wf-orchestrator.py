@@ -220,7 +220,7 @@ class WFOrchestrator:
                     "additionalContext": (
                         "SESSION START: No workflow configuration detected in this project.\n"
                         "Would you like to initialize the Claude workflow system?\n"
-                        "Run `/wf-init-project` to set up progress tracking, standards, and agents.\n"
+                        "Run `/wf-init` to set up progress tracking, standards, and agents.\n"
                         "Or continue without workflow management."
                     )
                 }

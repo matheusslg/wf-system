@@ -188,10 +188,10 @@ Parse existing PRD and create parent issues.
 
 ```
 # Starting fresh (PRD-first):
-/wf-create-prd → /wf-init-project → /wf-parse-prd → /wf-breakdown → /wf-delegate
+/wf-create-prd → /wf-init → /wf-parse-prd → /wf-breakdown → /wf-delegate
 
 # Existing codebase (setup-first):
-/wf-init-project → /wf-create-prd → /wf-parse-prd → /wf-breakdown → /wf-delegate
+/wf-init → /wf-create-prd → /wf-parse-prd → /wf-breakdown → /wf-delegate
 ```
 
 **Note**: `/wf-parse-prd` requires `workflow.json` for GitHub integration.
@@ -200,7 +200,7 @@ Parse existing PRD and create parent issues.
 
 ## Project Setup
 
-### `/wf-init-project`
+### `/wf-init`
 Bootstrap workflow system for a project.
 
 **Creates:**

@@ -207,7 +207,7 @@ ls .claude/agents/*.md
 ```
 
 **Options**:
-1. Create the agent using `/wf-init-project` (adds standard agents)
+1. Create the agent using `/wf-init` (adds standard agents)
 2. Manually create `.claude/agents/{agent_name}.md`
 3. Re-assign to existing agent:
    ```bash
