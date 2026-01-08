@@ -240,7 +240,7 @@ Generate agents and skills based on tech stack.
 2. Updates `workflow.json` with scopes and agents config
 3. Updates `standards.md` with stack-specific conventions
 4. Creates agents in `.claude/agents/`
-5. Creates skills in `.claude/commands/`
+5. Creates skills in `.claude/skills/`
 
 **If re-running with existing agents:**
 - Asks user: Merge (keep existing + add new) or Replace (delete all, start fresh)

@@ -100,6 +100,7 @@ gh auth status 2>/dev/null || echo "NOT_AUTHENTICATED"
 ```bash
 mkdir -p .claude
 mkdir -p .claude/agents
+mkdir -p .claude/skills
 mkdir -p .claude/session-archive
 ```
 
@@ -250,6 +251,7 @@ If no:
 **Directories Created**:
 - `.claude/` - Workflow configuration root
 - `.claude/agents/` - Agent definitions (empty)
+- `.claude/skills/` - Agent skills (empty)
 - `.claude/session-archive/` - Archived sessions (empty)
 
 **Next Steps**:

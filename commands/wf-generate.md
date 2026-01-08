@@ -35,11 +35,11 @@ ls standards.md 2>/dev/null || echo "NO_STANDARDS"
 - Display error: "Workflow not initialized. Run `/wf-init` first."
 - Exit without changes
 
-## 2. Check Existing Agents
+## 2. Check Existing Agents and Skills
 
 ```bash
 ls .claude/agents/*.md 2>/dev/null | wc -l
-ls .claude/commands/*.md 2>/dev/null | wc -l
+ls -d .claude/skills/*/ 2>/dev/null | wc -l
 ```
 
 **If agents or skills already exist**, ask user:
@@ -53,7 +53,7 @@ ls .claude/commands/*.md 2>/dev/null | wc -l
 If "Replace" selected:
 ```bash
 rm -f .claude/agents/*.md 2>/dev/null
-# Note: Don't delete commands that aren't stack-specific (e.g., keep wf-* commands)
+rm -rf .claude/skills/*/ 2>/dev/null
 ```
 
 ## 3. Determine Tech Stack Source
@@ -318,10 +318,24 @@ mkdir -p .claude/agents
 
 ## 8. Generate Stack-Specific Skills
 
-Create utility skills in `.claude/commands/` based on detected stack.
+Create Agent Skills in `.claude/skills/` based on detected stack. Agent Skills are automatically discovered and used by Claude when relevant.
 
 ```bash
-mkdir -p .claude/commands
+mkdir -p .claude/skills
+```
+
+### Skills Structure
+
+Each skill is a **directory** containing `SKILL.md` and optional supporting files:
+
+```
+.claude/skills/
+├── nest-test/
+│   └── SKILL.md
+├── docker-up/
+│   └── SKILL.md
+└── db-status/
+    └── SKILL.md
 ```
 
 ### Skills by Stack
@@ -352,24 +366,27 @@ Present recommended skills and let user choose:
 
 **IMPORTANT**: The templates below are **EXAMPLES**, not a strict list. Create skills for ANY detected technology using the same pattern:
 
-1. **Context section** - Use inline command syntax to gather relevant info when skill loads
-2. **Task section** - Clear instructions with bash commands
-3. **Error guidance** - Tell Claude what to do if something fails
+1. **Description** - Clear description so Claude knows when to use this skill
+2. **Context section** - Use inline command syntax to gather relevant info when skill loads
+3. **Task section** - Clear instructions with bash commands
+4. **Error guidance** - Tell Claude what to do if something fails
 
 **SYNTAX NOTE**: In templates below, `[[command]]` is a placeholder. When generating actual skill files, replace `[[command]]` with the inline execution syntax: exclamation mark followed by command in backticks.
 
+**STRUCTURE**: Each skill goes in `.claude/skills/{skill-name}/SKILL.md`
+
 **Examples of adapting to other stacks:**
-- Vue detected? → Create `vue-build.md`, `vue-lint.md`, `vue-test.md`
-- MongoDB detected? → Create `mongo-status.md`, `mongo-dump.md`
-- Rails detected? → Create `rails-generate.md`, `rails-test.md`, `rails-migrate.md`
-- Go detected? → Create `go-build.md`, `go-test.md`, `go-lint.md`
-- Rust detected? → Create `cargo-build.md`, `cargo-test.md`, `cargo-clippy.md`
+- Vue detected? → Create `skills/vue-build/SKILL.md`, `skills/vue-lint/SKILL.md`
+- MongoDB detected? → Create `skills/mongo-status/SKILL.md`, `skills/mongo-dump/SKILL.md`
+- Rails detected? → Create `skills/rails-generate/SKILL.md`, `skills/rails-test/SKILL.md`
+- Go detected? → Create `skills/go-build/SKILL.md`, `skills/go-test/SKILL.md`
+- Rust detected? → Create `skills/cargo-build/SKILL.md`, `skills/cargo-test/SKILL.md`
 
 Follow the same structure for any technology. The examples below show the pattern:
 
 #### Pulumi / Infrastructure
 
-**File: `.claude/commands/pulumi-preview.md`**
+**File: `.claude/skills/pulumi-preview/SKILL.md`**
 ```markdown
 ---
 description: Preview Pulumi infrastructure changes
@@ -392,7 +409,7 @@ pulumi preview --stack ${1:-dev} --diff
 Review the changes and explain what will be created, updated, or destroyed.
 ```
 
-**File: `.claude/commands/pulumi-up.md`**
+**File: `.claude/skills/pulumi-up/SKILL.md`**
 ```markdown
 ---
 description: Apply Pulumi infrastructure changes
@@ -423,7 +440,7 @@ pulumi up --stack ${1:-dev} --yes
 
 #### Terraform / Infrastructure
 
-**File: `.claude/commands/tf-plan.md`**
+**File: `.claude/skills/tf-plan/SKILL.md`**
 ```markdown
 ---
 description: Plan Terraform infrastructure changes
@@ -446,7 +463,7 @@ terraform plan -out=tfplan
 Explain the planned changes clearly.
 ```
 
-**File: `.claude/commands/tf-apply.md`**
+**File: `.claude/skills/tf-apply/SKILL.md`**
 ```markdown
 ---
 description: Apply Terraform changes
@@ -469,7 +486,7 @@ terraform apply tfplan
 
 #### NestJS / Backend
 
-**File: `.claude/commands/nest-generate.md`**
+**File: `.claude/skills/nest-generate/SKILL.md`**
 ```markdown
 ---
 description: Generate NestJS resources (module, controller, service)
@@ -492,7 +509,7 @@ npx nest generate $1 $2
 After generation, show the created files.
 ```
 
-**File: `.claude/commands/nest-test.md`**
+**File: `.claude/skills/nest-test/SKILL.md`**
 ```markdown
 ---
 description: Run NestJS tests with coverage
@@ -515,7 +532,7 @@ npm run test -- ${1:---coverage}
 If tests fail, analyze the failures and suggest fixes.
 ```
 
-**File: `.claude/commands/nest-migrate.md`**
+**File: `.claude/skills/nest-migrate/SKILL.md`**
 ```markdown
 ---
 description: Run database migrations (MikroORM/TypeORM)
@@ -545,7 +562,7 @@ npx mikro-orm migration:up
 
 #### Next.js / Frontend
 
-**File: `.claude/commands/next-build.md`**
+**File: `.claude/skills/next-build/SKILL.md`**
 ```markdown
 ---
 description: Build Next.js for production
@@ -567,7 +584,7 @@ npm run build
 If build fails, analyze errors and suggest fixes.
 ```
 
-**File: `.claude/commands/next-lint.md`**
+**File: `.claude/skills/next-lint/SKILL.md`**
 ```markdown
 ---
 description: Run Next.js linting and type checking
@@ -594,7 +611,7 @@ npx tsc --noEmit
 Fix any issues found or explain how to fix them.
 ```
 
-**File: `.claude/commands/next-test.md`**
+**File: `.claude/skills/next-test/SKILL.md`**
 ```markdown
 ---
 description: Run frontend tests (Vitest/Jest)
@@ -618,7 +635,7 @@ If tests fail, analyze and suggest fixes.
 
 #### Docker
 
-**File: `.claude/commands/docker-up.md`**
+**File: `.claude/skills/docker-up/SKILL.md`**
 ```markdown
 ---
 description: Start Docker Compose services
@@ -642,7 +659,7 @@ docker compose ps
 Check logs if any service fails to start.
 ```
 
-**File: `.claude/commands/docker-logs.md`**
+**File: `.claude/skills/docker-logs/SKILL.md`**
 ```markdown
 ---
 description: View Docker container logs
@@ -661,7 +678,7 @@ docker compose logs -f --tail=100 $1
 \`\`\`
 ```
 
-**File: `.claude/commands/docker-down.md`**
+**File: `.claude/skills/docker-down/SKILL.md`**
 ```markdown
 ---
 description: Stop and remove Docker containers
@@ -683,7 +700,7 @@ docker compose down
 
 #### Python / FastAPI / Django
 
-**File: `.claude/commands/py-test.md`**
+**File: `.claude/skills/py-test/SKILL.md`**
 ```markdown
 ---
 description: Run pytest with coverage
@@ -706,7 +723,7 @@ pytest ${1:-.} -v --cov --cov-report=term-missing
 Analyze failures and suggest fixes.
 ```
 
-**File: `.claude/commands/py-lint.md`**
+**File: `.claude/skills/py-lint/SKILL.md`**
 ```markdown
 ---
 description: Run Python linting (ruff/flake8/mypy)
@@ -734,7 +751,7 @@ Fix issues or explain how to fix them.
 
 #### Database
 
-**File: `.claude/commands/db-status.md`**
+**File: `.claude/skills/db-status/SKILL.md`**
 ```markdown
 ---
 description: Check database connection and status
@@ -758,7 +775,7 @@ psql -h localhost -U postgres -c "SELECT version();" 2>/dev/null || echo "Postgr
 \`\`\`
 ```
 
-**File: `.claude/commands/db-dump.md`**
+**File: `.claude/skills/db-dump/SKILL.md`**
 ```markdown
 ---
 description: Dump database to file
@@ -786,7 +803,7 @@ ls -lh $2
 
 #### Git / GitHub
 
-**File: `.claude/commands/gh-pr.md`**
+**File: `.claude/skills/gh-pr/SKILL.md`**
 ```markdown
 ---
 description: Create GitHub Pull Request
@@ -814,7 +831,7 @@ gh pr create --base ${1:-main} --fill
 \`\`\`
 ```
 
-**File: `.claude/commands/gh-issues.md`**
+**File: `.claude/skills/gh-issues/SKILL.md`**
 ```markdown
 ---
 description: List and manage GitHub issues
@@ -835,7 +852,7 @@ gh issue list --state open ${1:+--label "$1"} --limit 20
 \`\`\`
 ```
 
-**File: `.claude/commands/gh-pr-status.md`**
+**File: `.claude/skills/gh-pr-status/SKILL.md`**
 ```markdown
 ---
 description: Check PR status and reviews
@@ -862,7 +879,7 @@ gh pr checks ${1:-$(git branch --show-current)}
 
 #### General Utilities
 
-**File: `.claude/commands/deps-check.md`**
+**File: `.claude/skills/deps-check/SKILL.md`**
 ```markdown
 ---
 description: Check for outdated dependencies
@@ -890,7 +907,7 @@ pip list --outdated 2>/dev/null || echo "Run: pip install pip-review"
 Summarize which packages need updates and any security concerns.
 ```
 
-**File: `.claude/commands/env-check.md`**
+**File: `.claude/skills/env-check/SKILL.md`**
 ```markdown
 ---
 description: Verify environment setup
@@ -987,13 +1004,13 @@ Summarize what was generated:
 - `.claude/agents/project-reviewer.md` - Code review (read-only)
 
 **Skills Created**:
-- `.claude/commands/nest-generate.md` - Generate NestJS resources
-- `.claude/commands/docker-up.md` - Start Docker services
-- `.claude/commands/gh-pr.md` - Create GitHub PR
+- `.claude/skills/nest-generate/SKILL.md` - Generate NestJS resources
+- `.claude/skills/docker-up/SKILL.md` - Start Docker services
+- `.claude/skills/gh-pr/SKILL.md` - Create GitHub PR
 
 **Next Steps**:
 1. Review generated agents in `.claude/agents/`
-2. Review generated skills in `.claude/commands/`
+2. Review generated skills in `.claude/skills/`
 3. Customize as needed
 4. Run `/wf-start-session` to begin working
 
