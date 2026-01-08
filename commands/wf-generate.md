@@ -350,7 +350,238 @@ Present recommended skills and let user choose:
 
 ### Skill Templates
 
-(Use templates from original wf-init - Pulumi, Terraform, NestJS, Next.js, Docker, Python, Database, AWS, Git sections)
+#### Pulumi / Infrastructure
+```markdown
+# .claude/commands/pulumi-preview.md
+---
+description: Preview Pulumi infrastructure changes
+allowed-tools: Bash, Read
+argument-hint: [stack-name]
+---
+Preview infrastructure changes without applying:
+\`\`\`bash
+pulumi preview --stack ${1:-dev} --diff
+\`\`\`
+
+# .claude/commands/pulumi-up.md
+---
+description: Apply Pulumi infrastructure changes
+allowed-tools: Bash, Read, AskUserQuestion
+argument-hint: [stack-name]
+---
+**IMPORTANT**: Always run preview first and confirm with user before applying.
+\`\`\`bash
+pulumi up --stack ${1:-dev} --yes
+\`\`\`
+```
+
+#### Terraform / Infrastructure
+```markdown
+# .claude/commands/tf-plan.md
+---
+description: Plan Terraform infrastructure changes
+allowed-tools: Bash, Read
+argument-hint: [workspace]
+---
+\`\`\`bash
+terraform workspace select ${1:-dev} 2>/dev/null || true
+terraform plan -out=tfplan
+\`\`\`
+
+# .claude/commands/tf-apply.md
+---
+description: Apply Terraform changes
+allowed-tools: Bash, Read, AskUserQuestion
+---
+**IMPORTANT**: Review plan output and confirm with user before applying.
+\`\`\`bash
+terraform apply tfplan
+\`\`\`
+```
+
+#### NestJS / Backend
+```markdown
+# .claude/commands/nest-generate.md
+---
+description: Generate NestJS resources (module, controller, service)
+allowed-tools: Bash, Read
+argument-hint: <type> <name>
+---
+Generate NestJS resources. Types: module, controller, service, resource, guard, pipe, interceptor
+\`\`\`bash
+npx nest generate $1 $2
+\`\`\`
+
+# .claude/commands/nest-test.md
+---
+description: Run NestJS tests with coverage
+allowed-tools: Bash, Read
+argument-hint: [test-pattern]
+---
+\`\`\`bash
+npm run test -- ${1:---coverage}
+\`\`\`
+
+# .claude/commands/nest-migrate.md
+---
+description: Run database migrations (MikroORM/TypeORM)
+allowed-tools: Bash, Read
+argument-hint: [migration-name]
+---
+\`\`\`bash
+npx mikro-orm migration:create --name $1
+npx mikro-orm migration:up
+\`\`\`
+```
+
+#### Next.js / Frontend
+```markdown
+# .claude/commands/next-build.md
+---
+description: Build Next.js for production
+allowed-tools: Bash, Read
+---
+\`\`\`bash
+npm run build
+\`\`\`
+
+# .claude/commands/next-lint.md
+---
+description: Run Next.js linting and type checking
+allowed-tools: Bash, Read
+---
+\`\`\`bash
+npm run lint
+npx tsc --noEmit
+\`\`\`
+
+# .claude/commands/next-test.md
+---
+description: Run frontend tests (Vitest/Jest)
+allowed-tools: Bash, Read
+argument-hint: [test-pattern]
+---
+\`\`\`bash
+npm run test -- $1
+\`\`\`
+```
+
+#### Docker
+```markdown
+# .claude/commands/docker-up.md
+---
+description: Start Docker Compose services
+allowed-tools: Bash, Read
+argument-hint: [service-name]
+---
+\`\`\`bash
+docker compose up -d $1
+docker compose ps
+\`\`\`
+
+# .claude/commands/docker-logs.md
+---
+description: View Docker container logs
+allowed-tools: Bash, Read
+argument-hint: <container-name>
+---
+\`\`\`bash
+docker compose logs -f --tail=100 $1
+\`\`\`
+
+# .claude/commands/docker-down.md
+---
+description: Stop and remove Docker containers
+allowed-tools: Bash
+---
+\`\`\`bash
+docker compose down
+\`\`\`
+```
+
+#### Python / FastAPI / Django
+```markdown
+# .claude/commands/py-test.md
+---
+description: Run pytest with coverage
+allowed-tools: Bash, Read
+argument-hint: [test-path]
+---
+\`\`\`bash
+pytest ${1:-.} -v --cov --cov-report=term-missing
+\`\`\`
+
+# .claude/commands/py-lint.md
+---
+description: Run Python linting (ruff/flake8/mypy)
+allowed-tools: Bash, Read
+---
+\`\`\`bash
+ruff check . || flake8 .
+mypy . || true
+\`\`\`
+```
+
+#### Database
+```markdown
+# .claude/commands/db-connect.md
+---
+description: Connect to database CLI
+allowed-tools: Bash, Read
+argument-hint: [database-name]
+---
+\`\`\`bash
+psql -h localhost -U postgres ${1:-app}
+\`\`\`
+
+# .claude/commands/db-dump.md
+---
+description: Dump database to file
+allowed-tools: Bash
+argument-hint: <database-name> <output-file>
+---
+\`\`\`bash
+pg_dump -h localhost -U postgres $1 > $2
+\`\`\`
+```
+
+#### Git / GitHub
+```markdown
+# .claude/commands/gh-pr.md
+---
+description: Create GitHub Pull Request
+allowed-tools: Bash, Read
+argument-hint: [base-branch]
+---
+\`\`\`bash
+gh pr create --base ${1:-main} --fill
+\`\`\`
+
+# .claude/commands/gh-issues.md
+---
+description: List open GitHub issues
+allowed-tools: Bash, Read
+argument-hint: [label]
+---
+\`\`\`bash
+gh issue list --state open ${1:+--label "$1"}
+\`\`\`
+```
+
+### Skill Generation Logic
+
+When generating skills, follow this mapping:
+
+| Detected | Skills to Generate |
+|----------|-------------------|
+| `pulumi` in dependencies or Pulumi.yaml exists | pulumi-preview, pulumi-up |
+| `terraform` or .tf files exist | tf-plan, tf-apply |
+| `@nestjs/core` in package.json | nest-generate, nest-test, nest-migrate |
+| `next` in package.json | next-build, next-lint, next-test |
+| `docker-compose.yml` or Dockerfile exists | docker-up, docker-logs, docker-down |
+| `pytest` or `requirements.txt` exists | py-test, py-lint |
+| PostgreSQL/MySQL detected | db-connect, db-dump |
+| Git repo detected | gh-pr, gh-issues |
 
 ## 9. Report Results
 
