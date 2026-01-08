@@ -339,13 +339,122 @@ mcp__github__add_issue_comment(
 *Completed by `{agent_name}` via `/wf-delegate`*
 ```
 
-## 13. Close Issue (Optional)
+## 13. Workflow Pipeline (REQUIRED)
 
-Ask user if task is complete:
+After a developer agent completes implementation, **the work MUST go through the pipeline** if reviewer/QA agents exist.
+
+### Pipeline Order
+
+```
+Developer (backend/frontend) → Reviewer → QA → Close
+```
+
+### Check Available Pipeline Agents
+
+```bash
+ls .claude/agents/*reviewer*.md .claude/agents/*review*.md 2>/dev/null
+ls .claude/agents/*qa*.md .claude/agents/*test*.md 2>/dev/null
+```
+
+### Pipeline Rules
+
+| Current Agent Type | Next Step | Action |
+|-------------------|-----------|--------|
+| `*-backend`, `*-frontend`, `*-developer` | Reviewer exists? | **MUST** trigger review |
+| `*-reviewer`, `*-review` | QA exists? | **MUST** trigger QA |
+| `*-qa`, `*-test` | Pipeline complete | Can close issue |
+| No pipeline agents | N/A | Can close issue |
+
+### After Developer Completes
+
+If a reviewer agent exists in `.claude/agents/`:
+
 ```markdown
-Task implementation complete.
+## Implementation Complete - Review Required
 
-**Close issue #{number}?**
+The developer agent has completed the implementation.
+
+**Workflow Pipeline**: Developer ✓ → **Reviewer** → QA → Close
+
+A reviewer agent exists. Starting code review...
+```
+
+Then automatically spawn the reviewer agent:
+```
+Task(
+  subagent_type: "{project}-reviewer",
+  prompt: "Review the implementation for issue #{number}.
+
+  **Files to review**: {files_changed}
+
+  **Review checklist**:
+  - [ ] Code correctness
+  - [ ] Follows project standards
+  - [ ] No security issues
+  - [ ] Tests are adequate
+  - [ ] No unnecessary complexity
+
+  **If issues found**: List them clearly with file:line references
+  **If approved**: Confirm the code is ready for QA",
+  description: "Review implementation for #{number}"
+)
+```
+
+### After Reviewer Completes
+
+If a QA agent exists:
+
+```markdown
+## Review Complete - QA Required
+
+The reviewer has approved the implementation.
+
+**Workflow Pipeline**: Developer ✓ → Reviewer ✓ → **QA** → Close
+
+A QA agent exists. Starting QA validation...
+```
+
+Then spawn QA agent:
+```
+Task(
+  subagent_type: "{project}-qa",
+  prompt: "QA validation for issue #{number}.
+
+  **What was implemented**: {implementation_summary}
+  **Files changed**: {files_changed}
+
+  **QA checklist**:
+  - [ ] Run all tests: `npm run test`
+  - [ ] Check test coverage
+  - [ ] Verify acceptance criteria from issue
+  - [ ] Test edge cases
+  - [ ] Check for regressions
+
+  **If issues found**: Report failing tests or missing coverage
+  **If passed**: Confirm ready to close",
+  description: "QA validation for #{number}"
+)
+```
+
+### Pipeline Completion
+
+Only after ALL pipeline steps complete:
+
+```markdown
+## Pipeline Complete
+
+**Workflow Pipeline**: Developer ✓ → Reviewer ✓ → QA ✓
+
+All pipeline stages passed. Issue #{number} is ready to close.
+```
+
+## 14. Close Issue
+
+**Only close after pipeline is complete** (or if no pipeline agents exist).
+
+Ask user:
+```markdown
+Pipeline complete. **Close issue #{number}?**
 - `yes` - Close the issue
 - `no` - Keep open for further work
 ```
@@ -360,7 +469,7 @@ mcp__github__update_issue(
 )
 ```
 
-## 14. Report Results
+## 15. Report Results
 
 ```markdown
 ## Sub-Task Delegation Complete
@@ -437,11 +546,13 @@ Possible causes:
 
 ## Tips
 
-1. **Dependencies**: Always check dependencies are complete first
-2. **One at a Time**: Complete one sub-task before starting another
-3. **Progress Tracking**: Use `/wf-ticket-status` to see overall progress
-4. **Manual Override**: Use `--force` to skip dependency checks if needed
-5. **Re-run**: If agent fails, you can re-run the delegate command
+1. **Pipeline is Mandatory**: Developer → Reviewer → QA flow is enforced when those agents exist
+2. **Dependencies**: Always check dependencies are complete first
+3. **One at a Time**: Complete one sub-task before starting another
+4. **Progress Tracking**: Use `/wf-ticket-status` to see overall progress
+5. **Manual Override**: Use `--force` to skip dependency checks if needed
+6. **Re-run**: If agent fails, you can re-run the delegate command
+7. **Skip Pipeline**: Use `--skip-pipeline` only if you need to bypass review/QA (not recommended)
 
 ## Related Commands
 - `/wf-breakdown` - Create new sub-tasks from Jira ticket or GitHub issue
