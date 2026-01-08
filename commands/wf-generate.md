@@ -350,7 +350,20 @@ Present recommended skills and let user choose:
 
 ### Skill Templates
 
-Create these files in `.claude/commands/` based on detected stack.
+**IMPORTANT**: The templates below are **EXAMPLES**, not a strict list. Create skills for ANY detected technology using the same pattern:
+
+1. **Context section** - Use `!`command`` to gather relevant info when skill loads
+2. **Task section** - Clear instructions with bash commands
+3. **Error guidance** - Tell Claude what to do if something fails
+
+**Examples of adapting to other stacks:**
+- Vue detected? → Create `vue-build.md`, `vue-lint.md`, `vue-test.md`
+- MongoDB detected? → Create `mongo-status.md`, `mongo-dump.md`
+- Rails detected? → Create `rails-generate.md`, `rails-test.md`, `rails-migrate.md`
+- Go detected? → Create `go-build.md`, `go-test.md`, `go-lint.md`
+- Rust detected? → Create `cargo-build.md`, `cargo-test.md`, `cargo-clippy.md`
+
+Follow the same structure for any technology. The examples below show the pattern:
 
 #### Pulumi / Infrastructure
 
@@ -914,19 +927,41 @@ Verify all dependencies are installed:
 
 ### Skill Generation Logic
 
-When generating skills, follow this mapping:
+**This table shows examples - generate skills for ANY detected technology:**
 
-| Detected | Skills to Generate |
-|----------|-------------------|
-| `pulumi` in dependencies or Pulumi.yaml exists | pulumi-preview, pulumi-up |
-| `terraform` or .tf files exist | tf-plan, tf-apply |
-| `@nestjs/core` in package.json | nest-generate, nest-test, nest-migrate |
-| `next` in package.json | next-build, next-lint, next-test |
-| `docker-compose.yml` or Dockerfile exists | docker-up, docker-logs, docker-down |
-| `pytest` or `requirements.txt` exists | py-test, py-lint |
-| PostgreSQL/MySQL detected | db-status, db-dump |
-| Git repo detected | gh-pr, gh-issues, gh-pr-status |
+| Detected | Example Skills |
+|----------|----------------|
+| Pulumi | pulumi-preview, pulumi-up |
+| Terraform | tf-plan, tf-apply |
+| NestJS | nest-generate, nest-test, nest-migrate |
+| Next.js | next-build, next-lint, next-test |
+| Vue | vue-build, vue-lint, vue-test |
+| Angular | ng-build, ng-test, ng-lint |
+| React (CRA/Vite) | react-build, react-test |
+| Express | express-test |
+| FastAPI | fastapi-test, fastapi-run |
+| Django | django-test, django-migrate, django-shell |
+| Rails | rails-generate, rails-test, rails-migrate |
+| Go | go-build, go-test, go-lint |
+| Rust | cargo-build, cargo-test, cargo-clippy |
+| Docker | docker-up, docker-logs, docker-down |
+| Python (any) | py-test, py-lint |
+| PostgreSQL | db-status, db-dump |
+| MongoDB | mongo-status, mongo-dump |
+| MySQL | mysql-status, mysql-dump |
+| Redis | redis-cli |
+| Git/GitHub | gh-pr, gh-issues, gh-pr-status |
 | Any project | deps-check, env-check |
+
+**Pattern for any new technology:**
+```
+[tech]-build    → Build/compile
+[tech]-test     → Run tests
+[tech]-lint     → Linting/formatting
+[tech]-migrate  → Database migrations (if applicable)
+[tech]-generate → Scaffolding (if applicable)
+[tech]-status   → Health/status check (for services)
+```
 
 ## 9. Report Results
 
