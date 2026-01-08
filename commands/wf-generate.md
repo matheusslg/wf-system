@@ -352,7 +352,7 @@ Present recommended skills and let user choose:
 
 **IMPORTANT**: The templates below are **EXAMPLES**, not a strict list. Create skills for ANY detected technology using the same pattern:
 
-1. **Context section** - Use `!`command`` to gather relevant info when skill loads
+1. **Context section** - Use inline command syntax (exclamation + backticks) to gather relevant info when skill loads
 2. **Task section** - Clear instructions with bash commands
 3. **Error guidance** - Tell Claude what to do if something fails
 
