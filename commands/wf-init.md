@@ -115,11 +115,18 @@ Create `.claude/workflow.json` with generic template:
     "owner": "[owner or empty]",
     "repo": "[repo or empty]"
   },
+  "design": {
+    "figma": null,
+    "system": null,
+    "styleGuide": null
+  },
   "scopes": [],
   "agents": {},
   "init_script": null
 }
 ```
+
+Note: The `design` section is populated by `/wf-design-setup`.
 
 Fill in:
 - `project`: From user input or directory name

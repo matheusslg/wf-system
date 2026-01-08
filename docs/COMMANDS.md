@@ -244,3 +244,29 @@ Generate agents and skills based on tech stack.
 
 **If re-running with existing agents:**
 - Asks user: Merge (keep existing + add new) or Replace (delete all, start fresh)
+
+### `/wf-design-setup`
+Configure detailed design resources for the project.
+
+**Prerequisites:** Run `/wf-init` first.
+
+**Configures:**
+- **Figma integration** - File keys, node IDs, key frames
+- **Design system** - Shadcn, MUI, Tailwind, custom, etc.
+- **Style guide** - Creates `docs/STYLE_GUIDE.md` or links existing
+- **Design tokens** - Extracts from Figma or creates manually
+
+**Updates:**
+- `workflow.json` - Adds `design` section
+- `standards.md` - Adds design standards
+- Optionally creates design-related skills
+
+**When to use:**
+- After `/wf-create-prd` to configure design details
+- When adding Figma designs to an existing project
+- To update design system configuration
+
+**Typical workflow:**
+```
+/wf-create-prd → /wf-design-setup → /wf-generate → /wf-start-session
+```

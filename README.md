@@ -69,6 +69,7 @@ Restart Claude Code after installation.
 | `/wf-improve` | Enhance existing code |
 | `/wf-init` | Bootstrap minimal workflow structure |
 | `/wf-generate` | Generate agents and skills based on tech stack |
+| `/wf-design-setup` | Configure design resources (Figma, design system, tokens) |
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed documentation.
 
@@ -82,6 +83,11 @@ Create `.claude/workflow.json` in your project root:
   "github": {
     "owner": "your-username",
     "repo": "your-repo"
+  },
+  "design": {
+    "figma": { "fileKey": "abc123", "fileUrl": "https://figma.com/..." },
+    "system": "shadcn",
+    "styleGuide": "docs/STYLE_GUIDE.md"
   },
   "breakdown": {
     "enabled": true,

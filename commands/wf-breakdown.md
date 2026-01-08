@@ -149,6 +149,21 @@ Verify ticket exists at: https://{cloudId}/browse/{PROJECT}-{number}
 
 ## 3. Detect Figma Links
 
+### 3a. Check workflow.json for Figma config
+
+First, check if project has Figma configured via `/wf-design-setup`:
+
+```bash
+cat .claude/workflow.json 2>/dev/null | grep -A 10 '"figma"'
+```
+
+**If design.figma exists in workflow.json**:
+- Use `fileKey` from config as default reference
+- Use `keyFrames` for quick component lookups
+- This provides project-wide design context
+
+### 3b. Scan ticket for specific Figma URLs
+
 Scan ticket description for Figma URLs:
 
 **Patterns to match**:
@@ -161,7 +176,12 @@ Scan ticket description for Figma URLs:
 - `fileKey` - The file identifier (alphanumeric after /design/ or /file/)
 - `nodeId` - Node ID from query param (format: `123-456` or `123:456`)
 
-**If no Figma links found**:
+### Priority
+
+1. **Ticket-specific Figma links** - Use these first (most relevant to the task)
+2. **workflow.json Figma config** - Use as fallback for general design context
+
+**If no Figma links found and no workflow.json config**:
 - Note in plan: "No design references found"
 - Continue without design context
 
@@ -473,6 +493,20 @@ gh issue view {this_issue_number}
 ## Parent Issue
 Part of #{parent_issue_number} ([{reference}]({referenceUrl}))
 
+## Design Context (for UI tasks)
+{Include this section for frontend/UI tasks}
+
+### Figma Reference
+- Link: {figma_url_if_available}
+- Node ID: {node_id_if_available}
+
+### Design System
+- Component library: {from workflow.json design.system}
+- Style guide: {from workflow.json design.styleGuide}
+
+### Visual Requirements
+{extracted_from_figma_or_ticket}
+
 ## Implementation Details
 
 ### Files to Create/Modify
@@ -492,6 +526,7 @@ Part of #{parent_issue_number} ([{reference}]({referenceUrl}))
 ## Acceptance Criteria
 - [ ] {criterion_1}
 - [ ] {criterion_2}
+- [ ] Matches Figma design (if applicable)
 - [ ] Tests pass
 - [ ] TypeScript validates: `npx tsc --noEmit`
 

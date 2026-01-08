@@ -305,11 +305,44 @@ Before doing ANY work:
 | Detected Stack | Agent to Create |
 |----------------|-----------------|
 | NestJS/Express/FastAPI/Django | `backend` - API endpoints, services, database |
-| Next.js/React/Vue/Angular | `frontend` - Components, hooks, state |
+| Next.js/React/Vue/Angular | `frontend` - Components, hooks, state, **design implementation** |
 | React Native/Flutter | `mobile` - Mobile screens, navigation |
 | Terraform/Pulumi | `infra` - Cloud resources, IaC |
 | Jest/Vitest/pytest | `qa` - Tests, coverage, quality |
 | Any project | `reviewer` - Code review (READ-ONLY: tools: Read, Grep, Glob) |
+
+### Design Context for Frontend Agents
+
+Check if design is configured in workflow.json:
+
+```bash
+cat .claude/workflow.json 2>/dev/null | grep -A 10 '"design"'
+```
+
+**If design is configured**, add to frontend agent template:
+
+```markdown
+## Design Resources
+
+### Figma
+{If configured: "File: {figma_url} - Use mcp__figma__get_design_context for implementation details"}
+{If not configured: "No Figma configured. Run /wf-design-setup to add."}
+
+### Design System
+Using **{design.system}** component library.
+- Components location: {design.systemConfig.componentsDir}
+- Theme config: {design.systemConfig.themeFile}
+
+### Style Guide
+{If exists: "See {design.styleGuide} for colors, typography, spacing."}
+
+### Design Implementation Rules
+1. Always check Figma before implementing UI components
+2. Use existing components from {design.system} first
+3. Follow spacing scale from style guide
+4. Use semantic color tokens, not raw hex values
+5. Match Figma designs as closely as possible
+```
 
 Create directory if needed:
 ```bash

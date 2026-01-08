@@ -71,7 +71,7 @@ Based on choices from Steps 2 and 3, ask the appropriate questions.
 
 **Remember**: Project name was already determined in Step 0. Use that value.
 
-### Light Guidance Questions (4-5)
+### Light Guidance Questions (5-6)
 
 Ask these in a single AskUserQuestion with text inputs:
 
@@ -79,7 +79,8 @@ Ask these in a single AskUserQuestion with text inputs:
 2. **Target Users**: "Who will use this product/feature?"
 3. **MVP Scope**: "What are the must-have features for the first version?"
 4. **Tech Stack**: "What technologies will you use? (e.g., React, Node.js, PostgreSQL, AWS)"
-5. **Success Criteria** (optional): "How will you measure success?"
+5. **Design Resources**: "Do you have any design resources? (Figma links, design system like Shadcn/MUI/Tailwind, wireframes, or 'none')"
+6. **Success Criteria** (optional): "How will you measure success?"
 
 ### Heavy Guidance Questions (10-15)
 
@@ -100,13 +101,18 @@ Ask in batches of 3-4 questions using AskUserQuestion:
 8. **Tech Stack**: "What technologies will you use? (frontend, backend, database, infrastructure)"
 9. **Dependencies**: "External systems, APIs, or services needed?"
 
-**Batch 4: Planning**
-10. **Success Metrics**: "How will you measure success? (KPIs, goals)"
-11. **Timeline/Phases**: "Rough phasing? (e.g., Phase 0 = MVP, Phase 1 = ...)"
-12. **Risks**: "Known risks or potential blockers?"
+**Batch 4: Design**
+10. **Design Resources**: "Do you have Figma designs, wireframes, or mockups? (paste links or describe)"
+11. **Design System**: "What UI component library or design system? (e.g., Shadcn, MUI, Tailwind, custom, none)"
+12. **Brand/Style Guide**: "Any existing brand guidelines, color palette, or typography specs?"
 
-**Batch 5: Final (optional)**
-13. **Open Questions**: "Any unresolved decisions or questions?"
+**Batch 5: Planning**
+13. **Success Metrics**: "How will you measure success? (KPIs, goals)"
+14. **Timeline/Phases**: "Rough phasing? (e.g., Phase 0 = MVP, Phase 1 = ...)"
+15. **Risks**: "Known risks or potential blockers?"
+
+**Batch 6: Final (optional)**
+16. **Open Questions**: "Any unresolved decisions or questions?"
 
 ## 5. Generate PRD
 
@@ -179,6 +185,19 @@ Using the collected answers and the project name from Step 0, generate `PRD.md` 
 ### Other
 - {Additional tools, services, APIs}
 
+## Design
+
+{Design resources and guidelines - this section is used by /wf-design-setup}
+
+### Design Resources
+- {Figma links, wireframes, mockups, or "None"}
+
+### Design System
+- {Component library: Shadcn, MUI, Tailwind, custom, or "None"}
+
+### Brand/Style Guide
+- {Color palette, typography, spacing guidelines, or "To be defined"}
+
 ## Success Metrics
 
 - {Metric 1}
@@ -238,10 +257,11 @@ PRD.md created successfully!
 
 Next steps:
 1. Review and refine the PRD manually if needed
-2. Run /wf-parse-prd to create GitHub Issues from the roadmap
-3. Run /wf-breakdown #N to break parent issues into sub-tasks
+2. (Optional) Run /wf-design-setup to configure detailed design resources (Figma, tokens, etc.)
+3. Run /wf-parse-prd to create GitHub Issues from the roadmap
+4. Run /wf-breakdown #N to break parent issues into sub-tasks
 
-Workflow: /wf-create-prd → /wf-parse-prd → /wf-breakdown → /wf-delegate
+Workflow: /wf-create-prd → /wf-design-setup (optional) → /wf-parse-prd → /wf-breakdown → /wf-delegate
 ```
 
 ---
