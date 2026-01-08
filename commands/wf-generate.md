@@ -67,13 +67,18 @@ Read PRD.md for tech stack:
 cat PRD.md 2>/dev/null | head -100
 ```
 
-Look for sections:
+Look for `## Tech Stack` section (created by `/wf-create-prd`):
+- Frontend (React, Next.js, Vue, etc.)
+- Backend (NestJS, Express, FastAPI, Django, etc.)
+- Database (PostgreSQL, MongoDB, MySQL, etc.)
+- Infrastructure (AWS, Docker, Kubernetes, etc.)
+
+Fallback sections if "Tech Stack" not found:
 - "Technical Considerations"
-- "Tech Stack"
 - "Technologies"
 - "Architecture"
 
-Extract mentioned technologies (frameworks, databases, tools).
+Extract all mentioned technologies.
 
 ### Mode: --from-code
 

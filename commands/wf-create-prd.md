@@ -74,14 +74,15 @@ Based on choices from Steps 2 and 3, ask the appropriate questions.
 
 **Remember**: Project name was already determined in Step 0. Use that value.
 
-### Light Guidance Questions (3-4)
+### Light Guidance Questions (4-5)
 
 Ask these in a single AskUserQuestion with text inputs:
 
 1. **Problem & Solution**: "What problem are you solving, and what's your proposed solution?"
 2. **Target Users**: "Who will use this product/feature?"
 3. **MVP Scope**: "What are the must-have features for the first version?"
-4. **Success Criteria** (optional): "How will you measure success?"
+4. **Tech Stack**: "What technologies will you use? (e.g., React, Node.js, PostgreSQL, AWS)"
+5. **Success Criteria** (optional): "How will you measure success?"
 
 ### Heavy Guidance Questions (10-15)
 
@@ -97,9 +98,9 @@ Ask in batches of 3-4 questions using AskUserQuestion:
 5. **Key Features (MVP)**: "List the must-have features for the first version"
 6. **Future Features**: "What features come after MVP? (Phase 1, Phase 2...)"
 
-**Batch 3: Scope**
+**Batch 3: Scope & Tech**
 7. **Non-Goals**: "What's explicitly out of scope?"
-8. **Technical Constraints**: "Any technical requirements or limitations?"
+8. **Tech Stack**: "What technologies will you use? (frontend, backend, database, infrastructure)"
 9. **Dependencies**: "External systems, APIs, or services needed?"
 
 **Batch 4: Planning**
@@ -162,9 +163,24 @@ Using the collected answers and the project name from Step 0, generate `PRD.md` 
 ### Future
 - {Feature N}
 
-## Technical Considerations
+## Tech Stack
 
-{Only for Full PRD - constraints, dependencies, architecture notes}
+{Technologies chosen by the user - this section is used by /wf-generate}
+
+### Frontend
+- {e.g., React, Next.js, Vue}
+
+### Backend
+- {e.g., Node.js, NestJS, FastAPI, Django}
+
+### Database
+- {e.g., PostgreSQL, MongoDB, MySQL}
+
+### Infrastructure
+- {e.g., AWS, Docker, Kubernetes}
+
+### Other
+- {Additional tools, services, APIs}
 
 ## Success Metrics
 
@@ -266,7 +282,9 @@ Claude:
 2. Checks for existing PRD.md
 3. Asks: PRD scope? → User selects "Minimal"
 4. Asks: Guidance level? → User selects "Light"
-5. Asks 3-4 questions about problem, users, MVP
-6. Generates PRD.md with "# PRD: my-awesome-app"
-7. Suggests next steps
+5. Asks 4-5 questions about problem, users, MVP, tech stack
+6. Generates PRD.md with "# PRD: my-awesome-app" (includes Tech Stack section)
+7. Suggests next steps → /wf-parse-prd then /wf-generate
 ```
+
+Tech Stack in PRD enables `/wf-generate` to create appropriate agents and skills.
