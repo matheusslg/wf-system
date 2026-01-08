@@ -118,13 +118,25 @@ Break Jira/GitHub issue into sub-tasks.
 4. Creates GitHub Issues for each
 5. Assigns to appropriate agents
 
-### `/wf-delegate [issue-number]`
+### `/wf-delegate [issue-number] [flags]`
 Execute a sub-task with its assigned agent.
 
+**Flags:**
+- `--list` - List available sub-tasks
+- `--until-done` - Autonomous mode: process ALL sub-tasks without intervention
+- `--force` - Override dependency checks
+
 **Features:**
+- Automatic pipeline enforcement (Developer → Reviewer → QA)
 - Dependency checking
 - Validation against acceptance criteria
 - Progress tracking
+
+**Autonomous Mode** (`--until-done`):
+- Processes all open sub-tasks automatically
+- Respects task dependencies (processes in correct order)
+- Enforces review/QA pipeline for each task
+- Stops on critical errors, can be resumed
 
 ### `/wf-ticket-status [parent-issue]`
 Check implementation progress for a tracked ticket.

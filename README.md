@@ -29,6 +29,7 @@
 | **Session Management** | Start and end sessions with automatic progress tracking |
 | **Context Monitoring** | Auto-triggers session end at 75% context usage |
 | **Ticket Breakdown** | Break down tickets into sub-tasks with agent delegation |
+| **Autonomous Mode** | `--until-done` flag processes all sub-tasks without intervention |
 | **Multi-Agent Pipeline** | Developer → Reviewer → QA workflow enforcement |
 | **Design Integration** | Figma, design systems, and design tokens support |
 | **Multi-Platform** | Works with both GitHub Issues and Jira |
@@ -150,7 +151,7 @@ Once set up, your daily workflow looks like this:
 
 | Command | Description |
 |---------|-------------|
-| `/wf-delegate` | Execute a sub-task with its assigned agent |
+| `/wf-delegate` | Execute sub-task with agent (`--until-done` for autonomous mode) |
 | `/wf-ticket-status` | Check implementation progress for a tracked ticket |
 | `/wf-create-ticket` | Create GitHub/Jira ticket from user story |
 
@@ -316,7 +317,7 @@ your-project/
 If you find WF System helpful, consider supporting its development:
 
 <a href="https://buymeacoffee.com/matheusslg">
-  <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=matheusslg&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" />
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" />
 </a>
 
 ---

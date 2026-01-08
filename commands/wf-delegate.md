@@ -14,6 +14,8 @@ Execute a specific sub-task from a breakdown plan by spawning the appropriate sp
 
 ## Flags
 - `--list` - List available sub-tasks from tech-lead tracked issues
+- `--until-done` - Autonomous mode: work through ALL sub-tasks without human intervention
+- `--force` - Override dependency checks
 
 ## 0. Load Configuration
 
@@ -546,13 +548,184 @@ Possible causes:
 
 ## Tips
 
-1. **Pipeline is Mandatory**: Developer → Reviewer → QA flow is enforced when those agents exist
-2. **Dependencies**: Always check dependencies are complete first
-3. **One at a Time**: Complete one sub-task before starting another
-4. **Progress Tracking**: Use `/wf-ticket-status` to see overall progress
-5. **Manual Override**: Use `--force` to skip dependency checks if needed
-6. **Re-run**: If agent fails, you can re-run the delegate command
-7. **Skip Pipeline**: Use `--skip-pipeline` only if you need to bypass review/QA (not recommended)
+1. **Autonomous Mode**: Use `--until-done` to process all sub-tasks without intervention
+2. **Pipeline is Mandatory**: Developer → Reviewer → QA flow is enforced when those agents exist
+3. **Dependencies**: Always check dependencies are complete first
+4. **One at a Time**: In manual mode, complete one sub-task before starting another
+5. **Progress Tracking**: Use `/wf-ticket-status` to see overall progress
+6. **Manual Override**: Use `--force` to skip dependency checks if needed
+7. **Re-run**: If agent fails, you can re-run the delegate command
+8. **Skip Pipeline**: Use `--skip-pipeline` only if you need to bypass review/QA (not recommended)
+
+## 16. Autonomous Mode (--until-done)
+
+If `$ARGUMENTS` contains `--until-done`, enable autonomous execution loop.
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    AUTONOMOUS MODE                           │
+│                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
+│  │ Find Next    │───>│ Execute Task │───>│ Pipeline     │  │
+│  │ Available    │    │ (Developer)  │    │ (Review/QA)  │  │
+│  └──────────────┘    └──────────────┘    └──────────────┘  │
+│         ↑                                       │           │
+│         │                                       │           │
+│         └───────────── Loop ────────────────────┘           │
+│                                                              │
+│  Stops when: No more open sub-tasks with met dependencies   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Starting Autonomous Mode
+
+```markdown
+## Autonomous Mode Enabled
+
+**Mode**: `--until-done`
+**Will process**: All open sub-tasks with met dependencies
+**Pipeline**: Developer → Reviewer → QA (if agents exist)
+
+Starting autonomous execution...
+```
+
+### Find Next Available Sub-Task
+
+After completing each task (or at start if no issue number provided):
+
+```
+mcp__github__search_issues(
+  query: "label:sub-task state:open",
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo
+)
+```
+
+For each issue found, check:
+1. Has `sub-task` label
+2. Is `open` state
+3. All dependencies are closed (parse body for "Depends on: #X")
+
+**Priority order**:
+1. Tasks with no dependencies first
+2. Then tasks whose dependencies are all closed
+3. Skip tasks with open dependencies
+
+### Execute Next Task
+
+For each available task:
+
+```markdown
+## Autonomous Progress
+
+**Completed**: {N} of {total} sub-tasks
+**Current**: #{issue_number} - {title}
+**Agent**: `{agent_name}`
+
+---
+```
+
+Then execute the full delegation flow (sections 3-15) for this task.
+
+### Progress Tracking
+
+After each task completion:
+
+```markdown
+## Task #{N} Complete
+
+**Issue**: #{number} - {title}
+**Status**: Closed ✓
+
+**Progress**: {completed}/{total} sub-tasks done
+**Remaining**: {list_remaining}
+
+Continuing to next task...
+
+---
+```
+
+### Autonomous Mode Completion
+
+When no more tasks are available:
+
+```markdown
+## Autonomous Mode Complete
+
+### Summary
+**Total Processed**: {N} sub-tasks
+**Duration**: {time_if_available}
+
+### Completed Tasks
+| # | Title | Agent | Status |
+|---|-------|-------|--------|
+| #125 | Backend API | backend | ✓ Closed |
+| #126 | Frontend UI | frontend | ✓ Closed |
+| #127 | Unit tests | qa | ✓ Closed |
+
+### Skipped (Blocking Dependencies)
+| # | Title | Blocked By |
+|---|-------|------------|
+| #128 | Integration | #129 (still open) |
+
+### Next Steps
+- Check parent issue: `/wf-ticket-status #{parent}`
+- Review all changes: `git log --oneline -20`
+- Run full test suite: `npm run test`
+
+**All available sub-tasks have been processed.**
+```
+
+### Autonomous Mode Rules
+
+1. **Respects Pipeline**: Every task goes through Developer → Reviewer → QA
+2. **Respects Dependencies**: Won't start task if dependencies are open
+3. **Auto-closes Issues**: Closes issues after successful pipeline completion
+4. **Continues on Success**: Moves to next task automatically
+5. **Stops on Critical Error**: If agent fails critically, stops and reports
+
+### Error During Autonomous Mode
+
+If a task fails during autonomous execution:
+
+```markdown
+## Autonomous Mode Paused
+
+**Failed Task**: #{number} - {title}
+**Error**: {error_description}
+
+**Completed so far**: {N} sub-tasks
+
+**Options**:
+1. Fix the issue manually, then resume:
+   ```bash
+   /wf-delegate --until-done
+   ```
+2. Skip this task and continue:
+   ```bash
+   gh issue edit {number} --add-label "blocked"
+   /wf-delegate --until-done
+   ```
+3. Investigate the error:
+   ```bash
+   /wf-debug "#{number} failed: {error}"
+   ```
+```
+
+### Usage Examples
+
+```bash
+# Start autonomous mode from scratch (finds first available task)
+/wf-delegate --until-done
+
+# Start with specific task, then continue with rest
+/wf-delegate 125 --until-done
+
+# Force start even if some dependencies are unmet
+/wf-delegate --until-done --force
+```
 
 ## Related Commands
 - `/wf-breakdown` - Create new sub-tasks from Jira ticket or GitHub issue
