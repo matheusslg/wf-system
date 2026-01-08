@@ -360,12 +360,30 @@ ls .claude/agents/*qa*.md .claude/agents/*test*.md 2>/dev/null
 
 ### Pipeline Rules
 
-| Current Agent Type | Next Step | Action |
-|-------------------|-----------|--------|
-| `*-backend`, `*-frontend`, `*-developer` | Reviewer exists? | **MUST** trigger review |
-| `*-reviewer`, `*-review` | QA exists? | **MUST** trigger QA |
-| `*-qa`, `*-test` | Pipeline complete | Can close issue |
-| No pipeline agents | N/A | Can close issue |
+| Current Agent Type | Result | Next Step |
+|-------------------|--------|-----------|
+| `*-backend`, `*-frontend`, `*-developer` | Complete | → Reviewer (if exists) |
+| `*-reviewer`, `*-review` | **Approved** | → QA (if exists) |
+| `*-reviewer`, `*-review` | **Issues Found** | → **Back to Developer** to fix |
+| `*-qa`, `*-test` | **Passed** | → Close issue |
+| `*-qa`, `*-test` | **Issues Found** | → **Back to Developer** to fix |
+| No pipeline agents | N/A | → Close issue |
+
+### Pipeline Flow with Feedback Loop
+
+```
+                    ┌─────────────────────────────────┐
+                    │                                 │
+                    ▼                                 │
+Developer ──► Reviewer ──► QA ──► Close              │
+                │          │                         │
+                │          │    (issues found)       │
+                │          └─────────────────────────┤
+                │               (issues found)       │
+                └────────────────────────────────────┘
+```
+
+**Key Rule**: Reviewer and QA agents **only review/test** - they do NOT fix code. All fixes go back to the original developer agent.
 
 ### After Developer Completes
 
@@ -396,27 +414,70 @@ Task(
   - [ ] Tests are adequate
   - [ ] No unnecessary complexity
 
-  **If issues found**: List them clearly with file:line references
-  **If approved**: Confirm the code is ready for QA",
+  **Your response MUST end with one of**:
+  - `APPROVED` - Code is ready for QA
+  - `CHANGES_REQUESTED` - Issues need fixing (list them with file:line references)
+
+  **IMPORTANT**: You do NOT fix code. You only review and report issues.",
   description: "Review implementation for #{number}"
 )
 ```
 
 ### After Reviewer Completes
 
-If a QA agent exists:
+Parse reviewer response for `APPROVED` or `CHANGES_REQUESTED`.
+
+**If APPROVED** and QA agent exists:
 
 ```markdown
-## Review Complete - QA Required
-
-The reviewer has approved the implementation.
+## Review Approved - QA Required
 
 **Workflow Pipeline**: Developer ✓ → Reviewer ✓ → **QA** → Close
 
-A QA agent exists. Starting QA validation...
+Starting QA validation...
 ```
 
-Then spawn QA agent:
+Then spawn QA agent (see below).
+
+**If CHANGES_REQUESTED**:
+
+```markdown
+## Review Found Issues - Developer Fix Required
+
+**Workflow Pipeline**: Developer → Reviewer → Developer (fixing) → Reviewer → ...
+
+The reviewer found issues that need to be fixed.
+
+### Issues to Fix
+{reviewer_issues_list}
+
+Sending back to developer agent for fixes...
+```
+
+Then spawn the **original developer agent** to fix:
+```
+Task(
+  subagent_type: "{original_developer_agent}",  // e.g., "{project}-backend"
+  prompt: "Fix the issues found during code review for issue #{number}.
+
+  **Review Feedback**:
+  {reviewer_issues_list}
+
+  **Your task**:
+  1. Fix each issue listed above
+  2. Ensure tests still pass
+  3. Report what you fixed
+
+  **When done**: List the fixes made for each issue.",
+  description: "Fix review issues for #{number}"
+)
+```
+
+After developer fixes, **re-run the reviewer** (loop back).
+
+### After QA Agent
+
+Spawn QA agent:
 ```
 Task(
   subagent_type: "{project}-qa",
@@ -432,15 +493,61 @@ Task(
   - [ ] Test edge cases
   - [ ] Check for regressions
 
-  **If issues found**: Report failing tests or missing coverage
-  **If passed**: Confirm ready to close",
+  **Your response MUST end with one of**:
+  - `PASSED` - All tests pass, ready to close
+  - `FAILED` - Issues found (list failing tests or bugs)
+
+  **IMPORTANT**: You do NOT fix code. You only test and report issues.",
   description: "QA validation for #{number}"
 )
 ```
 
+### After QA Completes
+
+Parse QA response for `PASSED` or `FAILED`.
+
+**If PASSED**: Proceed to close issue.
+
+**If FAILED**:
+
+```markdown
+## QA Found Issues - Developer Fix Required
+
+**Workflow Pipeline**: Developer → Reviewer ✓ → QA → Developer (fixing) → QA → ...
+
+QA testing found issues that need to be fixed.
+
+### Issues to Fix
+{qa_issues_list}
+
+Sending back to developer agent for fixes...
+```
+
+Then spawn the **original developer agent** to fix:
+```
+Task(
+  subagent_type: "{original_developer_agent}",  // e.g., "{project}-backend"
+  prompt: "Fix the issues found during QA for issue #{number}.
+
+  **QA Feedback**:
+  {qa_issues_list}
+
+  **Your task**:
+  1. Fix each issue/bug listed above
+  2. Ensure all tests pass
+  3. Add tests for the bugs if missing
+  4. Report what you fixed
+
+  **When done**: List the fixes made for each issue.",
+  description: "Fix QA issues for #{number}"
+)
+```
+
+After developer fixes, **re-run QA** (loop back) - skip reviewer since those issues were already approved.
+
 ### Pipeline Completion
 
-Only after ALL pipeline steps complete:
+Only after ALL pipeline steps complete (with no pending issues):
 
 ```markdown
 ## Pipeline Complete
