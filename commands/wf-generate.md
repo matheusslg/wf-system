@@ -352,9 +352,11 @@ Present recommended skills and let user choose:
 
 **IMPORTANT**: The templates below are **EXAMPLES**, not a strict list. Create skills for ANY detected technology using the same pattern:
 
-1. **Context section** - Use inline command syntax (exclamation + backticks) to gather relevant info when skill loads
+1. **Context section** - Use inline command syntax to gather relevant info when skill loads
 2. **Task section** - Clear instructions with bash commands
 3. **Error guidance** - Tell Claude what to do if something fails
+
+**SYNTAX NOTE**: In templates below, `[[command]]` is a placeholder. When generating actual skill files, replace `[[command]]` with the inline execution syntax: exclamation mark followed by command in backticks.
 
 **Examples of adapting to other stacks:**
 - Vue detected? → Create `vue-build.md`, `vue-lint.md`, `vue-test.md`
@@ -378,8 +380,8 @@ argument-hint: [stack-name]
 # Pulumi Preview
 
 ## Context
-- Current stack: !`pulumi stack --show-name 2>/dev/null || echo "no stack selected"`
-- Available stacks: !`pulumi stack ls 2>/dev/null | head -10`
+- Current stack: [[pulumi stack --show-name 2>/dev/null || echo "no stack selected"]]
+- Available stacks: [[pulumi stack ls 2>/dev/null | head -10]]
 
 ## Task
 Preview infrastructure changes without applying:
@@ -401,7 +403,7 @@ argument-hint: [stack-name]
 # Pulumi Up
 
 ## Context
-- Current stack: !`pulumi stack --show-name 2>/dev/null || echo "no stack selected"`
+- Current stack: [[pulumi stack --show-name 2>/dev/null || echo "no stack selected"]]
 
 ## Task
 **IMPORTANT**: Always run preview first and get user confirmation before applying.
@@ -432,8 +434,8 @@ argument-hint: [workspace]
 # Terraform Plan
 
 ## Context
-- Current workspace: !`terraform workspace show 2>/dev/null || echo "default"`
-- Available workspaces: !`terraform workspace list 2>/dev/null`
+- Current workspace: [[terraform workspace show 2>/dev/null || echo "default"]]
+- Available workspaces: [[terraform workspace list 2>/dev/null]]
 
 ## Task
 \`\`\`bash
@@ -454,8 +456,8 @@ allowed-tools: Bash, Read, AskUserQuestion
 # Terraform Apply
 
 ## Context
-- Current workspace: !`terraform workspace show 2>/dev/null`
-- Plan file exists: !`ls -la tfplan 2>/dev/null || echo "No tfplan file found"`
+- Current workspace: [[terraform workspace show 2>/dev/null]]
+- Plan file exists: [[ls -la tfplan 2>/dev/null || echo "No tfplan file found"]]
 
 ## Task
 **IMPORTANT**: Review plan output and confirm with user before applying.
@@ -479,7 +481,7 @@ argument-hint: <type> <name>
 
 ## Context
 - Available types: module, controller, service, resource, guard, pipe, interceptor, middleware, filter
-- Existing modules: !`ls -d src/*/ 2>/dev/null | head -10`
+- Existing modules: [[ls -d src/*/ 2>/dev/null | head -10]]
 
 ## Task
 Generate NestJS resource:
@@ -501,8 +503,8 @@ argument-hint: [test-pattern]
 # NestJS Tests
 
 ## Context
-- Test scripts: !`cat package.json | grep -E '"test' | head -5`
-- Test files: !`find src -name "*.spec.ts" | wc -l` spec files found
+- Test scripts: [[cat package.json | grep -E '"test' | head -5]]
+- Test files: [[find src -name "*.spec.ts" | wc -l]] spec files found
 
 ## Task
 Run tests:
@@ -524,8 +526,8 @@ argument-hint: [migration-name]
 # Database Migration
 
 ## Context
-- Pending migrations: !`npx mikro-orm migration:pending 2>/dev/null || echo "Check migration status manually"`
-- Recent migrations: !`ls -lt src/migrations/*.ts 2>/dev/null | head -5`
+- Pending migrations: [[npx mikro-orm migration:pending 2>/dev/null || echo "Check migration status manually"]]
+- Recent migrations: [[ls -lt src/migrations/*.ts 2>/dev/null | head -5]]
 
 ## Task
 1. Create migration (if name provided):
@@ -553,9 +555,9 @@ allowed-tools: Bash, Read
 # Next.js Build
 
 ## Context
-- Node version: !`node -v`
-- Build scripts: !`cat package.json | grep -E '"build' | head -3`
-- Last build: !`ls -la .next 2>/dev/null | head -3 || echo "No previous build"`
+- Node version: [[node -v]]
+- Build scripts: [[cat package.json | grep -E '"build' | head -3]]
+- Last build: [[ls -la .next 2>/dev/null | head -3 || echo "No previous build"]]
 
 ## Task
 \`\`\`bash
@@ -575,8 +577,8 @@ allowed-tools: Bash, Read
 # Next.js Lint & Type Check
 
 ## Context
-- ESLint config: !`ls .eslintrc* eslint.config.* 2>/dev/null | head -1 || echo "No ESLint config found"`
-- TypeScript config: !`ls tsconfig.json 2>/dev/null || echo "No tsconfig.json"`
+- ESLint config: [[ls .eslintrc* eslint.config.* 2>/dev/null | head -1 || echo "No ESLint config found"]]
+- TypeScript config: [[ls tsconfig.json 2>/dev/null || echo "No tsconfig.json"]]
 
 ## Task
 Run linting:
@@ -603,8 +605,8 @@ argument-hint: [test-pattern]
 # Frontend Tests
 
 ## Context
-- Test framework: !`cat package.json | grep -E '"vitest"|"jest"' | head -1`
-- Test files: !`find . -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" 2>/dev/null | wc -l` test files
+- Test framework: [[cat package.json | grep -E '"vitest"|"jest"' | head -1]]
+- Test files: [[find . -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" 2>/dev/null | wc -l]] test files
 
 ## Task
 \`\`\`bash
@@ -627,9 +629,9 @@ argument-hint: [service-name]
 # Docker Compose Up
 
 ## Context
-- Compose file: !`ls docker-compose*.yml 2>/dev/null | head -1`
-- Services defined: !`docker compose config --services 2>/dev/null`
-- Running containers: !`docker compose ps 2>/dev/null`
+- Compose file: [[ls docker-compose*.yml 2>/dev/null | head -1]]
+- Services defined: [[docker compose config --services 2>/dev/null]]
+- Running containers: [[docker compose ps 2>/dev/null]]
 
 ## Task
 \`\`\`bash
@@ -651,7 +653,7 @@ argument-hint: <container-name>
 # Docker Logs
 
 ## Context
-- Running services: !`docker compose ps 2>/dev/null | tail -10`
+- Running services: [[docker compose ps 2>/dev/null | tail -10]]
 
 ## Task
 \`\`\`bash
@@ -669,7 +671,7 @@ allowed-tools: Bash, AskUserQuestion
 # Docker Compose Down
 
 ## Context
-- Running containers: !`docker compose ps 2>/dev/null`
+- Running containers: [[docker compose ps 2>/dev/null]]
 
 ## Task
 **Confirm with user before stopping services.**
@@ -692,9 +694,9 @@ argument-hint: [test-path]
 # Python Tests
 
 ## Context
-- Python version: !`python --version 2>/dev/null || python3 --version`
-- Pytest config: !`ls pytest.ini pyproject.toml setup.cfg 2>/dev/null | head -1`
-- Test files: !`find . -name "test_*.py" -o -name "*_test.py" 2>/dev/null | wc -l` test files
+- Python version: [[python --version 2>/dev/null || python3 --version]]
+- Pytest config: [[ls pytest.ini pyproject.toml setup.cfg 2>/dev/null | head -1]]
+- Test files: [[find . -name "test_*.py" -o -name "*_test.py" 2>/dev/null | wc -l]] test files
 
 ## Task
 \`\`\`bash
@@ -714,7 +716,7 @@ allowed-tools: Bash, Read
 # Python Lint
 
 ## Context
-- Linter config: !`ls ruff.toml .flake8 mypy.ini pyproject.toml 2>/dev/null | head -3`
+- Linter config: [[ls ruff.toml .flake8 mypy.ini pyproject.toml 2>/dev/null | head -3]]
 
 ## Task
 Run linting:
@@ -742,8 +744,8 @@ allowed-tools: Bash, Read
 # Database Status
 
 ## Context
-- Docker DB containers: !`docker compose ps 2>/dev/null | grep -E 'postgres|mysql|mongo' || echo "No DB containers found"`
-- Environment DB config: !`grep -E 'DATABASE|DB_' .env 2>/dev/null | head -5 || echo "Check .env for DB config"`
+- Docker DB containers: [[docker compose ps 2>/dev/null | grep -E 'postgres|mysql|mongo' || echo "No DB containers found"]]
+- Environment DB config: [[grep -E 'DATABASE|DB_' .env 2>/dev/null | head -5 || echo "Check .env for DB config"]]
 
 ## Task
 Check database connectivity:
@@ -767,7 +769,7 @@ argument-hint: <database-name> <output-file>
 # Database Dump
 
 ## Context
-- Available databases: !`psql -h localhost -U postgres -c "\\l" 2>/dev/null | head -10 || echo "Cannot list databases"`
+- Available databases: [[psql -h localhost -U postgres -c "\\l" 2>/dev/null | head -10 || echo "Cannot list databases"]]
 
 ## Task
 **Confirm database name and output file with user.**
@@ -795,10 +797,10 @@ argument-hint: [base-branch]
 # Create Pull Request
 
 ## Context
-- Current branch: !`git branch --show-current`
-- Base branch: !`git remote show origin 2>/dev/null | grep "HEAD branch" | cut -d: -f2 | xargs`
-- Unpushed commits: !`git log @{u}.. --oneline 2>/dev/null || echo "Branch not pushed yet"`
-- Changed files: !`git diff --stat @{u}.. 2>/dev/null | tail -5`
+- Current branch: [[git branch --show-current]]
+- Base branch: [[git remote show origin 2>/dev/null | grep "HEAD branch" | cut -d: -f2 | xargs]]
+- Unpushed commits: [[git log @{u}.. --oneline 2>/dev/null || echo "Branch not pushed yet"]]
+- Changed files: [[git diff --stat @{u}.. 2>/dev/null | tail -5]]
 
 ## Task
 1. Push current branch if needed:
@@ -823,8 +825,8 @@ argument-hint: [label]
 # GitHub Issues
 
 ## Context
-- Repository: !`gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo "Not a GitHub repo"`
-- Open issues count: !`gh issue list --state open --json number -q 'length' 2>/dev/null || echo "?"`
+- Repository: [[gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo "Not a GitHub repo"]]
+- Open issues count: [[gh issue list --state open --json number -q 'length' 2>/dev/null || echo "?"]]
 
 ## Task
 List open issues:
@@ -844,7 +846,7 @@ argument-hint: [pr-number]
 # PR Status
 
 ## Context
-- Current branch PRs: !`gh pr list --head $(git branch --show-current) 2>/dev/null`
+- Current branch PRs: [[gh pr list --head $(git branch --show-current) 2>/dev/null]]
 
 ## Task
 Show PR details:
@@ -870,7 +872,7 @@ allowed-tools: Bash, Read
 # Dependency Check
 
 ## Context
-- Package manager: !`ls package-lock.json yarn.lock pnpm-lock.yaml requirements.txt Pipfile.lock 2>/dev/null | head -1`
+- Package manager: [[ls package-lock.json yarn.lock pnpm-lock.yaml requirements.txt Pipfile.lock 2>/dev/null | head -1]]
 
 ## Task
 Check outdated packages:
@@ -898,11 +900,11 @@ allowed-tools: Bash, Read
 # Environment Check
 
 ## Context
-- Node: !`node -v 2>/dev/null || echo "Not installed"`
-- npm: !`npm -v 2>/dev/null || echo "Not installed"`
-- Python: !`python3 --version 2>/dev/null || echo "Not installed"`
-- Docker: !`docker --version 2>/dev/null || echo "Not installed"`
-- Git: !`git --version`
+- Node: [[node -v 2>/dev/null || echo "Not installed"]]
+- npm: [[npm -v 2>/dev/null || echo "Not installed"]]
+- Python: [[python3 --version 2>/dev/null || echo "Not installed"]]
+- Docker: [[docker --version 2>/dev/null || echo "Not installed"]]
+- Git: [[git --version]]
 
 ## Task
 Check environment variables:
