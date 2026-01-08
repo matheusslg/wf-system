@@ -55,12 +55,45 @@ Use directory name as default, but confirm with user.
 
 Ask user: "Do you want to configure GitHub integration now?"
 
-If yes:
+**If No**:
+- Leave blank (can be set later by `/wf-generate`)
+- Skip to Step 3
+
+**If Yes**, follow this flow:
+
+#### Step 2a: Check if repo exists
+
+Ask: "Does the GitHub repository already exist?"
+
+**If Yes (repo exists)**:
 - Ask for GitHub owner (username or org)
 - Ask for repository name
+- Verify with: `gh repo view owner/repo --json name 2>/dev/null && echo "FOUND" || echo "NOT_FOUND"`
+- If NOT_FOUND, warn user and ask to re-enter or create
 
-If no:
-- Leave blank (can be set later by `/wf-generate`)
+**If No (need to create repo)**:
+
+#### Step 2b: Create GitHub Repository
+
+Ask for:
+1. **Owner**: GitHub username or organization
+2. **Repository name**: Name for the new repo (default: project name)
+3. **Visibility**: Public or Private (default: Private)
+4. **Description**: Optional repo description
+
+Create the repository:
+```bash
+gh repo create [owner]/[repo] --[public|private] --description "[description]" --confirm
+```
+
+If successful, store owner and repo for workflow.json.
+
+If `gh` CLI not installed or not authenticated:
+```bash
+gh auth status 2>/dev/null || echo "NOT_AUTHENTICATED"
+```
+- Suggest: `gh auth login`
+- Or skip GitHub setup and continue without it
 
 ## 3. Create Directory Structure
 
