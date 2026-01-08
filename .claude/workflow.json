@@ -9,7 +9,11 @@
     "system": null,
     "styleGuide": null
   },
-  "scopes": [],
-  "agents": {},
+  "scopes": ["commands", "hooks", "docs"],
+  "agents": {
+    "commands": ".claude/agents/wf-system-commands.md",
+    "hooks": ".claude/agents/wf-system-hooks.md",
+    "reviewer": ".claude/agents/wf-system-reviewer.md"
+  },
   "init_script": null
 }
