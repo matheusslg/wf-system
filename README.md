@@ -1,14 +1,39 @@
-# WF System
+<p align="center">
+  <h1 align="center">WF System</h1>
+  <p align="center">
+    <strong>A workflow management system for Claude Code</strong>
+  </p>
+  <p align="center">
+    Session management, progress tracking, and seamless GitHub/Jira integration
+  </p>
+</p>
 
-A workflow management system for [Claude Code](https://claude.com/claude-code) that provides session management, progress tracking, and Jira/GitHub integration.
+<p align="center">
+  <a href="https://buymeacoffee.com/matheusslg">
+    <img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?style=flat-square&logo=buy-me-a-coffee" alt="Buy Me A Coffee">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License">
+  </a>
+  <a href="https://claude.com/claude-code">
+    <img src="https://img.shields.io/badge/Claude%20Code-compatible-purple?style=flat-square" alt="Claude Code Compatible">
+  </a>
+</p>
+
+---
 
 ## Features
 
-- **Session Management**: Start and end sessions with automatic progress tracking
-- **Context Monitoring**: Auto-triggers session end at 75% context usage
-- **Ticket Breakdown**: Break down tickets into sub-tasks with agent delegation
-- **Multi-Platform**: Works with both GitHub Issues and Jira
-- **Autonomous Mode**: Optional checkpoint system for multi-task execution
+| Feature | Description |
+|---------|-------------|
+| **Session Management** | Start and end sessions with automatic progress tracking |
+| **Context Monitoring** | Auto-triggers session end at 75% context usage |
+| **Ticket Breakdown** | Break down tickets into sub-tasks with agent delegation |
+| **Multi-Agent Pipeline** | Developer → Reviewer → QA workflow enforcement |
+| **Design Integration** | Figma, design systems, and design tokens support |
+| **Multi-Platform** | Works with both GitHub Issues and Jira |
+
+---
 
 ## Installation
 
@@ -19,63 +44,130 @@ git clone https://github.com/matheusslg/wf-system.git ~/wf-system
 
 The installer will ask:
 
-1. **Installation scope**:
-   - `Global` (default) → `~/.claude/commands/` - Available in all projects
-   - `Project` → `./.claude/commands/` - Only for current project
+| Option | Choices | Description |
+|--------|---------|-------------|
+| **Scope** | `Global` (default) / `Project` | Global: `~/.claude/commands/` • Project: `./.claude/commands/` |
+| **Method** | `Symlink` (default) / `Copy` | Symlink auto-updates with `git pull` |
 
-2. **Installation method** (global only):
-   - `Symlink` (default) → Auto-updates when you `git pull`
-   - `Copy` → Standalone, no dependency on cloned repo
+> **Note**: Global install includes the orchestrator hook for context monitoring. Restart Claude Code after installation.
 
-**Global install** includes the orchestrator hook for context monitoring.
-**Project install** only copies commands (no hook).
-
-Restart Claude Code after installation.
+---
 
 ## Quick Start
 
-1. Navigate to your project directory
-2. Run `/wf-init` to create the workflow structure
-3. Run `/wf-generate` to create agents and skills based on your tech stack
-4. Use `/wf-start-session` to begin working
-5. Use `/wf-end-session` when done (or let the context monitor trigger it)
+### Choose Your Workflow
 
-**Alternative (PRD-first workflow)**:
+<table>
+<tr>
+<td width="50%">
+
+#### Starting Fresh (PRD-First)
+
+Best for new projects where you want to define requirements first.
+
 ```
-/wf-init → /wf-create-prd → /wf-parse-prd → /wf-generate → /wf-start-session
+/wf-init
+    ↓
+/wf-create-prd
+    ↓
+/wf-design-setup  ← (optional)
+    ↓
+/wf-parse-prd
+    ↓
+/wf-generate
+    ↓
+/wf-start-session
 ```
+
+</td>
+<td width="50%">
+
+#### Existing Codebase
+
+Best for projects that already have code and structure.
+
+```
+/wf-init
+    ↓
+/wf-generate
+    ↓
+/wf-start-session
+```
+
+</td>
+</tr>
+</table>
+
+### Daily Development Loop
+
+Once set up, your daily workflow looks like this:
+
+```
+/wf-start-session → /wf-pick-issue → [work] → /wf-commit → /wf-end-session
+```
+
+---
 
 ## Commands
 
+### Project Setup
+
 | Command | Description |
 |---------|-------------|
-| `/wf-start-session` | Start a development session |
-| `/wf-end-session` | End session and save progress |
-| `/wf-overview` | Quick status overview |
-| `/wf-pick-issue` | Select next issue to work on |
-| `/wf-implement` | Build a new feature |
-| `/wf-fix-bug` | Debug and fix an issue |
-| `/wf-test` | Run tests and fix failures |
-| `/wf-refactor` | Restructure code safely |
-| `/wf-review` | Review code changes |
-| `/wf-commit` | Create conventional commit |
-| `/wf-create-prd` | Create a PRD from scratch with guided questions |
-| `/wf-parse-prd` | Parse existing PRD and create parent issues |
-| `/wf-breakdown` | Break ticket into sub-tasks |
-| `/wf-delegate` | Execute assigned sub-task |
-| `/wf-ticket-status` | Check implementation progress |
-| `/wf-create-ticket` | Create GitHub/Jira ticket |
-| `/wf-debug` | Deep investigation mode |
-| `/wf-improve` | Enhance existing code |
-| `/wf-init` | Bootstrap minimal workflow structure |
-| `/wf-generate` | Generate agents and skills based on tech stack |
+| `/wf-init` | Bootstrap minimal workflow structure (checks for required MCPs) |
+| `/wf-generate` | Generate agents and skills based on detected tech stack |
 | `/wf-design-setup` | Configure design resources (Figma, design system, tokens) |
 
-See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed documentation.
+### PRD & Planning
+
+| Command | Description |
+|---------|-------------|
+| `/wf-create-prd` | Create a PRD from scratch with guided questions |
+| `/wf-parse-prd` | Parse existing PRD and create GitHub Issues |
+| `/wf-breakdown` | Break ticket into atomic sub-tasks with agent assignments |
+
+### Session Management
+
+| Command | Description |
+|---------|-------------|
+| `/wf-start-session` | Start session - loads progress, verifies environment, shows MCP status |
+| `/wf-end-session` | End session - saves progress, commits changes, archives session |
+| `/wf-overview` | Quick status overview of current work state |
+
+### Development
+
+| Command | Description |
+|---------|-------------|
+| `/wf-pick-issue` | Select next issue to work on based on priority |
+| `/wf-implement` | Build a new feature from description |
+| `/wf-fix-bug` | Debug and fix an issue |
+| `/wf-test` | Run tests and fix any failures |
+| `/wf-refactor` | Restructure code without changing behavior |
+| `/wf-improve` | Enhance existing code or feature quality |
+| `/wf-debug` | Deep investigation for complex issues |
+
+### Ticket Management
+
+| Command | Description |
+|---------|-------------|
+| `/wf-delegate` | Execute a sub-task with its assigned agent |
+| `/wf-ticket-status` | Check implementation progress for a tracked ticket |
+| `/wf-create-ticket` | Create GitHub/Jira ticket from user story |
+
+### Code Quality
+
+| Command | Description |
+|---------|-------------|
+| `/wf-review` | Review recent code changes or a specific PR |
+| `/wf-commit` | Create a well-formatted conventional commit |
+
+> See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed documentation.
+
+---
 
 ## Configuration
 
-Create `.claude/workflow.json` in your project root:
+WF System creates `.claude/workflow.json` in your project root:
 
 ```json
 {
@@ -85,40 +177,131 @@ Create `.claude/workflow.json` in your project root:
     "repo": "your-repo"
   },
   "design": {
-    "figma": { "fileKey": "abc123", "fileUrl": "https://figma.com/..." },
+    "figma": {
+      "fileKey": "abc123",
+      "fileUrl": "https://figma.com/design/abc123/..."
+    },
     "system": "shadcn",
     "styleGuide": "docs/STYLE_GUIDE.md"
   },
-  "breakdown": {
-    "enabled": true,
-    "agents": {
-      "frontend": { "label": "frontend" },
-      "backend": { "label": "backend" }
-    }
+  "scopes": ["frontend", "backend", "api"],
+  "agents": {
+    "frontend": { "file": "frontend.md", "label": "frontend" },
+    "backend": { "file": "backend.md", "label": "backend" }
   }
 }
 ```
 
-See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
+> See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
+
+---
 
 ## How It Works
 
-### Session Start
-When you start Claude Code in a project with `workflow.json`, the orchestrator hook:
-1. Detects the workflow type (GitHub or Jira)
-2. Checks for work in progress
-3. Suggests the appropriate next command
+### Session Lifecycle
 
-### Context Monitoring
-The orchestrator monitors token usage via the transcript file:
-- At **75%**: Triggers `/wf-end-session` to save progress
-- At **85%**: Shows warning message
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        SESSION START                             │
+│  /wf-start-session                                              │
+│  ├── Check MCP availability (GitHub, Figma)                     │
+│  ├── Load progress.md (previous session state)                  │
+│  ├── Verify environment (git, dependencies)                     │
+│  └── Show open issues summary                                   │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                         DEVELOPMENT                              │
+│  /wf-pick-issue → /wf-implement or /wf-fix-bug → /wf-commit     │
+│                                                                  │
+│  Context Monitoring:                                             │
+│  • 75% usage → Auto-triggers /wf-end-session                    │
+│  • 85% usage → Shows warning message                            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                         SESSION END                              │
+│  /wf-end-session                                                │
+│  ├── Save progress to progress.md                               │
+│  ├── Commit pending changes                                     │
+│  ├── Archive session if file exceeds 500 lines                  │
+│  └── Verify clean git state                                     │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### Session End
-When ending a session:
-1. Progress is saved to `progress.md`
-2. Current work is committed
-3. Session is archived for continuity
+### Multi-Agent Pipeline
+
+When using `/wf-delegate`, work automatically flows through the pipeline:
+
+```
+Developer (frontend/backend)
+         ↓
+    [Implementation]
+         ↓
+      Reviewer  ← (if reviewer agent exists)
+         ↓
+     [Code Review]
+         ↓
+        QA       ← (if QA agent exists)
+         ↓
+    [Testing & Validation]
+         ↓
+       Close
+```
+
+---
+
+## Requirements
+
+### Core Requirements
+
+| Requirement | Purpose |
+|-------------|---------|
+| [Claude Code CLI](https://claude.ai/code) | Required - The AI-powered CLI |
+| Python 3.x | Required - For orchestrator hook |
+| `jq` | Optional - For settings merge |
+| `gh` CLI | Optional - For GitHub operations |
+
+### MCP Servers (Recommended)
+
+WF System works best with these MCP servers installed:
+
+| MCP Server | Required For | Status |
+|------------|--------------|--------|
+| **[GitHub MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/github)** | Issue management, PRs, ticket tracking | Recommended |
+| **[Figma MCP](https://github.com/figma/figma-mcp-server)** | Design context, tokens, screenshots | Optional |
+| **[Context7](https://github.com/upstash/context7)** | Library documentation lookup | Optional |
+
+> `/wf-init` will check for these and guide installation if missing.
+
+**Without MCPs:**
+- **No GitHub MCP**: Manual issue management (copy/paste)
+- **No Figma MCP**: `/wf-design-setup` will skip Figma integration
+
+---
+
+## Project Structure
+
+After running `/wf-init` and `/wf-generate`:
+
+```
+your-project/
+├── .claude/
+│   ├── workflow.json          # Workflow configuration
+│   ├── agents/                # Agent definitions
+│   │   ├── frontend.md
+│   │   ├── backend.md
+│   │   └── ...
+│   ├── skills/                # Agent skills
+│   │   └── {skill-name}/
+│   │       └── SKILL.md
+│   └── session-archive/       # Archived sessions
+├── progress.md                # Session progress tracking
+├── standards.md               # Code standards
+└── PRD.md                     # Product requirements (if using PRD-first)
+```
+
+---
 
 ## Uninstall
 
@@ -126,27 +309,24 @@ When ending a session:
 ~/wf-system/uninstall.sh
 ```
 
-## Requirements
+---
 
-- Claude Code CLI
-- Python 3.x
-- `jq` (optional, for settings merge)
+## Support
 
-### MCP Servers (Recommended)
+If you find WF System helpful, consider supporting its development:
 
-WF System works best with these MCP servers installed:
+<a href="https://buymeacoffee.com/matheusslg">
+  <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=matheusslg&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" />
+</a>
 
-| MCP Server | Required For | Installation |
-|------------|--------------|--------------|
-| **GitHub** | Issue management, PRs, tickets | [github-mcp](https://github.com/modelcontextprotocol/servers/tree/main/src/github) |
-| **Figma** | Design context, tokens, screenshots | [figma-mcp](https://github.com/anthropics/claude-figma-mcp) |
-| **Context7** | Library documentation lookup | [context7](https://github.com/upstash/context7) |
-
-`/wf-init` will check for these and guide installation if missing.
-
-**Without GitHub MCP**: Manual issue management (copy/paste)
-**Without Figma MCP**: `/wf-design-setup` will skip Figma integration
+---
 
 ## License
 
 MIT
+
+---
+
+<p align="center">
+  Made with Claude Code
+</p>

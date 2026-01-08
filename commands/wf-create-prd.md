@@ -259,9 +259,10 @@ Next steps:
 1. Review and refine the PRD manually if needed
 2. (Optional) Run /wf-design-setup to configure detailed design resources (Figma, tokens, etc.)
 3. Run /wf-parse-prd to create GitHub Issues from the roadmap
-4. Run /wf-breakdown #N to break parent issues into sub-tasks
+4. Run /wf-generate to create agents and skills based on your tech stack
+5. Run /wf-start-session to begin development
 
-Workflow: /wf-create-prd → /wf-design-setup (optional) → /wf-parse-prd → /wf-breakdown → /wf-delegate
+Workflow: /wf-create-prd → /wf-design-setup (optional) → /wf-parse-prd → /wf-generate → /wf-start-session
 ```
 
 ---

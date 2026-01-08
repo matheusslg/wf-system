@@ -138,11 +138,16 @@ After creating issues:
 
 ## Next Steps
 
+**If agents not yet created** (empty `.claude/agents/` directory):
+1. Run `/wf-generate` to create agents and skills based on your tech stack
+2. Run `/wf-start-session` to begin development
+
+**If agents already exist**:
 1. **Break down issues**: Use `/wf-breakdown #N` to create sub-tasks
 2. **Start working**: Use `/wf-pick-issue` to select first task
 3. **Track progress**: Use `/wf-ticket-status #N` to monitor
 
-**Recommended**: Start with `/wf-breakdown #1` to break down the first issue.
+**Workflow**: `/wf-parse-prd` → `/wf-generate` → `/wf-start-session` → `/wf-pick-issue`
 ```
 
 ## 6. Handle Edge Cases

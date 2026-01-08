@@ -330,7 +330,7 @@ If no:
 
 ```
 # Starting fresh (PRD-first):
-/wf-init → /wf-create-prd → /wf-parse-prd → /wf-generate → /wf-start-session
+/wf-init → /wf-create-prd → /wf-design-setup (optional) → /wf-parse-prd → /wf-generate → /wf-start-session
 
 # Existing codebase:
 /wf-init → /wf-generate → /wf-start-session
