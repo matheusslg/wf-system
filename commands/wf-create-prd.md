@@ -1,30 +1,27 @@
 ---
 description: Create a PRD from scratch with guided questions
 allowed-tools: Read, Write, Bash, AskUserQuestion
-argument-hint: [project-name]
 ---
 
 # Create PRD
 
 Generate a Product Requirements Document (PRD) through an interactive Q&A flow. The output is structured for compatibility with `/wf-parse-prd`.
 
-**Note**: Can be run before or after `/wf-init`. However, `/wf-parse-prd` requires `workflow.json` for GitHub integration, so run `/wf-init` before parsing the PRD.
+**Prerequisite**: Run `/wf-init` first to set up the project name and workflow structure.
 
-## Arguments
+## 0. Get Project Name from workflow.json
 
-- `$ARGUMENTS` - Project name. **MUST use this value if provided.**
+Read the project name from `.claude/workflow.json`:
 
-## 0. Get Project Name
-
-**CRITICAL**: If `$ARGUMENTS` is provided, use it as the project name. Do NOT ask the user again.
-
-```
-Project Name = $ARGUMENTS (if not empty)
-             = Ask user (if $ARGUMENTS is empty)
-             = Current directory name (as fallback default)
+```bash
+cat .claude/workflow.json 2>/dev/null
 ```
 
-Store this project name for use in the PRD header and throughout the document.
+**If workflow.json exists**: Extract the `project` field and use it as the project name.
+
+**If workflow.json doesn't exist**:
+- Display: "Workflow not initialized. Run `/wf-init` first to set up the project."
+- Exit without creating PRD.
 
 ## 1. Check for Existing PRD
 
@@ -251,11 +248,11 @@ Workflow: /wf-create-prd → /wf-parse-prd → /wf-breakdown → /wf-delegate
 
 ## Error Handling
 
-### No Project Name
+### No workflow.json
 
-If `$ARGUMENTS` is empty and user doesn't provide one:
-- Use the current directory name as default
-- Confirm with user before proceeding
+If `.claude/workflow.json` doesn't exist:
+- Display: "Workflow not initialized. Run `/wf-init` first."
+- Exit without creating PRD
 
 ### User Provides Incomplete Answers
 
@@ -275,10 +272,10 @@ If Write tool fails:
 ## Example Flow
 
 ```
-User: /wf-create-prd my-awesome-app
+User: /wf-create-prd
 
 Claude:
-1. Project name = "my-awesome-app" (from argument)
+1. Reads .claude/workflow.json → project = "my-awesome-app"
 2. Checks for existing PRD.md
 3. Asks: PRD scope? → User selects "Minimal"
 4. Asks: Guidance level? → User selects "Light"
