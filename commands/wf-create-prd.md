@@ -12,9 +12,21 @@ Generate a Product Requirements Document (PRD) through an interactive Q&A flow. 
 
 ## Arguments
 
-- `$ARGUMENTS` - Optional project name. If not provided, will be asked.
+- `$ARGUMENTS` - Project name. **MUST use this value if provided.**
 
-## 0. Check for Existing PRD
+## 0. Get Project Name
+
+**CRITICAL**: If `$ARGUMENTS` is provided, use it as the project name. Do NOT ask the user again.
+
+```
+Project Name = $ARGUMENTS (if not empty)
+             = Ask user (if $ARGUMENTS is empty)
+             = Current directory name (as fallback default)
+```
+
+Store this project name for use in the PRD header and throughout the document.
+
+## 1. Check for Existing PRD
 
 ```bash
 ls PRD.md 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
@@ -30,7 +42,7 @@ ls PRD.md 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 
 If user selects "Cancel", stop here and suggest reviewing the existing PRD with `/wf-parse-prd`.
 
-## 1. Choose PRD Scope
+## 2. Choose PRD Scope
 
 Use AskUserQuestion to ask:
 
@@ -43,7 +55,7 @@ Use AskUserQuestion to ask:
 
 Store the choice for later sections.
 
-## 2. Choose Guidance Level
+## 3. Choose Guidance Level
 
 Use AskUserQuestion to ask:
 
@@ -56,9 +68,11 @@ Use AskUserQuestion to ask:
 
 Store the choice for question flow.
 
-## 3. Interactive Q&A
+## 4. Interactive Q&A
 
-Based on choices from Steps 1 and 2, ask the appropriate questions.
+Based on choices from Steps 2 and 3, ask the appropriate questions.
+
+**Remember**: Project name was already determined in Step 0. Use that value.
 
 ### Light Guidance Questions (3-4)
 
@@ -73,33 +87,32 @@ Ask these in a single AskUserQuestion with text inputs:
 
 Ask in batches of 3-4 questions using AskUserQuestion:
 
-**Batch 1: Core**
-1. **Project Name**: "What's the product/project called?" (use $ARGUMENTS if provided)
-2. **Problem Statement**: "What problem does this solve? Who experiences this problem?"
-3. **Target Users**: "Who are your primary users? Describe them briefly."
+**Batch 1: Core** (Project name already known from Step 0)
+1. **Problem Statement**: "What problem does this solve? Who experiences this problem?"
+2. **Target Users**: "Who are your primary users? Describe them briefly."
+3. **User Personas**: "Describe 1-2 typical users (name, role, goals, pain points)"
 
 **Batch 2: Solution**
-4. **User Personas**: "Describe 1-2 typical users (name, role, goals, pain points)"
-5. **Proposed Solution**: "What's your high-level approach to solving this?"
-6. **Key Features (MVP)**: "List the must-have features for the first version"
+4. **Proposed Solution**: "What's your high-level approach to solving this?"
+5. **Key Features (MVP)**: "List the must-have features for the first version"
+6. **Future Features**: "What features come after MVP? (Phase 1, Phase 2...)"
 
 **Batch 3: Scope**
-7. **Future Features**: "What features come after MVP? (Phase 1, Phase 2...)"
-8. **Non-Goals**: "What's explicitly out of scope?"
-9. **Technical Constraints**: "Any technical requirements or limitations?"
+7. **Non-Goals**: "What's explicitly out of scope?"
+8. **Technical Constraints**: "Any technical requirements or limitations?"
+9. **Dependencies**: "External systems, APIs, or services needed?"
 
 **Batch 4: Planning**
-10. **Dependencies**: "External systems, APIs, or services needed?"
-11. **Success Metrics**: "How will you measure success? (KPIs, goals)"
-12. **Timeline/Phases**: "Rough phasing? (e.g., Phase 0 = MVP, Phase 1 = ...)"
+10. **Success Metrics**: "How will you measure success? (KPIs, goals)"
+11. **Timeline/Phases**: "Rough phasing? (e.g., Phase 0 = MVP, Phase 1 = ...)"
+12. **Risks**: "Known risks or potential blockers?"
 
-**Batch 5: Risks (optional for Minimal)**
-13. **Risks**: "Known risks or potential blockers?"
-14. **Open Questions**: "Any unresolved decisions or questions?"
+**Batch 5: Final (optional)**
+13. **Open Questions**: "Any unresolved decisions or questions?"
 
-## 4. Generate PRD
+## 5. Generate PRD
 
-Using the collected answers, generate `PRD.md` with the following structure:
+Using the collected answers and the project name from Step 0, generate `PRD.md` with the following structure:
 
 ```markdown
 # PRD: {Project Name}
@@ -190,7 +203,7 @@ Using the collected answers, generate `PRD.md` with the following structure:
 
 Use the Write tool to create `PRD.md` in the project root.
 
-## 5. Validate Output
+## 6. Validate Output
 
 After writing, read back the file to confirm:
 
@@ -203,7 +216,7 @@ Verify:
 - Roadmap has proper `### Phase N` structure for `/wf-parse-prd` parsing
 - No placeholder text remains
 
-## 6. Suggest Next Steps
+## 7. Suggest Next Steps
 
 After successful PRD creation, display:
 
@@ -243,9 +256,17 @@ If Write tool fails:
 
 ---
 
-## Examples
-
-### Example: Light Guidance, Minimal PRD
+## Example Flow
 
 ```
-User: /wf-create-prd task-manager
+User: /wf-create-prd my-awesome-app
+
+Claude:
+1. Project name = "my-awesome-app" (from argument)
+2. Checks for existing PRD.md
+3. Asks: PRD scope? → User selects "Minimal"
+4. Asks: Guidance level? → User selects "Light"
+5. Asks 3-4 questions about problem, users, MVP
+6. Generates PRD.md with "# PRD: my-awesome-app"
+7. Suggests next steps
+```
