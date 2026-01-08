@@ -1,0 +1,15 @@
+{
+  "project": "wf-system",
+  "github": {
+    "owner": "matheusslg",
+    "repo": "wf-system"
+  },
+  "design": {
+    "figma": null,
+    "system": null,
+    "styleGuide": null
+  },
+  "scopes": [],
+  "agents": {},
+  "init_script": null
+}
