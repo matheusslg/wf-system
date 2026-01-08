@@ -651,7 +651,7 @@ argument-hint: <container-name>
 # Docker Logs
 
 ## Context
-- Running services: !`docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null`
+- Running services: !`docker compose ps 2>/dev/null | tail -10`
 
 ## Task
 \`\`\`bash
