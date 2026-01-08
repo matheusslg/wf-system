@@ -6,10 +6,12 @@
 Start a development session with context loading.
 
 **Actions:**
+- Checks MCP availability (GitHub, Figma if configured)
 - Reads progress.md for previous session state
 - Verifies environment (git status, dependencies)
 - Runs init script if defined in workflow.json
 - Shows open issues summary
+- Reports MCP status in session summary
 
 ### `/wf-end-session`
 End session and save progress.
@@ -203,11 +205,17 @@ Parse existing PRD and create parent issues.
 ### `/wf-init`
 Bootstrap minimal workflow structure for a project.
 
+**MCP Prerequisites Check:**
+- Checks for GitHub MCP (recommended for issue management)
+- Lists optional MCPs (Figma, Context7)
+- Allows continuing without MCPs (limited functionality)
+
 **Creates:**
 - `.claude/workflow.json` (generic template)
 - `progress.md` (session tracking)
 - `standards.md` (generic conventions)
 - `.claude/agents/` directory (empty)
+- `.claude/skills/` directory (empty)
 - `.claude/session-archive/` directory (empty)
 
 **Does NOT create:**
@@ -250,8 +258,12 @@ Configure detailed design resources for the project.
 
 **Prerequisites:** Run `/wf-init` first.
 
+**MCP Check:**
+- Checks for Figma MCP before Figma configuration
+- If Figma MCP not available: offers to continue with design system only, or cancel to install first
+
 **Configures:**
-- **Figma integration** - File keys, node IDs, key frames
+- **Figma integration** - File keys, node IDs, key frames (requires Figma MCP)
 - **Design system** - Shadcn, MUI, Tailwind, custom, etc.
 - **Style guide** - Creates `docs/STYLE_GUIDE.md` or links existing
 - **Design tokens** - Extracts from Figma or creates manually

@@ -19,6 +19,36 @@ Extract settings (defaults if not present):
 - `standardsFile`: defaults to "standards.md"
 - `initScript`: optional environment verification script
 
+## 0.5. Quick MCP Status Check
+
+Silently verify available MCP servers to understand what features are available this session:
+
+**GitHub MCP** (for issue management):
+```
+mcp__github__get_me()
+```
+If fails: Note that issue-related commands (`/wf-breakdown`, `/wf-parse-prd`, etc.) won't work.
+
+**Figma MCP** (if design is configured in workflow.json):
+Only check if `workflow.json` has `design.figma` configured:
+```
+mcp__figma__whoami()
+```
+If fails and Figma is configured: Warn user that design context features are unavailable.
+
+**Do NOT block session start** - just include MCP status in the session summary:
+
+```markdown
+**MCP Status**:
+- GitHub: ✅ Available | ❌ Not configured
+- Figma: ✅ Available | ❌ Not configured | ⏭️ Not needed (no Figma config)
+```
+
+If critical MCPs are missing, add to session summary:
+```markdown
+**Note**: Some workflow commands require MCP servers. Run `/wf-init` for setup instructions.
+```
+
 ## 1. Read Progress Log
 
 First, check file size to ensure it's readable:

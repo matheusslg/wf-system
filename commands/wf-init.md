@@ -41,6 +41,67 @@ If "Overwrite" selected:
 - Warn user that progress.md history will be lost
 - Proceed with initialization
 
+## 1.5. Check MCP Prerequisites
+
+Check if essential MCP servers are available for full workflow functionality.
+
+### GitHub MCP (Recommended)
+
+Required for: Issue management, PR creation, ticket tracking
+
+```bash
+# Try to check GitHub MCP availability
+echo "Checking GitHub MCP..."
+```
+
+Then attempt:
+```
+mcp__github__get_me()
+```
+
+**If GitHub MCP available**: Continue normally.
+
+**If GitHub MCP NOT available or fails**:
+
+Display warning and ask user:
+
+```markdown
+⚠️ **GitHub MCP Not Detected**
+
+The GitHub MCP server is recommended for full workflow functionality:
+- Creating and managing issues (`/wf-create-ticket`, `/wf-breakdown`)
+- Parsing PRDs into issues (`/wf-parse-prd`)
+- Tracking ticket status (`/wf-ticket-status`)
+
+**To install GitHub MCP**:
+1. Add to your Claude Code MCP settings
+2. Configure with your GitHub token
+3. Restart Claude Code
+
+See: https://github.com/modelcontextprotocol/servers/tree/main/src/github
+```
+
+| Option | Behavior |
+|--------|----------|
+| **Continue without GitHub MCP** | Proceed with limited functionality (manual issue management) |
+| **Cancel and install first** | Exit to let user install MCP |
+
+### Optional MCPs
+
+Inform user about other helpful MCPs (don't block on these):
+
+```markdown
+**Optional MCP Servers** (can be added later):
+
+| MCP | Purpose | When Needed |
+|-----|---------|-------------|
+| **Figma** | Design context, screenshots, tokens | If using Figma designs (`/wf-design-setup`) |
+| **Context7** | Up-to-date library documentation | For framework/library lookups |
+| **Firecrawl** | Web scraping for research | For gathering external docs |
+
+Run `/wf-design-setup` later to configure Figma integration.
+```
+
 ## 2. Get Project Info
 
 ### Project Name

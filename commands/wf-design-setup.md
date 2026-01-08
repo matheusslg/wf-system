@@ -41,6 +41,41 @@ ls docs/STYLE_GUIDE.md STYLE_GUIDE.md 2>/dev/null || echo "NO_STYLE_GUIDE"
 | **Replace** | Start fresh with new design config |
 | **Cancel** | Exit without changes |
 
+## 1.5. Check Figma MCP (If User Has Figma)
+
+Before asking about Figma, check if the Figma MCP is available:
+
+```
+mcp__figma__whoami()
+```
+
+**If Figma MCP available**: Continue to section 2.
+
+**If Figma MCP NOT available or fails**:
+
+```markdown
+⚠️ **Figma MCP Not Detected**
+
+To use Figma integration features, you need the Figma MCP server installed:
+- Fetching design context for implementation
+- Extracting design tokens and variables
+- Getting screenshots for reference
+
+**To install Figma MCP**:
+1. Add to your Claude Code MCP settings
+2. Authenticate with your Figma account
+3. Restart Claude Code
+
+See: https://github.com/anthropics/claude-figma-mcp
+```
+
+| Option | Behavior |
+|--------|----------|
+| **Continue without Figma** | Skip Figma config, set up design system only |
+| **Cancel and install first** | Exit to let user install MCP |
+
+If continuing without Figma MCP, skip to "## 3. Design System Configuration".
+
 ## 2. Figma Integration
 
 Ask user about Figma:

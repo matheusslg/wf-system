@@ -132,6 +132,21 @@ When ending a session:
 - Python 3.x
 - `jq` (optional, for settings merge)
 
+### MCP Servers (Recommended)
+
+WF System works best with these MCP servers installed:
+
+| MCP Server | Required For | Installation |
+|------------|--------------|--------------|
+| **GitHub** | Issue management, PRs, tickets | [github-mcp](https://github.com/modelcontextprotocol/servers/tree/main/src/github) |
+| **Figma** | Design context, tokens, screenshots | [figma-mcp](https://github.com/anthropics/claude-figma-mcp) |
+| **Context7** | Library documentation lookup | [context7](https://github.com/upstash/context7) |
+
+`/wf-init` will check for these and guide installation if missing.
+
+**Without GitHub MCP**: Manual issue management (copy/paste)
+**Without Figma MCP**: `/wf-design-setup` will skip Figma integration
+
 ## License
 
 MIT
