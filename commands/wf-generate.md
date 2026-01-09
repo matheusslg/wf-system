@@ -1023,7 +1023,102 @@ Verify all dependencies are installed:
 [tech]-status   → Health/status check (for services)
 ```
 
-## 9. Report Results
+## 9. Update Agents with Generated Skills
+
+After generating skills, circle back to update agent files with appropriate skills.
+
+### List Generated Skills
+
+```bash
+ls -d .claude/skills/*/ 2>/dev/null | xargs -I {} basename {}
+```
+
+### Map Skills to Agent Roles
+
+Determine which skills apply to which agent type:
+
+| Agent Role | Skills to Assign |
+|------------|------------------|
+| UI/Frontend (`*-ui`, `*-frontend`) | `visual-verify`, `next-*`, `react-*`, `vue-*` |
+| Backend (`*-backend`, `*-api`) | `nest-*`, `express-*`, `fastapi-*`, `django-*`, `db-*` |
+| Fullstack (`*-fullstack`) | All UI skills + all backend skills |
+| QA/Test (`*-qa`, `*-test`) | `*-test`, `*-lint`, `*-e2e` |
+| Infra (`*-infra`, `*-devops`) | `docker-*`, `pulumi-*`, `tf-*` |
+| Reviewer (`*-reviewer`) | None (read-only agent) |
+| Generic (`*-dev`) | `gh-pr`, `gh-issues`, `deps-check`, `env-check` |
+
+### Update Agent Files
+
+For each agent in `.claude/agents/`:
+
+1. Read the agent file
+2. Determine which generated skills match the agent's role
+3. Update the YAML frontmatter `skills` field
+
+**Example**:
+```bash
+# If agent is project-ui.md and we generated: visual-verify, next-build, next-lint
+# Update the frontmatter:
+
+---
+name: project-ui
+description: UI developer for project...
+tools: Read, Edit, Write, Bash, Grep, Glob
+skills: visual-verify, next-build, next-lint
+model: sonnet
+---
+```
+
+### Skill Assignment Logic
+
+```bash
+# For each agent file
+for agent in .claude/agents/*.md; do
+  agent_name=$(basename "$agent" .md)
+
+  # Determine role from filename
+  if [[ "$agent_name" == *"-ui"* ]] || [[ "$agent_name" == *"-frontend"* ]]; then
+    # Assign UI-related skills
+    skills="visual-verify"
+    [ -d ".claude/skills/next-build" ] && skills="$skills, next-build"
+    [ -d ".claude/skills/next-lint" ] && skills="$skills, next-lint"
+  elif [[ "$agent_name" == *"-backend"* ]] || [[ "$agent_name" == *"-api"* ]]; then
+    # Assign backend-related skills
+    skills=""
+    [ -d ".claude/skills/nest-test" ] && skills="nest-test"
+    [ -d ".claude/skills/db-status" ] && skills="${skills:+$skills, }db-status"
+  elif [[ "$agent_name" == *"-fullstack"* ]]; then
+    # Assign both UI and backend skills
+    skills="visual-verify"
+    # ... add all relevant skills
+  fi
+
+  # Update agent file with skills
+  # (Use Edit tool to update the YAML frontmatter)
+done
+```
+
+### Always Include These Skills
+
+Some skills should be available to most development agents:
+
+| Skill | Assign To |
+|-------|-----------|
+| `visual-verify` | Any agent with UI responsibilities |
+| `gh-pr` | All development agents |
+| `gh-issues` | All development agents |
+| `deps-check` | All development agents |
+
+### Verify Updates
+
+After updating, verify agents have skills:
+```bash
+grep -l "^skills:" .claude/agents/*.md
+```
+
+---
+
+## 10. Report Results
 
 Summarize what was generated:
 
@@ -1058,7 +1153,7 @@ Summarize what was generated:
 **Recommended**: `/wf-start-session` or `/wf-pick-issue` to start development.
 ```
 
-## 10. Suggest Workflow
+## 11. Suggest Workflow
 
 Based on project state, suggest next command:
 
