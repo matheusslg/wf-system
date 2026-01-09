@@ -9,6 +9,32 @@
 
 ---
 
+### Session 4 (2026-01-09)
+**Focus**: Task tool custom agent testing + template integration
+**Completed**:
+- [x] Tested custom agent invocation via Task tool - DOES NOT WORK
+- [x] Updated `/wf-generate` to use role-based templates from `templates/agents/`
+- [x] Updated `/wf-delegate` with workaround for Task tool limitation
+- [x] Documented Task tool limitations in `docs/CONFIGURATION.md`
+**Key Finding - Task Tool Limitation**:
+- Task tool `subagent_type` ONLY accepts built-in agents: general-purpose, Explore, Plan, Bash, claude-code-guide, statusline-setup
+- Custom agents from `.claude/agents/` CANNOT be invoked via Task tool
+- Error: "Agent type 'X' not found. Available agents: ..."
+**Workaround Implemented**:
+- Read custom agent file content
+- Include full agent prompt in Task prompt to `general-purpose`
+- This preserves agent personality while using available infrastructure
+**Changes**:
+- `commands/wf-generate.md` - Section 7 now uses templates with role detection
+- `commands/wf-delegate.md` - Section 10 and pipeline sections use workaround
+- `docs/CONFIGURATION.md` - Added "Known Limitations" section
+**Synced to global**: wf-generate.md, wf-delegate.md
+**Next**:
+- Commit changes
+- Test `/wf-generate` in a real project to verify template usage
+
+---
+
 ### Session 3 (2026-01-09)
 **Focus**: Context monitoring fix + visual-verify skill + agent templates
 **Completed**:
@@ -18,7 +44,7 @@
 - [x] Created agent templates: ui-developer, backend-developer, fullstack-developer, reviewer, generic-developer
 - [x] Researched Claude Code docs on skills + subagents
 - [x] Verified: Custom agents CAN access skills via `skills` field, but built-in agents (Explore, Plan) cannot
-- [x] Verified: Task tool should accept custom agent names (needs session restart to test)
+- [x] CORRECTED: Task tool does NOT accept custom agent names (tested in Session 4)
 **Commits**:
 - `72dcb71` - fix(hooks): correct context monitoring to use latest API call tokens
 - `8a3b8eb` - feat(skills): add visual-verify skill for UI verification
@@ -29,11 +55,7 @@
 - Skills load at session startup only (new skills need restart)
 - Subagents don't inherit skills automatically - need explicit `skills` field
 - Built-in agents (Explore, Plan, general-purpose) have NO skill access
-- Custom agents from `.claude/agents/` with `skills` field DO have access
-**Next**:
-- Test custom agent invocation via Task tool (after session restart)
-- Update `/wf-generate` to use templates + assign skills to agents
-- Update `/wf-delegate` to use custom agents when available
+- Custom agents ARE NOT SUPPORTED by Task tool (corrected from initial assumption)
 
 ---
 
@@ -81,15 +103,16 @@
 - None
 
 ## Next Session Should
-- [ ] Test hooks in a fresh session to confirm visible feedback
+- [ ] Test `/wf-generate` in a real project to verify template usage works
+- [ ] Test `/wf-delegate` with the workaround to verify agent prompts work correctly
 - [ ] Create GitHub issues for planned features/improvements
-- [ ] Run `/wf-pick-issue` to start development
 
 ## Decisions Made
 - Tech stack: Shell (Bash), Python, Markdown, Git/GitHub
 - Scopes: commands, hooks, docs
 - Three agents: commands (development), hooks (development), reviewer (read-only)
 - Hook output uses `systemMessage` for visible user feedback (not just `additionalContext`)
+- Task tool workaround: embed agent file content in prompt to `general-purpose` since custom agents not supported
 
 ## Notes
 - This is the wf-system repository - the workflow management tool itself

@@ -276,20 +276,53 @@ Before starting:
 
 ## 10. Spawn Agent via Task Tool
 
-Use the Task tool to spawn the appropriate agent:
+**Note**: The Task tool doesn't support custom agent names directly. We work around this by:
+1. Reading the agent's system prompt from its file
+2. Including that prompt in the Task to `general-purpose`
+
+### Read Agent Instructions
+
+First, read the full agent file:
+```bash
+cat .claude/agents/{agent_name}.md
+```
+
+### Build Task Prompt
+
+Combine the agent instructions with the task context:
+
+```markdown
+## Agent Role (from {agent_name})
+
+{full_content_of_agent_file}
+
+---
+
+## Task Assignment
+
+{prepared_task_context_from_section_9}
+```
+
+### Spawn via general-purpose
 
 ```
 Task(
-  subagent_type: "{agent_name}",
-  prompt: "{prepared_task_context}",
-  description: "Execute sub-task #{number}"
+  subagent_type: "general-purpose",
+  prompt: "{combined_agent_role_and_task_context}",
+  description: "Execute sub-task #{number} as {agent_name}"
 )
 ```
 
 The agent will:
-1. Read its own agent file for protocols
-2. Execute the task
+1. Follow the instructions from the agent file (included in prompt)
+2. Execute the task with those capabilities
 3. Return completion report
+
+### Why This Works
+
+- `general-purpose` has access to all tools including MCP tools
+- By including the agent's system prompt, we give it the same "personality"
+- The agent follows the same protocols defined in the agent file
 
 ## 11. Process Agent Results
 
@@ -399,11 +432,22 @@ The developer agent has completed the implementation.
 A reviewer agent exists. Starting code review...
 ```
 
-Then automatically spawn the reviewer agent:
+Then read the reviewer agent file and spawn via general-purpose:
+
+```bash
+cat .claude/agents/{project}-reviewer.md
+```
+
 ```
 Task(
-  subagent_type: "{project}-reviewer",
-  prompt: "Review the implementation for issue #{number}.
+  subagent_type: "general-purpose",
+  prompt: "{content_of_reviewer_agent_file}
+
+  ---
+
+  ## Review Task
+
+  Review the implementation for issue #{number}.
 
   **Files to review**: {files_changed}
 
@@ -454,11 +498,22 @@ The reviewer found issues that need to be fixed.
 Sending back to developer agent for fixes...
 ```
 
-Then spawn the **original developer agent** to fix:
+Then read the original developer agent file and spawn via general-purpose:
+
+```bash
+cat .claude/agents/{original_developer_agent}.md  # e.g., {project}-backend
+```
+
 ```
 Task(
-  subagent_type: "{original_developer_agent}",  // e.g., "{project}-backend"
-  prompt: "Fix the issues found during code review for issue #{number}.
+  subagent_type: "general-purpose",
+  prompt: "{content_of_developer_agent_file}
+
+  ---
+
+  ## Fix Task
+
+  Fix the issues found during code review for issue #{number}.
 
   **Review Feedback**:
   {reviewer_issues_list}
@@ -477,11 +532,22 @@ After developer fixes, **re-run the reviewer** (loop back).
 
 ### After QA Agent
 
-Spawn QA agent:
+Read QA agent file and spawn via general-purpose:
+
+```bash
+cat .claude/agents/{project}-qa.md
+```
+
 ```
 Task(
-  subagent_type: "{project}-qa",
-  prompt: "QA validation for issue #{number}.
+  subagent_type: "general-purpose",
+  prompt: "{content_of_qa_agent_file}
+
+  ---
+
+  ## QA Task
+
+  QA validation for issue #{number}.
 
   **What was implemented**: {implementation_summary}
   **Files changed**: {files_changed}
@@ -523,11 +589,22 @@ QA testing found issues that need to be fixed.
 Sending back to developer agent for fixes...
 ```
 
-Then spawn the **original developer agent** to fix:
+Then read the original developer agent file and spawn via general-purpose:
+
+```bash
+cat .claude/agents/{original_developer_agent}.md  # e.g., {project}-backend
+```
+
 ```
 Task(
-  subagent_type: "{original_developer_agent}",  // e.g., "{project}-backend"
-  prompt: "Fix the issues found during QA for issue #{number}.
+  subagent_type: "general-purpose",
+  prompt: "{content_of_developer_agent_file}
+
+  ---
+
+  ## Fix Task
+
+  Fix the issues found during QA for issue #{number}.
 
   **QA Feedback**:
   {qa_issues_list}

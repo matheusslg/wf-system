@@ -174,3 +174,54 @@ For sensitive values, use the `env:` prefix:
 ```
 
 This reads from the `FIGMA_TOKEN` environment variable.
+
+---
+
+## Known Limitations
+
+### Task Tool and Custom Agents
+
+**Limitation**: The Task tool (`subagent_type`) only accepts built-in agent names:
+- `general-purpose`
+- `Explore`
+- `Plan`
+- `Bash`
+- `claude-code-guide`
+- `statusline-setup`
+
+Custom agents defined in `.claude/agents/` **cannot** be invoked directly via the Task tool.
+
+**Workaround**: The wf-system commands work around this by:
+1. Reading the custom agent's file (e.g., `.claude/agents/project-backend.md`)
+2. Including the agent's full system prompt in the Task prompt
+3. Spawning `general-purpose` with that combined prompt
+
+This preserves the agent's personality and instructions while using the available infrastructure.
+
+**Example** (from `/wf-delegate`):
+```
+# Instead of: Task(subagent_type: "my-agent", ...)
+
+# Read agent file
+agent_content = read(".claude/agents/my-agent.md")
+
+# Spawn with embedded instructions
+Task(
+  subagent_type: "general-purpose",
+  prompt: "{agent_content}\n\n---\n\n## Task\n{actual_task}"
+)
+```
+
+**Impact on Skills**: Since we use `general-purpose`, the spawned agent has access to all tools. The `skills` field in custom agent definitions is informational only - it documents which skills the agent SHOULD use but cannot automatically load them.
+
+### Skills Load at Session Startup
+
+Skills are discovered and loaded when Claude Code starts. Creating a new skill during a session won't make it available until the session restarts.
+
+### Skills in Sub-Agents
+
+Built-in sub-agents (Explore, Plan, general-purpose) do NOT have access to skills. Skills are only available to:
+- The main Claude session
+- Custom agents with explicit `skills` field (if custom agents were supported)
+
+Since we work around the custom agent limitation using `general-purpose`, sub-agents spawned via `/wf-delegate` do not have direct skill access.

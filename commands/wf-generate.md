@@ -227,91 +227,105 @@ cat standards.md
 
 ## 7. Generate Project Agents
 
-Create agents in `.claude/agents/` based on detected stack.
+Generate agents using role-based templates from `templates/agents/`.
 
-### Agent Template Structure
+### Determine Project Roles
 
-```markdown
----
-name: [project]-[role]
-description: [Role description]. Use for [specific tasks].
-tools: Read, Edit, Write, Bash, Grep, Glob
-model: opus
----
+Based on detected tech stack, determine which roles the project needs:
 
-# [Project] [Role] Agent
+| Has This | Needs Role |
+|----------|------------|
+| Next.js, React, Vue, Angular, Svelte | UI Developer |
+| NestJS, Express, FastAPI, Django, Rails, Go, Rust | Backend Developer |
+| React Native, Flutter, Swift, Kotlin | Mobile Developer (use generic for now) |
+| Both frontend AND backend | Choose: Fullstack OR separate UI + Backend |
+| Any project | Reviewer (always) |
 
-You are a senior [role] specializing in [technologies] for [project name].
+**Detection logic**:
+```bash
+# Check for frontend
+HAS_UI=$(cat package.json 2>/dev/null | grep -E '"next"|"react"|"vue"|"@angular"|"svelte"' | head -1)
 
-## Session Protocol (MANDATORY)
+# Check for backend
+HAS_BACKEND=$(cat package.json 2>/dev/null | grep -E '"@nestjs"|"express"|"fastify"' | head -1)
+# Also check Python/Go/Rust
+HAS_BACKEND_PY=$(ls requirements.txt pyproject.toml 2>/dev/null | head -1)
+HAS_BACKEND_GO=$(ls go.mod 2>/dev/null)
+HAS_BACKEND_RUST=$(ls Cargo.toml 2>/dev/null)
+```
 
-Before doing ANY work:
-1. Read `progress.md` - understand current state
-2. Read `standards.md` - know code conventions
-3. [Run init script if defined]
-4. Check your assigned issue: `gh issue view <number>`
+### Template Selection
 
-## Your Responsibilities
+Based on roles detected, select templates:
 
-### Primary Focus
-- [Main directories and tasks]
+| Project Type | Templates to Use |
+|--------------|------------------|
+| Frontend only | `ui-developer.md` + `reviewer.md` |
+| Backend only | `backend-developer.md` + `reviewer.md` |
+| Both (small team) | `fullstack-developer.md` + `reviewer.md` |
+| Both (larger team) | `ui-developer.md` + `backend-developer.md` + `reviewer.md` |
+| Unknown/Other | `generic-developer.md` + `reviewer.md` |
 
-### Secondary Focus
-- [Supporting tasks]
+**Ask user if both frontend and backend**:
+- Option A: Single fullstack agent (simpler)
+- Option B: Separate UI + backend agents (more specialized)
 
-## Code Standards
+### Check for Templates
 
-[Stack-specific code examples]
-
-## Working Pattern
-
-1. **Pick ONE issue** at a time
-2. **Create feature branch**: `git checkout -b feature/ISSUE-<n>-description`
-3. **Implement** following project patterns
-4. **Write tests**
-5. **Run tests**: [test command]
-6. **Commit**: `git commit -m "type(scope): description"`
-7. **Update progress**: Edit `progress.md`
-
-## Do NOT
-
-- Work on multiple issues at once
-- Skip writing tests
-- Modify code outside your scope (delegate to other agents)
-- Declare victory without running tests
-
-## Key Files
-
-| Location | Purpose |
-|----------|---------|
-| [path] | [description] |
-
-## Commands
+First, check if templates exist:
 
 ```bash
-[Stack-specific commands]
+# Check wf-system installation
+WF_TEMPLATES="${HOME}/wf-system/templates/agents"
+ls "$WF_TEMPLATES"/*.md 2>/dev/null | wc -l
 ```
 
-## Before Ending Session
+If templates don't exist, fall back to generic agent creation (legacy behavior).
 
-1. Update `progress.md` with what you did
-2. Commit progress file
-3. Ensure tests pass
-4. Leave no uncommitted critical changes
+### Generate Agents from Templates
+
+For each selected template:
+
+1. Read the template file
+2. Replace `{{project}}` with the actual project name (from workflow.json)
+3. Write to `.claude/agents/`
+
+**Example**:
+```bash
+PROJECT_NAME=$(cat .claude/workflow.json | grep '"project"' | cut -d'"' -f4)
+
+# For UI Developer
+if [ -n "$HAS_UI" ]; then
+  sed "s/{{project}}/$PROJECT_NAME/g" "$WF_TEMPLATES/ui-developer.md" > ".claude/agents/${PROJECT_NAME}-ui.md"
+fi
+
+# For Backend Developer
+if [ -n "$HAS_BACKEND" ] || [ -n "$HAS_BACKEND_PY" ]; then
+  sed "s/{{project}}/$PROJECT_NAME/g" "$WF_TEMPLATES/backend-developer.md" > ".claude/agents/${PROJECT_NAME}-backend.md"
+fi
+
+# Reviewer (always)
+sed "s/{{project}}/$PROJECT_NAME/g" "$WF_TEMPLATES/reviewer.md" > ".claude/agents/${PROJECT_NAME}-reviewer.md"
 ```
 
-### Agents by Stack
+### Templates Include Skills
 
-| Detected Stack | Agent to Create |
-|----------------|-----------------|
-| NestJS/Express/FastAPI/Django | `backend` - API endpoints, services, database |
-| Next.js/React/Vue/Angular | `frontend` - Components, hooks, state, **design implementation** |
-| React Native/Flutter | `mobile` - Mobile screens, navigation |
-| Terraform/Pulumi | `infra` - Cloud resources, IaC |
-| Jest/Vitest/pytest | `qa` - Tests, coverage, quality |
-| Any project | `reviewer` - Code review (READ-ONLY: tools: Read, Grep, Glob) |
+**Important**: The templates already have appropriate skills pre-assigned:
 
-### Design Context for Frontend Agents
+| Template | Skills Included |
+|----------|-----------------|
+| `ui-developer.md` | `visual-verify` (for visual verification) |
+| `fullstack-developer.md` | `visual-verify` (for visual verification) |
+| `backend-developer.md` | (none - no UI work) |
+| `reviewer.md` | (none - read-only agent) |
+| `generic-developer.md` | (none - basic development) |
+
+Skills are defined in the template's YAML frontmatter:
+```yaml
+skills: visual-verify
+```
+
+### Design Context for UI Agents
 
 Check if design is configured in workflow.json:
 
@@ -319,35 +333,29 @@ Check if design is configured in workflow.json:
 cat .claude/workflow.json 2>/dev/null | grep -A 10 '"design"'
 ```
 
-**If design is configured**, add to frontend agent template:
+**If design is configured**, append to UI/fullstack agent:
 
 ```markdown
 ## Design Resources
 
 ### Figma
 {If configured: "File: {figma_url} - Use mcp__figma__get_design_context for implementation details"}
-{If not configured: "No Figma configured. Run /wf-design-setup to add."}
 
 ### Design System
 Using **{design.system}** component library.
 - Components location: {design.systemConfig.componentsDir}
 - Theme config: {design.systemConfig.themeFile}
-
-### Style Guide
-{If exists: "See {design.styleGuide} for colors, typography, spacing."}
-
-### Design Implementation Rules
-1. Always check Figma before implementing UI components
-2. Use existing components from {design.system} first
-3. Follow spacing scale from style guide
-4. Use semantic color tokens, not raw hex values
-5. Match Figma designs as closely as possible
 ```
 
-Create directory if needed:
+### Create Directory
+
 ```bash
 mkdir -p .claude/agents
 ```
+
+### Fallback: No Templates Found
+
+If wf-system templates not found, use legacy inline generation (kept for backward compatibility) with simplified structure.
 
 ## 8. Generate Stack-Specific Skills
 
