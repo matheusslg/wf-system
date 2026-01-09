@@ -10,28 +10,29 @@
 ---
 
 ### Session 4 (2026-01-09)
-**Focus**: Task tool custom agent testing + template integration
+**Focus**: Task tool custom agent testing + template integration + skill assignment
 **Completed**:
 - [x] Tested custom agent invocation via Task tool - DOES NOT WORK
 - [x] Updated `/wf-generate` to use role-based templates from `templates/agents/`
 - [x] Updated `/wf-delegate` with workaround for Task tool limitation
 - [x] Documented Task tool limitations in `docs/CONFIGURATION.md`
+- [x] Added Playwright MCP to README recommended servers
+- [x] Added Section 9 to `/wf-generate`: circle back and update agents with generated skills
+- [x] Validated via claude-code-guide: custom agents CAN use skills IF Task tool supported them
 **Key Finding - Task Tool Limitation**:
 - Task tool `subagent_type` ONLY accepts built-in agents: general-purpose, Explore, Plan, Bash, claude-code-guide, statusline-setup
 - Custom agents from `.claude/agents/` CANNOT be invoked via Task tool
 - Error: "Agent type 'X' not found. Available agents: ..."
+- BUT: docs say custom agents with `skills` field CAN access skills - chain breaks at Task tool
 **Workaround Implemented**:
 - Read custom agent file content
 - Include full agent prompt in Task prompt to `general-purpose`
 - This preserves agent personality while using available infrastructure
-**Changes**:
-- `commands/wf-generate.md` - Section 7 now uses templates with role detection
-- `commands/wf-delegate.md` - Section 10 and pipeline sections use workaround
-- `docs/CONFIGURATION.md` - Added "Known Limitations" section
+**Commits**:
+- `564f26d` - fix(commands): work around Task tool custom agent limitation
+- `8c9cf0f` - docs(readme): add Playwright MCP to recommended servers
+- `1df9b66` - feat(wf-generate): add step to update agents with generated skills
 **Synced to global**: wf-generate.md, wf-delegate.md
-**Next**:
-- Commit changes
-- Test `/wf-generate` in a real project to verify template usage
 
 ---
 
@@ -103,9 +104,10 @@
 - None
 
 ## Next Session Should
-- [ ] Test `/wf-generate` in a real project to verify template usage works
+- [ ] Test `/wf-generate` in a real project to verify template + skill assignment works
 - [ ] Test `/wf-delegate` with the workaround to verify agent prompts work correctly
 - [ ] Create GitHub issues for planned features/improvements
+- [ ] Monitor if Claude Code adds custom agent support to Task tool
 
 ## Decisions Made
 - Tech stack: Shell (Bash), Python, Markdown, Git/GitHub
@@ -113,6 +115,7 @@
 - Three agents: commands (development), hooks (development), reviewer (read-only)
 - Hook output uses `systemMessage` for visible user feedback (not just `additionalContext`)
 - Task tool workaround: embed agent file content in prompt to `general-purpose` since custom agents not supported
+- `/wf-generate` now assigns skills to agents after generating them (Section 9)
 
 ## Notes
 - This is the wf-system repository - the workflow management tool itself
