@@ -1,5 +1,6 @@
 ---
-description: Visual verification of UI against Figma designs. Uses Chrome if available, falls back to Playwright.
+name: visual-verify
+description: Verify UI matches Figma designs. Use when implementing UI components, after styling changes, or when user asks to check visual accuracy. Takes screenshots and compares against Figma mockups.
 allowed-tools: Read, Bash, mcp__figma__get_screenshot, mcp__figma__get_design_context, mcp__MCP_DOCKER__browser_navigate, mcp__MCP_DOCKER__browser_take_screenshot, mcp__MCP_DOCKER__browser_snapshot, mcp__playwright__browser_navigate, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot
 ---
 
