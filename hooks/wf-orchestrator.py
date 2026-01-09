@@ -125,11 +125,16 @@ class WFOrchestrator:
     # -------------------------------------------------------------------------
 
     def _get_context_usage(self) -> Tuple[int, float]:
-        """Calculate token usage from transcript JSONL."""
+        """Get current context usage from the most recent API call.
+
+        The transcript logs all API calls. The most recent input_tokens +
+        cache_read_input_tokens represents current context window size,
+        NOT the sum of all historical tokens.
+        """
         if not self.transcript_path or not os.path.exists(self.transcript_path):
             return 0, 0.0
 
-        total_tokens = 0
+        latest_context = 0
         try:
             with open(self.transcript_path, 'r') as f:
                 for line in f:
@@ -137,17 +142,19 @@ class WFOrchestrator:
                         continue
                     try:
                         entry = json.loads(line)
-                        usage = entry.get("usage", {})
-                        total_tokens += usage.get("input_tokens", 0)
-                        total_tokens += usage.get("output_tokens", 0)
-                        total_tokens += usage.get("cache_creation_input_tokens", 0)
+                        usage = entry.get("message", {}).get("usage", {})
+                        # Current context = input tokens + cached tokens being read
+                        input_tokens = usage.get("input_tokens", 0)
+                        cache_read = usage.get("cache_read_input_tokens", 0)
+                        if input_tokens > 0 or cache_read > 0:
+                            latest_context = input_tokens + cache_read
                     except json.JSONDecodeError:
                         continue
         except (IOError, FileNotFoundError):
             pass
 
-        pct = (total_tokens / CONTEXT_LIMIT) * 100 if CONTEXT_LIMIT > 0 else 0
-        return total_tokens, pct
+        pct = (latest_context / CONTEXT_LIMIT) * 100 if CONTEXT_LIMIT > 0 else 0
+        return latest_context, pct
 
     # -------------------------------------------------------------------------
     # Progress Detection
