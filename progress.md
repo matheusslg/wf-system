@@ -5,7 +5,23 @@
 
 ## Current Status
 **Phase**: Development Ready
-**Last Updated**: 2026-01-08
+**Last Updated**: 2026-01-09
+
+---
+
+### Session 2 (2026-01-09)
+**Focus**: Workflow initialization and hook visibility fix
+**Completed**:
+- [x] Ran `/wf-init` - initialized workflow for wf-system repo
+- [x] Ran `/wf-generate` - created agents and skills based on tech stack
+- [x] Ran `/wf-start-session` - verified environment
+- [x] Pushed commits to GitHub
+- [x] Fixed hook visibility issue - hooks now use `systemMessage` for visible user feedback
+**Commits**:
+- `6d6ef6d` - chore: initialize claude workflow system
+- `8b4d385` - feat: generate agents and skills for wf-system
+- `8a1bb12` - fix(hooks): add systemMessage for visible user feedback
+**Next**: Test hooks in new session, create issues for planned work
 
 ---
 
@@ -25,7 +41,6 @@
   - `py-check` - Check Python syntax
   - `cmd-list` - List all commands
   - `sync-commands` - Sync commands to global install
-**Next**: Begin development with /wf-start-session
 
 ---
 
@@ -38,14 +53,17 @@
 - None
 
 ## Next Session Should
-- [ ] Run /wf-start-session to begin development
-- [ ] Pick an issue with /wf-pick-issue
+- [ ] Test hooks in a fresh session to confirm visible feedback
+- [ ] Create GitHub issues for planned features/improvements
+- [ ] Run `/wf-pick-issue` to start development
 
 ## Decisions Made
 - Tech stack: Shell (Bash), Python, Markdown, Git/GitHub
 - Scopes: commands, hooks, docs
 - Three agents: commands (development), hooks (development), reviewer (read-only)
+- Hook output uses `systemMessage` for visible user feedback (not just `additionalContext`)
 
 ## Notes
 - This is the wf-system repository - the workflow management tool itself
 - Commands are in commands/*.md, hooks in hooks/*.py
+- Hook installed at ~/.claude/hooks/wf-orchestrator.py
