@@ -272,6 +272,49 @@ Before starting:
 1. Read `progress.md` for current state
 2. Read `standards.md` for conventions
 3. Create feature branch if not exists
+
+### Screenshot Documentation (IMPORTANT)
+Document your work with screenshots at key milestones. This creates a visual audit trail.
+
+**When to take screenshots**:
+| Milestone | When | Example |
+|-----------|------|---------|
+| Initial State | Before making changes (UI tasks) | Current page state |
+| Progress | After each significant change | Added component, fixed layout |
+| Validation | After running tests/builds | Terminal output, test results |
+| Final Result | When task is complete | Final UI state |
+| Errors | When encountering issues | Error messages, failed tests |
+
+**How to take screenshots**:
+```
+# Use Playwright MCP
+mcp__playwright__browser_take_screenshot(
+  filename: "/tmp/issue-{issue_number}/step-{N}-{description}.png"
+)
+
+# Or with full page capture for long content
+mcp__playwright__browser_take_screenshot(
+  filename: "/tmp/issue-{issue_number}/step-{N}-{description}.png",
+  fullPage: true
+)
+```
+
+**Directory structure**:
+```
+/tmp/issue-{issue_number}/
+├── step-01-initial-state.png
+├── step-02-component-added.png
+├── step-03-tests-passing.png
+└── step-04-final-result.png
+```
+
+**Naming convention**: `step-{NN}-{short-description}.png`
+- Use zero-padded numbers (01, 02, 03) for correct ordering
+- Keep descriptions short and descriptive (kebab-case)
+
+**For non-UI tasks** (backend, API, etc.):
+- Take screenshots of terminal output when relevant
+- Or skip screenshots if purely backend logic
 ```
 
 ## 10. Spawn Agent via Task Tool
@@ -332,6 +375,85 @@ When agent completes, capture:
 - Any issues encountered
 - Validation results
 
+## 11.5. Collect and Upload Screenshots
+
+After the agent completes, check for screenshots and upload them to the repository.
+
+### Check for Screenshots
+
+```bash
+ls /tmp/issue-{issue_number}/*.png 2>/dev/null | wc -l
+```
+
+If screenshots exist, proceed with upload.
+
+### Prepare Files for Upload
+
+```bash
+# List all screenshots
+for f in /tmp/issue-{issue_number}/*.png; do
+  echo "$(basename $f)"
+done
+```
+
+### Upload to Repository
+
+Use GitHub MCP to push screenshots to a dedicated folder:
+
+```
+# For each screenshot, read as base64 and push
+mcp__github__push_files(
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo,
+  branch: "main",  # or current feature branch
+  files: [
+    {
+      path: ".github/issue-screenshots/{issue_number}/step-01-initial-state.png",
+      content: "{base64_encoded_content}"
+    },
+    {
+      path: ".github/issue-screenshots/{issue_number}/step-02-component-added.png",
+      content: "{base64_encoded_content}"
+    }
+    # ... all screenshots
+  ],
+  message: "docs: add screenshots for issue #{issue_number}"
+)
+```
+
+**Note**: If `push_files` doesn't support binary, use `create_or_update_file` for each:
+
+```
+# Alternative: Push screenshots one by one
+mcp__github__create_or_update_file(
+  owner: breakdown.githubOwner,
+  repo: breakdown.githubRepo,
+  path: ".github/issue-screenshots/{issue_number}/{filename}",
+  content: "{base64_encoded_content}",
+  message: "docs: add screenshot {filename} for issue #{issue_number}",
+  branch: "main"
+)
+```
+
+### Generate Screenshot URLs
+
+After uploading, construct the raw GitHub URLs for each screenshot:
+
+```
+https://raw.githubusercontent.com/{owner}/{repo}/{branch}/.github/issue-screenshots/{issue_number}/{filename}
+```
+
+Example:
+```
+https://raw.githubusercontent.com/myorg/myrepo/main/.github/issue-screenshots/125/step-01-initial-state.png
+```
+
+### Cleanup Local Screenshots
+
+```bash
+rm -rf /tmp/issue-{issue_number}
+```
+
 ## 12. Update GitHub Issue
 
 Add completion comment:
@@ -370,9 +492,27 @@ mcp__github__add_issue_comment(
 - [x] Lint passes: `npm run lint`
 - [x] Tests pass: `npm run test`
 
+### Implementation Screenshots
+
+<details>
+<summary>📸 Visual Documentation (click to expand)</summary>
+
+#### Step 1: Initial State
+![Initial State](https://raw.githubusercontent.com/{owner}/{repo}/{branch}/.github/issue-screenshots/{issue_number}/step-01-initial-state.png)
+
+#### Step 2: {Description of change}
+![{Description}](https://raw.githubusercontent.com/{owner}/{repo}/{branch}/.github/issue-screenshots/{issue_number}/step-02-{description}.png)
+
+#### Step 3: Final Result
+![Final Result](https://raw.githubusercontent.com/{owner}/{repo}/{branch}/.github/issue-screenshots/{issue_number}/step-03-final-result.png)
+
+</details>
+
 ---
 *Completed by `{agent_name}` via `/wf-delegate`*
 ```
+
+**Note**: Only include the Screenshots section if screenshots were taken. Use `<details>` to keep the comment collapsible and clean.
 
 ## 13. Workflow Pipeline (REQUIRED)
 
@@ -458,6 +598,12 @@ Task(
   - [ ] Tests are adequate
   - [ ] No unnecessary complexity
 
+  **Screenshot Documentation**:
+  If you find issues, take screenshots to document them:
+  - Save to: `/tmp/issue-{issue_number}/review-{NN}-{issue-description}.png`
+  - Examples: `review-01-missing-null-check.png`, `review-02-accessibility-issue.png`
+  - Use Playwright MCP: `browser_take_screenshot(filename: '...')`
+
   **Your response MUST end with one of**:
   - `APPROVED` - Code is ready for QA
   - `CHANGES_REQUESTED` - Issues need fixing (list them with file:line references)
@@ -523,6 +669,12 @@ Task(
   2. Ensure tests still pass
   3. Report what you fixed
 
+  **Screenshot Documentation**:
+  Document your fixes with screenshots:
+  - Save to: `/tmp/issue-{issue_number}/fix-{NN}-{description}.png`
+  - Examples: `fix-01-null-check-added.png`, `fix-02-accessibility-fixed.png`
+  - Show before/after if helpful
+
   **When done**: List the fixes made for each issue.",
   description: "Fix review issues for #{number}"
 )
@@ -558,6 +710,14 @@ Task(
   - [ ] Verify acceptance criteria from issue
   - [ ] Test edge cases
   - [ ] Check for regressions
+
+  **Screenshot Documentation**:
+  Document your QA validation with screenshots:
+  - Save to: `/tmp/issue-{issue_number}/qa-{NN}-{description}.png`
+  - Required: `qa-01-tests-passing.png` (terminal with test results)
+  - If UI: `qa-02-acceptance-criteria.png` (showing feature works)
+  - If failed: `qa-03-bug-{description}.png` (showing the issue)
+  - Use Playwright MCP: `browser_take_screenshot(filename: '...')`
 
   **Your response MUST end with one of**:
   - `PASSED` - All tests pass, ready to close
@@ -614,6 +774,12 @@ Task(
   2. Ensure all tests pass
   3. Add tests for the bugs if missing
   4. Report what you fixed
+
+  **Screenshot Documentation**:
+  Document your bug fixes with screenshots:
+  - Save to: `/tmp/issue-{issue_number}/bugfix-{NN}-{description}.png`
+  - Examples: `bugfix-01-edge-case-fixed.png`, `bugfix-02-regression-resolved.png`
+  - Show the fix working if it's a UI bug
 
   **When done**: List the fixes made for each issue.",
   description: "Fix QA issues for #{number}"
