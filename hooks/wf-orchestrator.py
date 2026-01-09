@@ -214,15 +214,15 @@ class WFOrchestrator:
         if workflow is None:
             # No workflow.json - prompt to initialize
             self._save_state()
+            msg = (
+                "SESSION START: No workflow configuration detected.\n"
+                "Run `/wf-init` to set up progress tracking, standards, and agents."
+            )
             return {
+                "systemMessage": msg,
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": (
-                        "SESSION START: No workflow configuration detected in this project.\n"
-                        "Would you like to initialize the Claude workflow system?\n"
-                        "Run `/wf-init` to set up progress tracking, standards, and agents.\n"
-                        "Or continue without workflow management."
-                    )
+                    "additionalContext": msg
                 }
             }
 
@@ -243,18 +243,21 @@ class WFOrchestrator:
         jira_project = workflow.get("techLead", {}).get("jiraProject", "PROJECT")
         project_name = workflow.get("project", workflow.get("projectName", "Unknown"))
 
+        msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-start-session or provide ticket"
+        full_context = (
+            f"SESSION START - Jira Workflow Detected\n"
+            f"Project: {project_name}\n"
+            f"Jira Project: {jira_project}\n\n"
+            f"Would you like to work on a Jira ticket?\n"
+            f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-breakdown`\n"
+            f"- Or describe what you'd like to work on\n"
+            f"- Or run `/wf-start-session` for full context load"
+        )
         return {
+            "systemMessage": msg,
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
-                "additionalContext": (
-                    f"SESSION START - Jira Workflow Detected\n"
-                    f"Project: {project_name}\n"
-                    f"Jira Project: {jira_project}\n\n"
-                    f"Would you like to work on a Jira ticket?\n"
-                    f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-breakdown`\n"
-                    f"- Or describe what you'd like to work on\n"
-                    f"- Or run `/wf-start-session` for full context load"
-                )
+                "additionalContext": full_context
             }
         }
 
@@ -267,29 +270,35 @@ class WFOrchestrator:
         repo_display = f"{owner}/{repo}" if owner and repo else "Unknown"
 
         if wip:
+            msg = f"[WF] {repo_display} - WIP: {wip[:50]}{'...' if len(wip) > 50 else ''}"
+            full_context = (
+                f"SESSION START - Work In Progress Detected\n"
+                f"Repository: {repo_display}\n\n"
+                f"WIP: {wip}\n\n"
+                f"Recommended: Run `/wf-delegate` to continue with the assigned sub-task, "
+                f"or `/wf-start-session` for full context."
+            )
             return {
+                "systemMessage": msg,
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": (
-                        f"SESSION START - Work In Progress Detected\n"
-                        f"Repository: {repo_display}\n\n"
-                        f"WIP: {wip}\n\n"
-                        f"Recommended: Run `/wf-delegate` to continue with the assigned sub-task, "
-                        f"or `/wf-start-session` for full context."
-                    )
+                    "additionalContext": full_context
                 }
             }
         else:
+            msg = f"[WF] {repo_display} - No WIP. Run /wf-start-session or /wf-pick-issue"
+            full_context = (
+                f"SESSION START - GitHub Workflow\n"
+                f"Repository: {repo_display}\n\n"
+                f"No work in progress detected.\n"
+                f"Recommended: Run `/wf-pick-issue` to select the next task, "
+                f"or `/wf-start-session` for full context."
+            )
             return {
+                "systemMessage": msg,
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": (
-                        f"SESSION START - GitHub Workflow\n"
-                        f"Repository: {repo_display}\n\n"
-                        f"No work in progress detected.\n"
-                        f"Recommended: Run `/wf-pick-issue` to select the next task, "
-                        f"or `/wf-start-session` for full context."
-                    )
+                    "additionalContext": full_context
                 }
             }
 
@@ -305,28 +314,30 @@ class WFOrchestrator:
             self.state["pre_compact_ran"] = True
             self._save_state()
 
+            msg = f"[WF] CRITICAL: Context at {pct:.0f}% - Run /wf-end-session NOW!"
+            full_context = (
+                f"CRITICAL - CONTEXT AT {pct:.0f}%\n"
+                f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
+                f"YOU MUST run `/wf-end-session` NOW to:\n"
+                f"1. Save your progress to progress.md\n"
+                f"2. Commit current work\n"
+                f"3. Archive session state\n\n"
+                f"After /wf-end-session completes, run /compact to summarize."
+            )
             return {
+                "systemMessage": msg,
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": (
-                        f"CRITICAL - CONTEXT AT {pct:.0f}%\n"
-                        f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
-                        f"YOU MUST run `/wf-end-session` NOW to:\n"
-                        f"1. Save your progress to progress.md\n"
-                        f"2. Commit current work\n"
-                        f"3. Archive session state\n\n"
-                        f"After /wf-end-session completes, run /compact to summarize."
-                    )
+                    "additionalContext": full_context
                 }
             }
         elif pct >= WARNING_THRESHOLD:
+            msg = f"[WF] WARNING: Context at {pct:.0f}% - Consider /wf-end-session soon"
             return {
+                "systemMessage": msg,
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": (
-                        f"WARNING: Context at {pct:.0f}% ({tokens:,} tokens). "
-                        f"Consider running /wf-end-session and /compact soon."
-                    )
+                    "additionalContext": msg
                 }
             }
 
