@@ -271,6 +271,7 @@ WF System works best with these MCP servers installed:
 |------------|--------------|--------|
 | **[GitHub MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/github)** | Issue management, PRs, ticket tracking | Recommended |
 | **[Figma MCP](https://github.com/figma/figma-mcp-server)** | Design context, tokens, screenshots | Optional |
+| **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** | Visual verification, UI screenshots | Optional |
 | **[Context7](https://github.com/upstash/context7)** | Library documentation lookup | Optional |
 
 > `/wf-init` will check for these and guide installation if missing.
