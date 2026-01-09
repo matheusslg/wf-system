@@ -1,11 +1,31 @@
 ---
 description: Visual verification of UI against Figma designs. Uses Chrome if available, falls back to Playwright.
-allowed-tools: Read, Bash, mcp__figma__get_screenshot, mcp__figma__get_design_context, mcp__MCP_DOCKER__browser_navigate, mcp__MCP_DOCKER__browser_take_screenshot, mcp__MCP_DOCKER__browser_snapshot
+allowed-tools: Read, Bash, mcp__figma__get_screenshot, mcp__figma__get_design_context, mcp__MCP_DOCKER__browser_navigate, mcp__MCP_DOCKER__browser_take_screenshot, mcp__MCP_DOCKER__browser_snapshot, mcp__playwright__browser_navigate, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot
 ---
 
 # Visual Verify
 
-Verify rendered UI matches the Figma design. Attempts Chrome first, falls back to Playwright.
+Verify rendered UI matches the Figma design. Attempts Chrome first, falls back to Playwright MCP.
+
+## Prerequisites
+
+### Option A: Chrome Extension (Recommended for main agent)
+- Install [Claude in Chrome extension](https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn) (v1.0.36+)
+- Start Claude with `claude --chrome`
+
+### Option B: Playwright MCP Server (For sub-agents or headless)
+Add to your MCP config (`~/.claude/settings.json` or project `.mcp.json`):
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    }
+  }
+}
+```
+See: https://github.com/microsoft/playwright-mcp
 
 ## Arguments
 
@@ -32,16 +52,27 @@ If not responding (non-200), warn user:
 
 ### 3. Capture Rendered Page
 
-**Try Chrome first** (better for authenticated pages):
+Try browser tools in this order (use first available):
+
+**Option 1: Chrome Extension** (best - has auth state):
 ```
-Use browser tools to navigate to [URL] and take a screenshot.
+browser_navigate to [URL]
+browser_take_screenshot
 ```
 
-**If Chrome unavailable, use Playwright MCP**:
+**Option 2: Playwright MCP** (official Microsoft server):
 ```
-Use mcp__MCP_DOCKER__browser_navigate to go to [URL]
-Use mcp__MCP_DOCKER__browser_take_screenshot to capture the page
+mcp__playwright__browser_navigate to [URL]
+mcp__playwright__browser_take_screenshot
 ```
+
+**Option 3: MCP_DOCKER Playwright** (fallback):
+```
+mcp__MCP_DOCKER__browser_navigate to [URL]
+mcp__MCP_DOCKER__browser_take_screenshot
+```
+
+Use whichever browser tools are available in your current session.
 
 ### 4. Get Figma Design (if provided)
 
