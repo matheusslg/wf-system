@@ -9,6 +9,34 @@
 
 ---
 
+### Session 3 (2026-01-09)
+**Focus**: Context monitoring fix + visual-verify skill + agent templates
+**Completed**:
+- [x] Fixed context monitoring bug - was summing ALL historical tokens (6000%+), now uses latest input_tokens (correct ~50%)
+- [x] Created `visual-verify` skill for UI verification against Figma designs
+- [x] Added fallback chain: Chrome → Playwright MCP → MCP_DOCKER
+- [x] Created agent templates: ui-developer, backend-developer, fullstack-developer, reviewer, generic-developer
+- [x] Researched Claude Code docs on skills + subagents
+- [x] Verified: Custom agents CAN access skills via `skills` field, but built-in agents (Explore, Plan) cannot
+- [x] Verified: Task tool should accept custom agent names (needs session restart to test)
+**Commits**:
+- `72dcb71` - fix(hooks): correct context monitoring to use latest API call tokens
+- `8a3b8eb` - feat(skills): add visual-verify skill for UI verification
+- `2e13789` - docs(skills): add Playwright MCP reference to visual-verify
+- `4a81125` - feat(skills): add name field and improve skill discovery
+- `1decead` - feat(templates): add agent templates for stack-based generation
+**Key Findings**:
+- Skills load at session startup only (new skills need restart)
+- Subagents don't inherit skills automatically - need explicit `skills` field
+- Built-in agents (Explore, Plan, general-purpose) have NO skill access
+- Custom agents from `.claude/agents/` with `skills` field DO have access
+**Next**:
+- Test custom agent invocation via Task tool (after session restart)
+- Update `/wf-generate` to use templates + assign skills to agents
+- Update `/wf-delegate` to use custom agents when available
+
+---
+
 ### Session 2 (2026-01-09)
 **Focus**: Workflow initialization and hook visibility fix
 **Completed**:
