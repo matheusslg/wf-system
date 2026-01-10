@@ -9,12 +9,14 @@ argument-hint: <GitHub issue number>
 Execute a specific sub-task from a breakdown plan by spawning the appropriate specialized agent with full context.
 
 ## Arguments
-- `$ARGUMENTS` - GitHub issue number of the sub-task to execute
-  - Examples: `125`, `#125`
+- `$ARGUMENTS` - GitHub issue number(s) of the sub-task(s) to execute
+  - Single: `125`, `#125`
+  - Multiple (for parallel): `107 109 110 111`
 
 ## Flags
 - `--list` - List available sub-tasks from tech-lead tracked issues
 - `--until-done` - Autonomous mode: work through ALL sub-tasks without human intervention
+- `--parallel` - Execute multiple tasks concurrently (use with multiple issue numbers)
 - `--force` - Override dependency checks
 
 ## 0. Load Configuration
@@ -899,13 +901,14 @@ Possible causes:
 ## Tips
 
 1. **Autonomous Mode**: Use `--until-done` to process all sub-tasks without intervention
-2. **Pipeline is Mandatory**: Developer → Reviewer → QA flow is enforced when those agents exist
-3. **Dependencies**: Always check dependencies are complete first
-4. **One at a Time**: In manual mode, complete one sub-task before starting another
-5. **Progress Tracking**: Use `/wf-ticket-status` to see overall progress
-6. **Manual Override**: Use `--force` to skip dependency checks if needed
-7. **Re-run**: If agent fails, you can re-run the delegate command
-8. **Skip Pipeline**: Use `--skip-pipeline` only if you need to bypass review/QA (not recommended)
+2. **Parallel Mode**: Use `--parallel` with multiple issues to execute independent tasks concurrently
+3. **Pipeline is Mandatory**: Developer → Reviewer → QA flow is enforced when those agents exist
+4. **Dependencies**: Always check dependencies are complete first
+5. **Parallel First**: Check `/wf-breakdown` output for parallel-eligible tasks before starting
+6. **Progress Tracking**: Use `/wf-ticket-status` to see overall progress
+7. **Manual Override**: Use `--force` to skip dependency checks if needed
+8. **Re-run**: If agent fails, you can re-run the delegate command
+9. **Skip Pipeline**: Use `--skip-pipeline` only if you need to bypass review/QA (not recommended)
 
 ## 16. Autonomous Mode (--until-done)
 
@@ -1075,6 +1078,254 @@ If a task fails during autonomous execution:
 
 # Force start even if some dependencies are unmet
 /wf-delegate --until-done --force
+```
+
+## 17. Parallel Mode (--parallel)
+
+Execute multiple independent tasks concurrently using parallel Task tool calls.
+
+### When to Use
+
+Use parallel mode when `/wf-breakdown` identifies tasks that can run simultaneously:
+
+```
+Execution Order:
+1. Parallel: #107, #109, #110, #111 (no dependencies)  ← Use --parallel
+2. Sequential: #108 (depends on #107)
+3. Final: #112 (depends on all above)
+```
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      PARALLEL MODE                               │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ Task #107    │  │ Task #109    │  │ Task #110    │  ...     │
+│  │ (frontend)   │  │ (frontend)   │  │ (frontend)   │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                 │                 │                   │
+│         └────────────┬────┴────────────────┘                   │
+│                      ▼                                          │
+│              Collect Results                                    │
+│                      ▼                                          │
+│         Upload All Screenshots                                  │
+│                      ▼                                          │
+│          Post Completion Comments                               │
+│                      ▼                                          │
+│             Pipeline (if exists)                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Starting Parallel Mode
+
+If `$ARGUMENTS` contains `--parallel` with multiple issue numbers:
+
+```markdown
+## Parallel Execution Mode
+
+**Issues**: #107, #109, #110, #111
+**Mode**: Concurrent execution
+**Agents**: {list unique agents}
+
+Spawning {N} parallel tasks...
+```
+
+### Parse Multiple Issue Numbers
+
+Extract all issue numbers from `$ARGUMENTS`:
+
+```
+# Input: "107 109 110 111 --parallel"
+# Output: [107, 109, 110, 111]
+```
+
+### Validate All Issues
+
+For each issue number, perform validation (Section 3-7):
+- Fetch issue from GitHub
+- Verify it's a sub-task
+- Check dependencies (all must be met or use --force)
+- Verify agent exists
+
+**If any issue fails validation**:
+```markdown
+## Parallel Mode Blocked
+
+Cannot start parallel execution:
+
+| Issue | Problem |
+|-------|---------|
+| #107 | ✓ Ready |
+| #109 | ✗ Dependency #107 still open |
+| #110 | ✓ Ready |
+
+**Fix**: Close blocking dependencies first, or use `--force` to override.
+```
+
+### Spawn Parallel Tasks
+
+**CRITICAL**: Use a single message with multiple Task tool calls to execute in parallel.
+
+For each validated issue, prepare the task context (Section 8-9), then spawn ALL at once:
+
+```
+# In a SINGLE response, call Task multiple times:
+
+Task(
+  subagent_type: "general-purpose",
+  prompt: "{agent_107_content}\n\n---\n\n{task_107_context}",
+  description: "Execute #107: Create Staff Mode Context"
+)
+
+Task(
+  subagent_type: "general-purpose",
+  prompt: "{agent_109_content}\n\n---\n\n{task_109_context}",
+  description: "Execute #109: Make CategorySidebar Responsive"
+)
+
+Task(
+  subagent_type: "general-purpose",
+  prompt: "{agent_110_content}\n\n---\n\n{task_110_context}",
+  description: "Execute #110: Optimize ProductGrid for Tablet"
+)
+
+Task(
+  subagent_type: "general-purpose",
+  prompt: "{agent_111_content}\n\n---\n\n{task_111_context}",
+  description: "Execute #111: Improve Touch Targets"
+)
+```
+
+### Collect Parallel Results
+
+Wait for all tasks to complete, then collect:
+- Files modified by each task
+- Screenshots from each task's `/tmp/issue-{N}/` directory
+- Success/failure status
+- Agent reports
+
+### Handle Conflicts
+
+If multiple tasks modified the same file:
+
+```markdown
+## Potential Conflict Detected
+
+Multiple tasks modified the same file(s):
+
+| File | Modified By |
+|------|-------------|
+| `src/components/Layout.tsx` | #107, #109 |
+
+**Action Required**:
+1. Review the changes: `git diff src/components/Layout.tsx`
+2. Resolve any conflicts manually
+3. Run tests: `npm run test`
+```
+
+### Upload All Screenshots
+
+Collect screenshots from all parallel tasks:
+
+```bash
+# Merge all screenshot directories
+for issue in 107 109 110 111; do
+  ls /tmp/issue-$issue/*.png 2>/dev/null
+done
+```
+
+Upload to `.github/issue-screenshots/` for each issue (Section 11.5).
+
+### Post Completion Comments
+
+For each completed issue, post the completion comment (Section 12) with:
+- Summary of what was done
+- Files modified
+- Screenshots (if any)
+
+### Parallel Pipeline Handling
+
+After all parallel tasks complete:
+
+**Option A**: If tasks are independent (different scopes), run pipeline in parallel too:
+```
+Review #107 ─┬─► QA #107 ─┬─► Close
+Review #109 ─┤            │
+Review #110 ─┤            │
+Review #111 ─┘            └─► Close all
+```
+
+**Option B**: If tasks touch related code, run pipeline sequentially:
+```
+Review all changes together → QA all → Close all
+```
+
+### Parallel Mode Completion
+
+```markdown
+## Parallel Execution Complete
+
+### Summary
+**Tasks Executed**: 4
+**Successful**: 4
+**Failed**: 0
+
+### Results
+| Issue | Title | Agent | Status | Files |
+|-------|-------|-------|--------|-------|
+| #107 | Staff Mode Context | frontend | ✓ | 3 files |
+| #109 | CategorySidebar Responsive | frontend | ✓ | 2 files |
+| #110 | ProductGrid Tablet | frontend | ✓ | 1 file |
+| #111 | Touch Targets | frontend | ✓ | 2 files |
+
+### Total Changes
+- **Files modified**: 8
+- **Tests added**: 4
+- **Screenshots captured**: 12
+
+### Next Steps
+1. Run full test suite: `npm run test`
+2. Review all changes: `git diff HEAD~4`
+3. Continue with dependent task: `/wf-delegate 108`
+4. Check overall progress: `/wf-ticket-status 106`
+```
+
+### Parallel Mode Rules
+
+1. **Independence Required**: All tasks must have dependencies met
+2. **Conflict Detection**: Warns if same files modified
+3. **Screenshot Collection**: Gathers from all `/tmp/issue-{N}/` directories
+4. **Atomic Commits**: Each task should commit separately (or batch at end)
+5. **Pipeline Flexibility**: Can review together or separately
+
+### Usage Examples
+
+```bash
+# Execute specific tasks in parallel (from breakdown output)
+/wf-delegate 107 109 110 111 --parallel
+
+# Parallel with force (skip dependency check)
+/wf-delegate 107 108 109 --parallel --force
+
+# Auto-detect parallel tasks (finds all with no deps)
+/wf-delegate --parallel --auto
+```
+
+### Recommended Workflow
+
+Based on `/wf-breakdown` output:
+
+```bash
+# Step 1: Run parallel group
+/wf-delegate 107 109 110 111 --parallel
+
+# Step 2: Run sequential tasks
+/wf-delegate 108
+
+# Step 3: Run QA
+/wf-delegate 112
 ```
 
 ## Related Commands
