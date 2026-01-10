@@ -1065,9 +1065,11 @@ name: project-ui
 description: UI developer for project...
 tools: Read, Edit, Write, Bash, Grep, Glob
 skills: visual-verify, next-build, next-lint
-model: sonnet
+model: opus
 ---
 ```
+
+**IMPORTANT**: All sub-agents should use `model: opus` for best reasoning capabilities.
 
 ### Skill Assignment Logic
 

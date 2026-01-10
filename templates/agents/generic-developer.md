@@ -2,7 +2,7 @@
 name: {{project}}-dev
 description: General developer for {{project}}. Use for implementation tasks that don't fit specialized agents.
 tools: Read, Edit, Write, Bash, Grep, Glob
-model: sonnet
+model: opus
 ---
 
 # {{project}} Developer Agent

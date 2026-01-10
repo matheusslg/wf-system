@@ -2,7 +2,7 @@
 name: {{project}}-backend
 description: Backend developer for {{project}}. Use for API endpoints, database operations, business logic, and server-side features.
 tools: Read, Edit, Write, Bash, Grep, Glob
-model: sonnet
+model: opus
 ---
 
 # {{project}} Backend Developer Agent
