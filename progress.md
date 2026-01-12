@@ -5,7 +5,31 @@
 
 ## Current Status
 **Phase**: Development Ready
-**Last Updated**: 2026-01-09
+**Last Updated**: 2026-01-12
+
+---
+
+### Session 5 (2026-01-12)
+**Focus**: Enhanced sub-task documentation + parallel execution + opus model
+**Completed**:
+- [x] Added screenshot documentation for sub-tasks in `/wf-delegate`
+  - Section 9: Screenshot instructions for developer tasks
+  - Section 11.5: Screenshot collection and upload to repo
+  - Section 12: Enhanced completion comment with collapsible screenshot gallery
+  - Pipeline sections: Reviewer, QA, Fix tasks all have screenshot docs
+- [x] Added `--parallel` flag to `/wf-delegate` for concurrent task execution
+  - Execute multiple independent tasks simultaneously
+  - Based on `/wf-breakdown` output (parallel-eligible tasks)
+  - Conflict detection for same-file modifications
+  - Batch screenshot collection from all parallel tasks
+- [x] Updated all agent templates to use `model: opus` instead of `sonnet`
+  - ui-developer.md, backend-developer.md, fullstack-developer.md, generic-developer.md
+  - reviewer.md already had opus
+**Commits**:
+- `96c5f0f` - feat(delegate): add screenshot documentation for sub-tasks
+- `0582e13` - feat(delegate): add parallel execution mode for concurrent tasks
+- `f434816` - feat(agents): use opus model for all sub-agents
+**Synced to global**: wf-delegate.md, wf-generate.md
 
 ---
 
@@ -104,10 +128,10 @@
 - None
 
 ## Next Session Should
-- [ ] Test `/wf-generate` in a real project to verify template + skill assignment works
-- [ ] Test `/wf-delegate` with the workaround to verify agent prompts work correctly
+- [ ] Test `/wf-delegate --parallel` with real parallel tasks
+- [ ] Test screenshot documentation workflow end-to-end
+- [ ] Test `/wf-generate` in a real project to verify opus model + skill assignment
 - [ ] Create GitHub issues for planned features/improvements
-- [ ] Monitor if Claude Code adds custom agent support to Task tool
 
 ## Decisions Made
 - Tech stack: Shell (Bash), Python, Markdown, Git/GitHub
@@ -116,6 +140,8 @@
 - Hook output uses `systemMessage` for visible user feedback (not just `additionalContext`)
 - Task tool workaround: embed agent file content in prompt to `general-purpose` since custom agents not supported
 - `/wf-generate` now assigns skills to agents after generating them (Section 9)
+- All sub-agents use `model: opus` for best reasoning capabilities
+- Sub-tasks document work with screenshots uploaded to `.github/issue-screenshots/`
 
 ## Notes
 - This is the wf-system repository - the workflow management tool itself
