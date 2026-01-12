@@ -377,6 +377,45 @@ When agent completes, capture:
 - Any issues encountered
 - Validation results
 
+## 11.1. MANDATORY PIPELINE GATE
+
+**⛔ STOP - DO NOT CLOSE THE ISSUE YET ⛔**
+
+After a developer agent completes, you MUST check for pipeline agents before closing:
+
+```bash
+# Check for reviewer agent
+REVIEWER=$(ls .claude/agents/*reviewer*.md .claude/agents/*review*.md 2>/dev/null | head -1)
+
+# Check for QA agent
+QA_AGENT=$(ls .claude/agents/*qa*.md .claude/agents/*test*.md 2>/dev/null | head -1)
+```
+
+**Pipeline Decision Tree**:
+
+```
+IF $REVIEWER exists:
+  → GO TO Section 13 (Workflow Pipeline)
+  → DO NOT proceed to Section 14 (Close Issue)
+
+ELSE IF $QA_AGENT exists:
+  → GO TO Section 13.5 (QA Only Pipeline)
+  → DO NOT proceed to Section 14 (Close Issue)
+
+ELSE:
+  → No pipeline agents, proceed to Section 14
+```
+
+**CRITICAL**: You cannot close an issue until the pipeline completes successfully. Track pipeline state:
+
+```markdown
+### Pipeline State for #{issue_number}
+- [ ] Developer: Complete
+- [ ] Reviewer: {Pending | Approved | N/A}
+- [ ] QA: {Pending | Passed | N/A}
+- [ ] Ready to Close: {Yes | No}
+```
+
 ## 11.5. Collect and Upload Screenshots
 
 After the agent completes, check for screenshots and upload them to the repository.
@@ -518,19 +557,51 @@ mcp__github__add_issue_comment(
 
 ## 13. Workflow Pipeline (REQUIRED)
 
-After a developer agent completes implementation, **the work MUST go through the pipeline** if reviewer/QA agents exist.
+**⛔ THIS SECTION IS MANDATORY - DO NOT SKIP ⛔**
+
+After a developer agent completes implementation, **the work MUST go through the pipeline** if reviewer/QA agents exist. **You CANNOT close the issue until the pipeline completes.**
 
 ### Pipeline Order
 
 ```
 Developer (backend/frontend) → Reviewer → QA → Close
+                                  ↓          ↓
+                              (issues?)  (issues?)
+                                  ↓          ↓
+                              Developer ←────┘
+                              (fix loop)
+```
+
+### Pipeline Retry Limits
+
+**MAX_REVIEW_RETRIES**: 3
+**MAX_QA_RETRIES**: 3
+
+Track retry count for each stage. If exceeded:
+```markdown
+## Pipeline Blocked - Human Intervention Required
+
+**Issue**: #{number}
+**Stage**: {Reviewer | QA}
+**Retries**: {count}/3 EXCEEDED
+
+The pipeline has looped {count} times without resolution.
+This issue requires human intervention.
+
+Adding label `needs-human` and pausing...
+```
+
+```bash
+gh issue edit {number} --add-label "needs-human"
 ```
 
 ### Check Available Pipeline Agents
 
 ```bash
-ls .claude/agents/*reviewer*.md .claude/agents/*review*.md 2>/dev/null
-ls .claude/agents/*qa*.md .claude/agents/*test*.md 2>/dev/null
+REVIEWER=$(ls .claude/agents/*reviewer*.md .claude/agents/*review*.md 2>/dev/null | head -1)
+QA_AGENT=$(ls .claude/agents/*qa*.md .claude/agents/*test*.md 2>/dev/null | head -1)
+echo "Reviewer: $REVIEWER"
+echo "QA: $QA_AGENT"
 ```
 
 ### Pipeline Rules
@@ -804,11 +875,51 @@ All pipeline stages passed. Issue #{number} is ready to close.
 
 ## 14. Close Issue
 
-**Only close after pipeline is complete** (or if no pipeline agents exist).
+**⛔ VALIDATION REQUIRED BEFORE CLOSING ⛔**
 
-Ask user:
+Before closing ANY issue, verify the pipeline state:
+
+### Pre-Close Checklist
+
+```bash
+# Check if pipeline agents exist
+REVIEWER=$(ls .claude/agents/*reviewer*.md .claude/agents/*review*.md 2>/dev/null | head -1)
+QA_AGENT=$(ls .claude/agents/*qa*.md .claude/agents/*test*.md 2>/dev/null | head -1)
+```
+
+**If pipeline agents exist, you MUST have completed the pipeline:**
+
+| Condition | Can Close? |
+|-----------|------------|
+| No reviewer AND no QA agents | ✅ Yes |
+| Reviewer exists, got `APPROVED` | ✅ Continue to QA |
+| QA exists, got `PASSED` | ✅ Yes |
+| Reviewer exists, NOT run yet | ❌ **NO - Run Section 13 first** |
+| QA exists, NOT run yet | ❌ **NO - Run Section 13 first** |
+| Reviewer returned `CHANGES_REQUESTED` | ❌ **NO - Fix and re-review** |
+| QA returned `FAILED` | ❌ **NO - Fix and re-test** |
+
+### Verify Pipeline Completion
+
+Before closing, confirm you received one of these responses:
+- From Reviewer: `APPROVED` (exact word)
+- From QA: `PASSED` (exact word)
+
+**If you cannot confirm these responses were received, DO NOT CLOSE. Go back to Section 13.**
+
+### Close Prompt
+
+Only after pipeline validation passes:
+
 ```markdown
-Pipeline complete. **Close issue #{number}?**
+## Ready to Close
+
+**Pipeline State**:
+- Developer: ✅ Complete
+- Reviewer: {✅ APPROVED | ⏭️ N/A (no reviewer agent)}
+- QA: {✅ PASSED | ⏭️ N/A (no QA agent)}
+
+**Close issue #{number}?**
 - `yes` - Close the issue
 - `no` - Keep open for further work
 ```
@@ -917,29 +1028,69 @@ If `$ARGUMENTS` contains `--until-done`, enable autonomous execution loop.
 ### How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    AUTONOMOUS MODE                           │
-│                                                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │ Find Next    │───>│ Execute Task │───>│ Pipeline     │  │
-│  │ Available    │    │ (Developer)  │    │ (Review/QA)  │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-│         ↑                                       │           │
-│         │                                       │           │
-│         └───────────── Loop ────────────────────┘           │
-│                                                              │
-│  Stops when: No more open sub-tasks with met dependencies   │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         AUTONOMOUS MODE                                    │
+│                                                                           │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌────────┐ │
+│  │ Find Next    │───>│ Developer    │───>│ Reviewer     │───>│ QA     │ │
+│  │ Available    │    │ Agent        │    │ (if exists)  │    │(exists)│ │
+│  └──────────────┘    └──────────────┘    └──────┬───────┘    └───┬────┘ │
+│         ↑                                       │                 │      │
+│         │                                       │ CHANGES_REQ     │FAILED│
+│         │                                       ▼                 ▼      │
+│         │                                  ┌─────────────────────────┐   │
+│         │                                  │ Developer Fixes         │   │
+│         │                                  │ (retry ≤ 3 times)       │   │
+│         │                                  └───────────┬─────────────┘   │
+│         │                                              │                  │
+│         │         ┌────────────────────────────────────┘                  │
+│         │         │ (re-review or re-test)                               │
+│         │         ▼                                                       │
+│         │    ┌──────────────┐                                            │
+│         │    │ APPROVED/    │                                            │
+│         │    │ PASSED       │                                            │
+│         │    └──────┬───────┘                                            │
+│         │           │                                                     │
+│         │           ▼                                                     │
+│         │    ┌──────────────┐                                            │
+│         └────│ Close Issue  │                                            │
+│              │ (validated)  │                                            │
+│              └──────────────┘                                            │
+│                                                                           │
+│  Stops when: No more open sub-tasks with met dependencies                │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
+**⛔ CRITICAL FOR AUTONOMOUS MODE ⛔**
+
+Each task MUST complete the FULL pipeline before moving to the next task:
+1. Developer executes task
+2. **IF reviewer exists**: Run reviewer → handle APPROVED/CHANGES_REQUESTED
+3. **IF QA exists**: Run QA → handle PASSED/FAILED
+4. **ONLY THEN**: Close issue and move to next task
+
+**DO NOT skip steps 2-3 even in autonomous mode.**
+
 ### Starting Autonomous Mode
+
+First, check what pipeline agents exist:
+
+```bash
+REVIEWER=$(ls .claude/agents/*reviewer*.md .claude/agents/*review*.md 2>/dev/null | head -1)
+QA_AGENT=$(ls .claude/agents/*qa*.md .claude/agents/*test*.md 2>/dev/null | head -1)
+echo "Pipeline: Developer → ${REVIEWER:+Reviewer →} ${QA_AGENT:+QA →} Close"
+```
 
 ```markdown
 ## Autonomous Mode Enabled
 
 **Mode**: `--until-done`
 **Will process**: All open sub-tasks with met dependencies
-**Pipeline**: Developer → Reviewer → QA (if agents exist)
+**Pipeline agents found**:
+- Reviewer: {$REVIEWER or "None"}
+- QA: {$QA_AGENT or "None"}
+
+**Each task will go through**: Developer {→ Reviewer} {→ QA} → Close
 
 Starting autonomous execution...
 ```
@@ -976,20 +1127,36 @@ For each available task:
 **Completed**: {N} of {total} sub-tasks
 **Current**: #{issue_number} - {title}
 **Agent**: `{agent_name}`
+**Pipeline**: Developer → {Reviewer →} {QA →} Close
 
 ---
 ```
 
-Then execute the full delegation flow (sections 3-15) for this task.
+**Execute the FULL flow for this task:**
+
+1. **Sections 3-11**: Validate issue, load agent, spawn developer task, collect results
+2. **Section 11.1**: ⛔ MANDATORY PIPELINE GATE - Check for reviewer/QA agents
+3. **Section 13**: IF pipeline agents exist, run the FULL pipeline:
+   - Spawn Reviewer → Get APPROVED/CHANGES_REQUESTED
+   - If CHANGES_REQUESTED: Developer fixes → Re-review (max 3 retries)
+   - Spawn QA → Get PASSED/FAILED
+   - If FAILED: Developer fixes → Re-test (max 3 retries)
+4. **Section 14**: Validate pipeline completion, THEN close issue
+
+**⛔ DO NOT proceed to next task until current task passes Section 14 validation ⛔**
 
 ### Progress Tracking
 
-After each task completion:
+After each task completes the FULL pipeline:
 
 ```markdown
 ## Task #{N} Complete
 
 **Issue**: #{number} - {title}
+**Pipeline Result**:
+- Developer: ✅ Implemented
+- Reviewer: {✅ APPROVED | ⏭️ N/A}
+- QA: {✅ PASSED | ⏭️ N/A}
 **Status**: Closed ✓
 
 **Progress**: {completed}/{total} sub-tasks done
@@ -999,6 +1166,8 @@ Continuing to next task...
 
 ---
 ```
+
+**Note**: A task is only "complete" after the full pipeline passes. Developer completion alone is NOT sufficient to close.
 
 ### Autonomous Mode Completion
 
@@ -1012,11 +1181,11 @@ When no more tasks are available:
 **Duration**: {time_if_available}
 
 ### Completed Tasks
-| # | Title | Agent | Status |
-|---|-------|-------|--------|
-| #125 | Backend API | backend | ✓ Closed |
-| #126 | Frontend UI | frontend | ✓ Closed |
-| #127 | Unit tests | qa | ✓ Closed |
+| # | Title | Agent | Reviewer | QA | Status |
+|---|-------|-------|----------|-------|--------|
+| #125 | Backend API | backend | ✅ APPROVED | ✅ PASSED | ✓ Closed |
+| #126 | Frontend UI | frontend | ✅ APPROVED | ✅ PASSED | ✓ Closed |
+| #127 | Unit tests | qa | ⏭️ N/A | ⏭️ N/A | ✓ Closed |
 
 ### Skipped (Blocking Dependencies)
 | # | Title | Blocked By |
@@ -1033,11 +1202,19 @@ When no more tasks are available:
 
 ### Autonomous Mode Rules
 
-1. **Respects Pipeline**: Every task goes through Developer → Reviewer → QA
-2. **Respects Dependencies**: Won't start task if dependencies are open
-3. **Auto-closes Issues**: Closes issues after successful pipeline completion
-4. **Continues on Success**: Moves to next task automatically
-5. **Stops on Critical Error**: If agent fails critically, stops and reports
+**⛔ MANDATORY RULES - DO NOT VIOLATE ⛔**
+
+1. **Pipeline is NON-NEGOTIABLE**: IF reviewer/QA agents exist, they MUST run for EVERY task
+2. **No Shortcuts**: Developer completion → Reviewer → QA → Close (never skip steps)
+3. **Validate Before Close**: Section 14 validation MUST pass before closing ANY issue
+4. **Retry Limits**: Max 3 retries per pipeline stage, then escalate to human
+5. **One Task at a Time**: Complete full pipeline for task N before starting task N+1
+
+**Standard Rules**:
+6. **Respects Dependencies**: Won't start task if dependencies are open
+7. **Auto-closes Issues**: Closes issues ONLY after successful pipeline completion
+8. **Continues on Success**: Moves to next task automatically after pipeline passes
+9. **Stops on Critical Error**: If agent fails critically or retries exceeded, stops and reports
 
 ### Error During Autonomous Mode
 
