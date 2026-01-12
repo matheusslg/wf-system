@@ -110,13 +110,11 @@ class WFOrchestrator:
 
     def _detect_workflow_type(self, config: Dict[str, Any]) -> str:
         """Detect if Jira or GitHub workflow."""
-        # Jira: has techLead.jiraProject
-        if config.get("techLead", {}).get("jiraProject"):
+        # Jira: has breakdown.jiraProject
+        if config.get("breakdown", {}).get("jiraProject"):
             return "jira"
-        # GitHub: has github.owner or ticketing.platform == "github"
+        # GitHub: has github.owner
         if config.get("github", {}).get("owner"):
-            return "github"
-        if config.get("ticketing", {}).get("platform") == "github":
             return "github"
         return "unknown"
 
@@ -247,7 +245,7 @@ class WFOrchestrator:
 
     def _handle_jira_session_start(self, workflow: Dict) -> Dict:
         """Jira workflow session start prompt."""
-        jira_project = workflow.get("techLead", {}).get("jiraProject", "PROJECT")
+        jira_project = workflow.get("breakdown", {}).get("jiraProject", "PROJECT")
         project_name = workflow.get("project", workflow.get("projectName", "Unknown"))
 
         msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-start-session or provide ticket"
