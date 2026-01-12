@@ -26,8 +26,8 @@ from typing import Optional, Dict, Any, Tuple
 # =============================================================================
 
 CONTEXT_LIMIT = 200_000
-PRE_COMPACT_THRESHOLD = 75  # Trigger /wf-end-session
-WARNING_THRESHOLD = 85      # Show warning
+PRE_COMPACT_THRESHOLD = 75  # Trigger /wf-end-session (first alert)
+WARNING_THRESHOLD = 75      # Repeated warning threshold (same as above)
 STATE_DIR = Path(os.path.expanduser("~/.claude/hooks/.wf-state"))
 STATE_MAX_AGE_DAYS = 7      # Cleanup old state files
 
@@ -339,12 +339,19 @@ class WFOrchestrator:
                 }
             }
         elif pct >= WARNING_THRESHOLD:
-            msg = f"[WF] WARNING: Context at {pct:.0f}% - Consider /wf-end-session soon"
+            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST RUN /wf-end-session NOW"
+            full_context = (
+                f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
+                f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
+                f"YOU MUST run `/wf-end-session` IMMEDIATELY.\n"
+                f"Context will be lost if you continue without saving.\n\n"
+                f"DO NOT continue working - run /wf-end-session first."
+            )
             return {
                 "systemMessage": msg,
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": msg
+                    "additionalContext": full_context
                 }
             }
 
