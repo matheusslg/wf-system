@@ -319,12 +319,14 @@ class WFOrchestrator:
             self.state["pre_compact_ran"] = True
             self._save_state()
 
-            msg = f"[WF] CRITICAL: Context at {pct:.0f}% - Run /wf-end-session NOW!"
+            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST RUN /wf-end-session NOW"
             full_context = (
-                f"CRITICAL - CONTEXT AT {pct:.0f}%\n"
+                f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
                 f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
-                f"YOU MUST run `/wf-end-session` NOW to:\n"
-                f"1. Save your progress to progress.md\n"
+                f"INVOKE THE SKILL: Use the Skill tool with skill='wf-end-session'\n"
+                f"DO NOT manually update progress.md - the skill handles everything.\n\n"
+                f"The /wf-end-session skill will:\n"
+                f"1. Save progress to progress.md\n"
                 f"2. Commit current work\n"
                 f"3. Archive session state\n\n"
                 f"After /wf-end-session completes, run /compact to summarize."
@@ -341,9 +343,9 @@ class WFOrchestrator:
             full_context = (
                 f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
                 f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
-                f"YOU MUST run `/wf-end-session` IMMEDIATELY.\n"
-                f"Context will be lost if you continue without saving.\n\n"
-                f"DO NOT continue working - run /wf-end-session first."
+                f"INVOKE THE SKILL: Use the Skill tool with skill='wf-end-session'\n"
+                f"DO NOT manually update progress.md - the skill handles everything.\n\n"
+                f"DO NOT continue working - invoke /wf-end-session skill first."
             )
             return {
                 "systemMessage": msg,
