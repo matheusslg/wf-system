@@ -5,7 +5,32 @@
 
 ## Current Status
 **Phase**: Development Ready
-**Last Updated**: 2026-01-12
+**Last Updated**: 2026-01-13
+
+---
+
+### Session 6 (2026-01-13)
+**Focus**: Pipeline enforcement + bug fixes + token analysis
+**Completed**:
+- [x] Enforced pipeline execution (Developer→Reviewer→QA) in `/wf-delegate`
+  - Added Section 11.1: MANDATORY PIPELINE GATE
+  - Added retry limits (max 3) for review/QA loops
+  - Strengthened Section 13 with ⛔ warnings
+  - Added Section 14 validation before closing
+  - Updated autonomous mode with explicit pipeline steps
+- [x] Made context warning more forceful at 75%+ in orchestrator hook
+- [x] Fixed legacy config keys: `techLead` → `breakdown`, removed `ticketing`
+- [x] Fixed YAML parsing crash in 7 commands (bracket syntax in argument-hint)
+  - wf-test, wf-commit, wf-init, wf-parse-prd, wf-pick-issue, wf-review, wf-generate
+- [x] Identified token hogs: wf-delegate (~10K), wf-generate (~7.5K), wf-breakdown (~4.6K)
+**Commits**:
+- `d2c1abd` - fix(delegate): enforce pipeline execution in autonomous mode
+- `83fc3f4` - fix(hooks): make context warning more forceful at 75%+
+- `bcf70fb` - fix(hooks): update legacy config key names in orchestrator
+- `3e87b91` - fix(commands): quote argument-hint values to prevent YAML parsing error
+**Next Session**:
+- Consider splitting large commands to reduce token consumption
+- Test pipeline enforcement with real `/wf-delegate --until-done` run
 
 ---
 
