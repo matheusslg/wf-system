@@ -1,7 +1,7 @@
 ---
 description: Bootstrap workflow system with minimal setup
 allowed-tools: Read, Write, Bash, AskUserQuestion
-argument-hint: [project-name]
+argument-hint: "<project-name>"
 ---
 
 # Initialize Project Workflow

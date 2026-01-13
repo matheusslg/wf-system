@@ -1,7 +1,7 @@
 ---
 description: Create a well-formatted conventional commit
 allowed-tools: Bash, Read, Grep
-argument-hint: [optional commit message]
+argument-hint: "<commit message>"
 ---
 
 # Commit

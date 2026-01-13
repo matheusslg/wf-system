@@ -1,7 +1,7 @@
 ---
 description: Select the next issue to work on based on priority
 allowed-tools: Read, Bash, Grep
-argument-hint: [optional: label or filter]
+argument-hint: "<label or filter>"
 ---
 
 # Pick Issue

@@ -1,7 +1,7 @@
 ---
 description: Generate agents and skills based on tech stack
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-argument-hint: [--from-prd | --from-code | --ask]
+argument-hint: "--from-prd | --from-code | --ask"
 ---
 
 # Generate Workflow Agents & Skills

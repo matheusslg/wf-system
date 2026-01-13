@@ -1,7 +1,7 @@
 ---
 description: Run tests and fix any failures
 allowed-tools: Read, Edit, Bash, Grep, Glob
-argument-hint: [optional: specific test or area]
+argument-hint: "<test file or pattern>"
 ---
 
 # Test

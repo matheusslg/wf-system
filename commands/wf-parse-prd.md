@@ -1,7 +1,7 @@
 ---
 description: Parse PRD and create parent issues
 allowed-tools: Read, Bash, Grep, Glob, Task, AskUserQuestion, mcp__github__create_issue, mcp__github__list_issues
-argument-hint: [prd-file-path]
+argument-hint: "<prd-file-path>"
 ---
 
 # Parse PRD

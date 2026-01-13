@@ -1,7 +1,7 @@
 ---
 description: Review recent code changes or a specific PR
 allowed-tools: Read, Bash, Grep, Glob
-argument-hint: [optional: PR number or branch]
+argument-hint: "<PR number or branch>"
 ---
 
 # Review
