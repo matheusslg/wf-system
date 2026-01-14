@@ -213,6 +213,12 @@ class WFOrchestrator:
         if self.state["first_run_handled"]:
             return None
 
+        # Skip session prompts in external loop mode (Ralph provides instructions)
+        if os.environ.get("WF_EXTERNAL_LOOP", "false") == "true":
+            self.state["first_run_handled"] = True
+            self._save_state()
+            return None
+
         self.state["first_run_handled"] = True
         workflow = self._get_workflow_config()
 
@@ -313,6 +319,10 @@ class WFOrchestrator:
 
     def handle_context_check(self) -> Optional[Dict]:
         """Check context usage and trigger /wf-end-session if needed."""
+        # Skip context warnings in external loop mode (Ralph handles restarts)
+        if os.environ.get("WF_EXTERNAL_LOOP", "false") == "true":
+            return None
+
         tokens, pct = self._get_context_usage()
 
         if pct >= PRE_COMPACT_THRESHOLD and not self.state["pre_compact_ran"]:
@@ -370,6 +380,10 @@ class WFOrchestrator:
         # Prevent infinite loops
         if self.stop_hook_active:
             return 0
+
+        # Unattended mode (Ralph) - always continue without prompting
+        if os.environ.get("WF_UNATTENDED", "false") == "true":
+            return 2
 
         workflow = self._get_workflow_config()
 
