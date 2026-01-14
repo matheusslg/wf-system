@@ -9,22 +9,37 @@
 
 ---
 
+### Session 14 (2026-01-14)
+**Focus**: Ralph error detection + SXRX-1050 test + Jira comment fixes
+**Completed**:
+- [x] Fixed Ralph to detect Claude auth errors before marking tickets complete
+  - Added `check_claude_errors()` function (detects OAuth expiry, API errors, rate limits)
+  - Prevents false-positive completions when Claude fails
+- [x] Tested Ralph with SXRX-1050 - caught OAuth expiration issue
+- [x] Reverted SXRX-1050 to "To Do" (was falsely marked complete)
+- [x] Updated SXRX-421 Jira comments with both PR links (api #266, app #410)
+- [x] Updated SXRX-421 "How to QA" comment with proper MFA test steps
+- [x] Researched Cognito email MFA - requires Essentials/Plus tier (paid)
+  - SXRX uses Lite tier = TOTP was correct choice for "no cost" requirement
+**Commits (sxrx-agentic)**:
+- `0526fd0` - fix(ralph): collect and post ALL PR URLs in Jira completion comment
+- `8911ae3` - fix(ralph): detect Claude errors before marking ticket complete
+**Decisions**:
+- TOTP MFA is correct for SXRX (Cognito Lite tier doesn't support email MFA)
+- Ralph should explain tradeoffs in comments when deviating from AC
+**Next**: Run Ralph on SXRX-1050 after OAuth refresh
+
+---
+
 ### Session 13 (2026-01-14)
 **Focus**: SXRX-421 cleanup - close duplicate PRs/issues + Fix Ralph multi-PR comment
 **Completed**:
 - [x] Closed GitHub issue #32 (MFA Settings Page sub-task)
-- [x] Closed 4 duplicate PRs created by Ralph:
-  - sxrx-app #409 (duplicate of #410)
-  - sxrx-api #263, #264, #265 (duplicates of #266)
-- [x] Fixed Ralph to post ALL PR URLs in Jira completion comment:
-  - Added `extract_pr_urls()` function (extracts all unique PR URLs, not just last one)
-  - Updated completion comment to list multiple PRs when present
-  - Also included: clickable Jira links, improved QA summary fallback
-**Blockers**: None
-**Decisions**: Keep consolidated PRs (#410, #266), close sub-task PRs
+- [x] Closed 4 duplicate PRs created by Ralph
+- [x] Fixed Ralph to post ALL PR URLs in Jira completion comment
 **Commits (sxrx-agentic)**:
 - `0526fd0` - fix(ralph): collect and post ALL PR URLs in Jira completion comment
-**Next**: Test Ralph with another ticket to verify multi-PR comment works
+**Next**: Test Ralph with another ticket
 
 ---
 
