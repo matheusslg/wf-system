@@ -1,19 +1,21 @@
 ---
-description: Evaluate and respond to PR review comments (CodeRabbitAI, reviewers)
+description: Evaluate, fix, and respond to PR review comments (CodeRabbitAI, reviewers)
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob, Task
 argument-hint: "<PR number(s) or 'all' for current branch PRs>"
 ---
 
 # PR Comments Handler
 
-Fetch, evaluate, and respond to PR review comments. Automatically determines which comments should be fixed and which should be declined with an explanation.
+Fetch, evaluate, and address PR review comments. For each comment:
+- **Should fix**: Implement the fix in the codebase
+- **Won't fix**: Reply with explanation using gh CLI
 
 ## Arguments
 - `$ARGUMENTS` - PR number(s), comma-separated, or "all" for PRs on current branch
 
 ## Flags
-- `--fix` - Automatically implement valid fixes after evaluation
-- `--dry-run` - Show what would be done without making changes
+- `--evaluate-only` - Only show evaluation, don't implement fixes or reply
+- `--no-replies` - Implement fixes but don't reply to comments
 - `--repo <owner/repo>` - Specify repository (defaults to current)
 
 ## 0. Setup
@@ -135,16 +137,17 @@ Show all evaluated comments:
 | PR | File | Issue | Verdict |
 |----|------|-------|---------|
 | #410 (app) | AuthWrapper.tsx:108-122 | Missing defensive handling | ✅ Should fix |
-| #266 (api) | Migration.ts | Add CHECK constraint | ❌ Won't fix |
+| #266 (api) | Migration.ts | Add CHECK constraint | ❌ Won't fix (replied) |
 | #266 (api) | auth.controller.ts:104-110 | Use ApiError instead | ✅ Should fix |
 
-**Summary**: 3 should fix, 1 won't fix
-
-Do you want me to:
-1. Implement the 3 valid fixes
-2. Reply to the "won't fix" comment with explanation
-3. Both
+**Summary**: 2 to fix, 1 won't fix
 ```
+
+### If `--evaluate-only` flag is set:
+Stop here and ask user what to do next.
+
+### Otherwise (default behavior):
+Proceed to implement all "Should fix" items and reply to all "Won't fix" items.
 
 ## 5. Reply to "Won't Fix" Comments
 
@@ -195,38 +198,57 @@ This doesn't apply to our use case because {explanation}. The current implementa
 Marking this as won't fix for now.
 ```
 
-## 6. Implement Valid Fixes (if --fix or user confirms)
+## 6. Implement Valid Fixes
 
-For each "Should fix" comment:
+For each "Should fix" comment, implement the fix:
 
-### 6.1 Read Full File
+### 6.1 Read Full File Context
 ```bash
 cat {file_path}
 ```
 
-### 6.2 Understand the Fix
-Parse the comment suggestion and determine:
-- What needs to change
-- Where in the file
-- Any dependencies
+Also read related files if needed (imports, types, tests).
 
-### 6.3 Apply the Fix
-Use Edit tool to make the change.
+### 6.2 Analyze the Suggested Fix
+Parse the comment to understand:
+- **What** needs to change (the issue)
+- **Where** in the file (line numbers from comment)
+- **How** to fix it (the suggestion)
+- **Why** it's an improvement (the reasoning)
+
+### 6.3 Implement the Fix
+Use the Edit tool to make the change. Follow the suggestion but adapt to existing code patterns.
+
+**Common fix patterns**:
+
+| Comment Type | Implementation |
+|--------------|----------------|
+| Missing null check | Add optional chaining or defensive if-statement |
+| Use specific error type | Replace `Error` with project-specific error class |
+| Add validation | Add validation logic (regex, type guards, etc.) |
+| Missing type annotation | Add TypeScript types |
+| Security concern | Implement proper sanitization/validation |
 
 ### 6.4 Verify the Fix
 ```bash
-# Run relevant tests if identifiable
-npm test -- --testPathPattern="{related_test}" 2>/dev/null || true
-
-# Or run type check
+# Type check the changes
 npx tsc --noEmit 2>/dev/null || true
+
+# Run related tests if identifiable
+npm test -- --testPathPattern="{related_test}" 2>/dev/null || true
 ```
 
-### 6.5 Reply to Comment (optional)
+### 6.5 Update Summary Table
+After each fix, update the displayed table:
+```
+| #410 (app) | AuthWrapper.tsx:108-122 | Missing defensive handling | ✅ Fixed |
+```
+
+### 6.6 Reply to Fixed Comment (unless --no-replies)
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   --method POST \
-  -f body="Fixed in the latest commit. Thanks for catching this!" \
+  -f body="Fixed! Added defensive handling for the undefined case. Thanks for catching this." \
   -F in_reply_to={comment_id}
 ```
 
