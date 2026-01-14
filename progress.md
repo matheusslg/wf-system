@@ -25,15 +25,19 @@
 - [x] Added .env configuration support
   - Created .env.example template
   - Script auto-loads .env from parent directory
+- [x] Fixed Jira API - migrated to new v3 POST endpoint
+  - Old: `GET /rest/api/3/search` (deprecated)
+  - New: `POST /rest/api/3/search/jql` with JSON body
+  - Tested and working with dry-run
 **Commits**:
-- `5ca2796` - feat(hooks): add Ralph compatibility env vars
+- `5ca2796` - feat(hooks): add Ralph compatibility env vars (wf-system)
 - `990d2b4` - feat: add Ralph autonomous development loop script (sxrx-agentic)
 - `237987e` - feat: add .env configuration support for Ralph (sxrx-agentic)
-**In Progress**:
-- Debugging Jira API connection (HTTP 000 error - likely network/SSL issue)
+- `e7a3fa4` - fix(ralph): use new Jira v3 search API endpoint (sxrx-agentic)
 **Next Session**:
-- Debug Jira API connection issue
-- Test Ralph with a real ticket once connection works
+- Test Ralph with a real ticket (add `ralph-ready` label to a Jira ticket)
+- Verify ephemeral environment creation works
+- Test full flow: ticket → Claude → PR → Jira comment
 
 ---
 
