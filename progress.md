@@ -9,6 +9,26 @@
 
 ---
 
+### Session 12 (2026-01-14)
+**Focus**: Fix migration failure + Ralph improvements
+**Completed**:
+- [x] Diagnosed ephemeral env migration failure (PR #266) - RDS DNS unreachable from GitHub runners
+- [x] Created sxrx-iac PR #45 to use self-hosted runners for Terraform
+- [x] Fixed Jira links to be clickable (proper ADF link marks)
+- [x] Fixed "How to QA" empty summary issue with fallback logic
+- [x] Updated Ralph prompt: ONE branch/PR per repo, close all issues when done
+**In Progress**:
+- [ ] Merge sxrx-iac PR #45 to enable ephemeral env creation
+**Blockers**: PR #45 needs approval before ephemeral envs work
+**Decisions**:
+- Terraform jobs need self-hosted runners with VPC access for postgresql provider
+- Ralph should enforce: one feature branch, one PR per repo, close all sub-issues
+**Commits (sxrx-iac)**:
+- `671d662` - fix(terraform): use self-hosted runners for VPC access
+**Next**: Merge PR #45, re-run Terraform for sxrx-421, verify migration passes
+
+---
+
 ### Session 11 (2026-01-14)
 **Focus**: Ralph improvements + SXRX-421 MFA implementation
 **Completed**:
