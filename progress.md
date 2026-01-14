@@ -9,6 +9,44 @@
 
 ---
 
+### Session 11 (2026-01-14)
+**Focus**: Ralph improvements - better Jira comments, verbose mode, Chrome/vision
+**Completed**:
+- [x] Fixed ephemeral env URL format: `app-sxrx-XXX` instead of `sxrx-XXX`
+- [x] Enhanced Jira completion comment to include PR link
+- [x] Added "How to QA" comment with rich ADF formatting (headings, links, lists)
+- [x] Added `VERBOSE=true` option for detailed Claude output (tools, agents, skills)
+- [x] Added `CHROME=true` (default) for browser automation / vision capability
+- [x] Explored wf-system vision usage - found `visual-verify` skill exists but needs auth solution
+- [x] Tested Ralph on SXRX-421 (MFA feature) - successfully ran `/wf-breakdown`
+**Ralph SXRX-421 Progress** (still running):
+- Created 7 GitHub issues in sxrx-agentic repo
+- Completed #28 (Cognito MFA already configured)
+- Completed #30 (DB migration for MFA preferences)
+- Working through remaining 4 sub-tasks
+**Commits (sxrx-agentic)**:
+- `077b160` - feat(ralph): improve Jira comments with PR link and How to QA section
+- `c5c4a58` - feat(ralph): add VERBOSE mode to see detailed Claude activity
+- `98d15a8` - feat(ralph): enable Chrome browser automation by default
+**Deferred**: Visual verification for authenticated pages (needs auth bypass solution)
+
+---
+
+### Session 10 (2026-01-14)
+**Focus**: Fix PR #408 build failure - missing AWS secrets for ephemeral environments
+**Completed**:
+- [x] Diagnosed build failure: missing keys in `sxrx-frontend-app-secrets-ephemeral-envs`
+- [x] Added 5 missing secrets via AWS CLI:
+  - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` = 131728710440
+  - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` = sxrx-dev.appspot.com
+  - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` = sxrx-dev.firebaseapp.com
+  - `NEXT_PUBLIC_SEALD_APP_ID`, `NEXT_PUBLIC_SEALD_API_URL`, `NEXT_PUBLIC_SEALD_KEY_STORAGE_URL`
+- [x] Re-ran failed workflow - build now passes
+- [x] Ephemeral environment deployed to https://sxrx-995.sxrxprotocols.com
+**Result**: PR #408 ready for review (all checks green)
+
+---
+
 ### Session 9 (2026-01-14)
 **Focus**: Ralph debugging - fixing permission issues and completing SXRX-995
 **Completed**:
