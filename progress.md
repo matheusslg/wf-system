@@ -5,7 +5,28 @@
 
 ## Current Status
 **Phase**: Development Ready
-**Last Updated**: 2026-01-13
+**Last Updated**: 2026-01-14
+
+---
+
+### Session 7 (2026-01-14)
+**Focus**: Hook fix + new command + Ralph integration research
+**Completed**:
+- [x] Fixed orchestrator hook to explicitly instruct Claude to invoke skill (not manually update progress.md)
+- [x] Created `/wf-investigate` command for proactive codebase exploration
+  - Quick mode: answer specific questions with file:line refs
+  - Deep mode (`--deep`): full architectural analysis report
+- [x] Researched Ralph autonomous coding loop integration
+  - Identified blockers: context management conflict, task source mismatch, pipeline incompatibility
+  - Proposed solutions: `WF_EXTERNAL_LOOP` and `WF_UNATTENDED` env vars
+- [x] Analyzed SXRX ephemeral environment infrastructure (Terraform workspaces)
+  - Confirmed SXRX-1054 ticket is implementable (~12 hours effort)
+**Commits**:
+- `0f4aa0f` - fix(hooks): explicitly tell Claude to invoke skill, not manually update progress
+- `8d44079` - feat(commands): add /wf-investigate for proactive codebase exploration
+**Next Session**:
+- Implement Ralph compatibility flags (`WF_EXTERNAL_LOOP`, `WF_UNATTENDED`)
+- Create prototype deploy workflow for SXRX if requested
 
 ---
 
