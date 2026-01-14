@@ -9,6 +9,29 @@
 
 ---
 
+### Session 9 (2026-01-14)
+**Focus**: Ralph debugging - fixing permission issues and completing SXRX-995
+**Completed**:
+- [x] Diagnosed why SXRX-995 wasn't implemented (Claude couldn't access Jira)
+- [x] Added `get_ticket_content()` function to fetch ticket from Jira before invoking Claude
+- [x] Fixed false-positive completion (tests passed on main without implementation)
+- [x] Added `--dangerously-skip-permissions` flag for non-interactive Claude execution
+- [x] **Successfully completed full Ralph cycle on SXRX-995**:
+  - Feature branch `feature/SXRX-995` created
+  - OTP highlight fix implemented
+  - PR #408 created with `create-infra` label
+  - All 1839 tests passed
+  - Ticket transitioned to "Code Review"
+  - Label removed automatically
+**Commits (sxrx-agentic)**:
+- `b6efb52` - fix(ralph): fetch ticket content before invoking Claude
+- `8b012f6` - fix(ralph): add --dangerously-skip-permissions flag for non-interactive use
+**Result**:
+- PR: https://github.com/gnarlysoft-ai/sxrx-app/pull/408
+- Commit: `97901bc9` - fix(frontend): prevent multiple OTP boxes from appearing highlighted on mobile
+
+---
+
 ### Session 8 (2026-01-14)
 **Focus**: Ralph integration - full implementation and testing
 **Completed**:
@@ -24,12 +47,7 @@
 - `e7a3fa4` - fix(ralph): use new Jira v3 search API endpoint
 - `585307b` - feat(ralph): auto-transition tickets to Code Review after PR
 - `4204cf1` - refactor(ralph): use create-infra PR label for ephemeral envs
-**In Progress**:
-- Ralph running on SXRX-995 (Claude implementing OTP fix)
-**Next Session**:
-- Check result of SXRX-995 implementation
-- Improve logging visibility (stream Claude output)
-- Test with a more complex ticket requiring /wf-breakdown
+**Status**: Completed in Session 9
 
 ---
 
@@ -195,10 +213,10 @@
 - None
 
 ## Next Session Should
+- [ ] Improve Ralph logging visibility (stream Claude output in real-time)
+- [ ] Test Ralph with a more complex ticket requiring `/wf-breakdown`
 - [ ] Test `/wf-delegate --parallel` with real parallel tasks
-- [ ] Test screenshot documentation workflow end-to-end
-- [ ] Test `/wf-generate` in a real project to verify opus model + skill assignment
-- [ ] Create GitHub issues for planned features/improvements
+- [ ] Consider adding Jira comment with PR link (currently only logs)
 
 ## Decisions Made
 - Tech stack: Shell (Bash), Python, Markdown, Git/GitHub
