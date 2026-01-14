@@ -10,17 +10,21 @@
 ---
 
 ### Session 13 (2026-01-14)
-**Focus**: SXRX-421 cleanup - close duplicate PRs/issues
+**Focus**: SXRX-421 cleanup - close duplicate PRs/issues + Fix Ralph multi-PR comment
 **Completed**:
 - [x] Closed GitHub issue #32 (MFA Settings Page sub-task)
 - [x] Closed 4 duplicate PRs created by Ralph:
   - sxrx-app #409 (duplicate of #410)
   - sxrx-api #263, #264, #265 (duplicates of #266)
-**In Progress**:
-- [ ] Fix Ralph to post ALL PR links in Jira comment (currently only posts one)
+- [x] Fixed Ralph to post ALL PR URLs in Jira completion comment:
+  - Added `extract_pr_urls()` function (extracts all unique PR URLs, not just last one)
+  - Updated completion comment to list multiple PRs when present
+  - Also included: clickable Jira links, improved QA summary fallback
 **Blockers**: None
 **Decisions**: Keep consolidated PRs (#410, #266), close sub-task PRs
-**Next**: Fix Ralph to collect and post both sxrx-api and sxrx-app PR URLs in completion comment
+**Commits (sxrx-agentic)**:
+- `0526fd0` - fix(ralph): collect and post ALL PR URLs in Jira completion comment
+**Next**: Test Ralph with another ticket to verify multi-PR comment works
 
 ---
 
