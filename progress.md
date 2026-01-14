@@ -9,6 +9,34 @@
 
 ---
 
+### Session 8 (2026-01-14)
+**Focus**: Ralph integration implementation for SXRX
+**Completed**:
+- [x] Added `WF_EXTERNAL_LOOP` env var to wf-orchestrator.py
+  - Skips context warnings (external loop handles restarts)
+  - Skips session start prompts
+- [x] Added `WF_UNATTENDED` env var to wf-orchestrator.py
+  - Always returns exit code 2 in stop hook (continue without prompts)
+- [x] Created `ralph-sxrx.sh` script in sxrx-agentic (~295 lines)
+  - Polls Jira for `ralph-ready` label
+  - Creates ephemeral environments via .tf_workspaces
+  - Smart routing: Claude decides /wf-implement vs /wf-breakdown
+  - Auto-removes label after processing
+- [x] Added .env configuration support
+  - Created .env.example template
+  - Script auto-loads .env from parent directory
+**Commits**:
+- `5ca2796` - feat(hooks): add Ralph compatibility env vars
+- `990d2b4` - feat: add Ralph autonomous development loop script (sxrx-agentic)
+- `237987e` - feat: add .env configuration support for Ralph (sxrx-agentic)
+**In Progress**:
+- Debugging Jira API connection (HTTP 000 error - likely network/SSL issue)
+**Next Session**:
+- Debug Jira API connection issue
+- Test Ralph with a real ticket once connection works
+
+---
+
 ### Session 7 (2026-01-14)
 **Focus**: Hook fix + new command + Ralph integration research
 **Completed**:
@@ -24,9 +52,6 @@
 **Commits**:
 - `0f4aa0f` - fix(hooks): explicitly tell Claude to invoke skill, not manually update progress
 - `8d44079` - feat(commands): add /wf-investigate for proactive codebase exploration
-**Next Session**:
-- Implement Ralph compatibility flags (`WF_EXTERNAL_LOOP`, `WF_UNATTENDED`)
-- Create prototype deploy workflow for SXRX if requested
 
 ---
 
