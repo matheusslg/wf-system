@@ -198,59 +198,110 @@ This doesn't apply to our use case because {explanation}. The current implementa
 Marking this as won't fix for now.
 ```
 
-## 6. Implement Valid Fixes
+## 6. Implement Valid Fixes (Delegated to Sub-Agent)
 
-For each "Should fix" comment, implement the fix:
+For each "Should fix" comment, delegate the implementation to a sub-agent.
 
-### 6.1 Read Full File Context
+### 6.1 Determine Agent Type
+
+Based on the file path, select the appropriate agent:
+
+| File Pattern | Agent Type |
+|--------------|------------|
+| `*.tsx`, `*.jsx`, `components/`, `app/` | `general-purpose` (frontend focus) |
+| `*.controller.ts`, `*.service.ts`, `modules/` | `general-purpose` (backend focus) |
+| `*.spec.ts`, `*.test.ts` | `general-purpose` (testing focus) |
+| Other | `general-purpose` |
+
+Check for project-specific agents:
 ```bash
-cat {file_path}
+ls .claude/agents/*.md 2>/dev/null
 ```
 
-Also read related files if needed (imports, types, tests).
+### 6.2 Spawn Fix Agent
 
-### 6.2 Analyze the Suggested Fix
-Parse the comment to understand:
-- **What** needs to change (the issue)
-- **Where** in the file (line numbers from comment)
-- **How** to fix it (the suggestion)
-- **Why** it's an improvement (the reasoning)
+For each fix, spawn a sub-agent with focused context:
 
-### 6.3 Implement the Fix
-Use the Edit tool to make the change. Follow the suggestion but adapt to existing code patterns.
+```
+Task(
+  subagent_type: "general-purpose",
+  model: "sonnet",
+  prompt: "## PR Review Comment Fix
 
-**Common fix patterns**:
+**Repository**: {owner}/{repo}
+**PR**: #{pr_number}
+**File**: {file_path}
+**Lines**: {start_line}-{end_line}
 
-| Comment Type | Implementation |
-|--------------|----------------|
-| Missing null check | Add optional chaining or defensive if-statement |
-| Use specific error type | Replace `Error` with project-specific error class |
-| Add validation | Add validation logic (regex, type guards, etc.) |
-| Missing type annotation | Add TypeScript types |
-| Security concern | Implement proper sanitization/validation |
+### Review Comment
+{comment_body}
 
-### 6.4 Verify the Fix
-```bash
-# Type check the changes
-npx tsc --noEmit 2>/dev/null || true
-
-# Run related tests if identifiable
-npm test -- --testPathPattern="{related_test}" 2>/dev/null || true
+### Code Context (from PR diff)
+```{language}
+{diff_hunk}
 ```
 
-### 6.5 Update Summary Table
-After each fix, update the displayed table:
+### Your Task
+1. Read the full file at `{file_path}`
+2. Understand the reviewer's concern
+3. Implement the suggested fix
+4. Verify with `npx tsc --noEmit` (if TypeScript)
+5. Report what you changed
+
+### Guidelines
+- Follow existing code patterns in the file
+- Make minimal changes to address the comment
+- Don't refactor unrelated code
+- Ensure the fix compiles without errors
+
+### Expected Output
+```
+**Fixed**: {brief description of what was changed}
+**File**: {file_path}
+**Lines changed**: {line numbers}
+```
+",
+  description: "Fix: {short_issue_description}"
+)
+```
+
+### 6.3 Collect Agent Results
+
+For each completed fix, capture:
+- What was changed
+- Files modified
+- Verification status
+
+### 6.4 Update Summary Table
+
+After each fix completes, update the displayed table:
 ```
 | #410 (app) | AuthWrapper.tsx:108-122 | Missing defensive handling | ✅ Fixed |
 ```
 
-### 6.6 Reply to Fixed Comment (unless --no-replies)
+### 6.5 Reply to Fixed Comment (unless --no-replies)
+
+After the agent completes the fix:
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   --method POST \
-  -f body="Fixed! Added defensive handling for the undefined case. Thanks for catching this." \
+  -f body="Fixed! {description_from_agent}. Thanks for catching this!" \
   -F in_reply_to={comment_id}
 ```
+
+### 6.6 Parallel Execution (Optional)
+
+If fixes are in different files with no dependencies, spawn multiple agents in parallel:
+```
+# Spawn all fix agents simultaneously
+Task(...fix1...)
+Task(...fix2...)
+Task(...fix3...)
+
+# Collect results from all
+```
+
+**Note**: Avoid parallel execution if fixes are in the same file or have dependencies.
 
 ## 7. Final Report
 
