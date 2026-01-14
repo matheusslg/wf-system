@@ -10,34 +10,26 @@
 ---
 
 ### Session 8 (2026-01-14)
-**Focus**: Ralph integration implementation for SXRX
+**Focus**: Ralph integration - full implementation and testing
 **Completed**:
-- [x] Added `WF_EXTERNAL_LOOP` env var to wf-orchestrator.py
-  - Skips context warnings (external loop handles restarts)
-  - Skips session start prompts
-- [x] Added `WF_UNATTENDED` env var to wf-orchestrator.py
-  - Always returns exit code 2 in stop hook (continue without prompts)
-- [x] Created `ralph-sxrx.sh` script in sxrx-agentic (~295 lines)
-  - Polls Jira for `ralph-ready` label
-  - Creates ephemeral environments via .tf_workspaces
-  - Smart routing: Claude decides /wf-implement vs /wf-breakdown
-  - Auto-removes label after processing
-- [x] Added .env configuration support
-  - Created .env.example template
-  - Script auto-loads .env from parent directory
 - [x] Fixed Jira API - migrated to new v3 POST endpoint
-  - Old: `GET /rest/api/3/search` (deprecated)
-  - New: `POST /rest/api/3/search/jql` with JSON body
-  - Tested and working with dry-run
-**Commits**:
-- `5ca2796` - feat(hooks): add Ralph compatibility env vars (wf-system)
-- `990d2b4` - feat: add Ralph autonomous development loop script (sxrx-agentic)
-- `237987e` - feat: add .env configuration support for Ralph (sxrx-agentic)
-- `e7a3fa4` - fix(ralph): use new Jira v3 search API endpoint (sxrx-agentic)
+- [x] Added auto-transition to "Code Review" after PR creation
+- [x] Refactored to use `create-infra` PR label (existing workflow)
+  - Removed manual sxrx-iac commits
+  - Removed 5-minute Terraform wait
+  - Claude adds `create-infra` label to PRs for auto-provisioning
+- [x] Tested dry-run successfully with SXRX-995
+- [x] Started real test with SXRX-995 (OTP highlight bug)
+**Commits (sxrx-agentic)**:
+- `e7a3fa4` - fix(ralph): use new Jira v3 search API endpoint
+- `585307b` - feat(ralph): auto-transition tickets to Code Review after PR
+- `4204cf1` - refactor(ralph): use create-infra PR label for ephemeral envs
+**In Progress**:
+- Ralph running on SXRX-995 (Claude implementing OTP fix)
 **Next Session**:
-- Test Ralph with a real ticket (add `ralph-ready` label to a Jira ticket)
-- Verify ephemeral environment creation works
-- Test full flow: ticket → Claude → PR → Jira comment
+- Check result of SXRX-995 implementation
+- Improve logging visibility (stream Claude output)
+- Test with a more complex ticket requiring /wf-breakdown
 
 ---
 
