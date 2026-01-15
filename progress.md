@@ -5,7 +5,32 @@
 
 ## Current Status
 **Phase**: Development Ready
-**Last Updated**: 2026-01-14
+**Last Updated**: 2026-01-15
+
+---
+
+### Session 15 (2026-01-15)
+**Focus**: /wf-pr-comments command + Ralph sub-task handling
+**Completed**:
+- [x] Created `/wf-pr-comments` command for handling PR review comments
+  - Fetches comments from CodeRabbitAI and other reviewers via gh CLI
+  - Evaluates each comment (should fix vs won't fix)
+  - Implements fixes by delegating to sub-agents
+  - Replies to "won't fix" comments with explanations
+- [x] Created Jira sub-tasks for email MFA (SXRX-1060, SXRX-1061)
+  - Discovered SXRX uses Cognito Plus (not Lite) - email MFA IS available
+**In Progress**:
+- [ ] Ralph sub-task detection - use parent's existing PRs/branches
+  - Added `get_parent_ticket()`, `get_existing_prs_for_ticket()`, `is_subtask()`
+  - Need to finish modifying Claude prompt for sub-tasks
+**Commits (wf-system)**:
+- `f488cfe` - feat(commands): add /wf-pr-comments for PR review comment handling
+- `7747466` - fix(wf-pr-comments): implement fixes by default, not just evaluate
+- `7bad9df` - feat(wf-pr-comments): delegate fixes to sub-agents
+**Decisions**:
+- Sub-tasks should reuse parent's PRs/branches instead of creating new ones
+- SXRX has Cognito Plus plan - email MFA should be added
+**Next**: Finish Ralph sub-task branch reuse logic in process_ticket()
 
 ---
 
