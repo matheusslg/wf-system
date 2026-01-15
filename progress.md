@@ -9,28 +9,42 @@
 
 ---
 
+### Session 16 (2026-01-15)
+**Focus**: Ralph sub-task handling completion + testing
+**Completed**:
+- [x] Finished Ralph sub-task handling in `ralph-sxrx.sh`
+  - Added conditional Claude prompt (sub-task vs standalone)
+  - Sub-tasks: checkout existing branch, push to existing PR, no create-infra
+  - Standalone: create new branch, new PR, add create-infra label
+  - Fall back to standalone if parent has no existing PRs
+- [x] Tested Ralph with SXRX-1060/1061 sub-tasks
+  - Sub-task detection working correctly
+  - Found existing PRs for parent SXRX-421
+  - Claude made changes but tests failing (MFA function name mismatch)
+**In Progress**:
+- [ ] MFA test failures - 31 tests failing due to function name changes
+  - `setupMfaTotp`, `verifyMfaTotp` in service but tests expect old names
+  - Uncommitted changes in sxrx-app on feature/SXRX-421 branch
+- [ ] User requested `/ralph-fix` comment feature for Jira
+  - Allow posting `/ralph-fix <issue>` in Jira comments for Ralph to process
+**Commits (sxrx-agentic)**:
+- `7f97215` - feat(ralph): handle sub-tasks by reusing parent PRs
+**Blockers**: OAuth token keeps expiring during Ralph runs
+**Next**:
+1. Fix MFA test failures (function name alignment)
+2. Implement `/ralph-fix` Jira comment feature
+
+---
+
 ### Session 15 (2026-01-15)
 **Focus**: /wf-pr-comments command + Ralph sub-task handling
 **Completed**:
 - [x] Created `/wf-pr-comments` command for handling PR review comments
-  - Fetches comments from CodeRabbitAI and other reviewers via gh CLI
-  - Evaluates each comment (should fix vs won't fix)
-  - Implements fixes by delegating to sub-agents
-  - Replies to "won't fix" comments with explanations
 - [x] Created Jira sub-tasks for email MFA (SXRX-1060, SXRX-1061)
-  - Discovered SXRX uses Cognito Plus (not Lite) - email MFA IS available
-**In Progress**:
-- [ ] Ralph sub-task detection - use parent's existing PRs/branches
-  - Added `get_parent_ticket()`, `get_existing_prs_for_ticket()`, `is_subtask()`
-  - Need to finish modifying Claude prompt for sub-tasks
 **Commits (wf-system)**:
-- `f488cfe` - feat(commands): add /wf-pr-comments for PR review comment handling
-- `7747466` - fix(wf-pr-comments): implement fixes by default, not just evaluate
+- `f488cfe` - feat(commands): add /wf-pr-comments
+- `7747466` - fix(wf-pr-comments): implement fixes by default
 - `7bad9df` - feat(wf-pr-comments): delegate fixes to sub-agents
-**Decisions**:
-- Sub-tasks should reuse parent's PRs/branches instead of creating new ones
-- SXRX has Cognito Plus plan - email MFA should be added
-**Next**: Finish Ralph sub-task branch reuse logic in process_ticket()
 
 ---
 
