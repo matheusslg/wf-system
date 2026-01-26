@@ -17,6 +17,8 @@ import sys
 import json
 import os
 import subprocess
+import urllib.request
+import time
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Tuple
@@ -30,6 +32,11 @@ PRE_COMPACT_THRESHOLD = 75  # Trigger /wf-end-session (first alert)
 WARNING_THRESHOLD = 75      # Repeated warning threshold (same as above)
 STATE_DIR = Path(os.path.expanduser("~/.claude/hooks/.wf-state"))
 STATE_MAX_AGE_DAYS = 7      # Cleanup old state files
+
+# Update check configuration
+UPDATE_CHECK_INTERVAL = 86400  # 24 hours in seconds
+VERSION_URL = "https://raw.githubusercontent.com/matheusslg/wf-system/main/VERSION"
+HOOKS_DIR = Path(os.path.expanduser("~/.claude/hooks"))
 
 
 class WFOrchestrator:
@@ -78,6 +85,73 @@ class WFOrchestrator:
                     state_file.unlink()
         except Exception:
             pass  # Ignore cleanup errors
+
+    # -------------------------------------------------------------------------
+    # Update Checking
+    # -------------------------------------------------------------------------
+
+    def _version_compare(self, v1: str, v2: str) -> int:
+        """Compare two semantic versions. Returns 1 if v1 > v2, -1 if v1 < v2, 0 if equal."""
+        try:
+            parts1 = [int(x) for x in v1.strip().split('.')]
+            parts2 = [int(x) for x in v2.strip().split('.')]
+            # Pad with zeros
+            while len(parts1) < 3:
+                parts1.append(0)
+            while len(parts2) < 3:
+                parts2.append(0)
+            for p1, p2 in zip(parts1, parts2):
+                if p1 > p2:
+                    return 1
+                if p1 < p2:
+                    return -1
+            return 0
+        except (ValueError, AttributeError):
+            return 0
+
+    def check_for_updates(self) -> None:
+        """Check for wf-system updates (daily, non-blocking)."""
+        last_check_file = HOOKS_DIR / ".wf-last-check"
+        version_file = HOOKS_DIR / ".wf-version"
+        update_file = HOOKS_DIR / ".wf-update-available"
+
+        # Skip if checked within 24 hours
+        if last_check_file.exists():
+            try:
+                last_check = last_check_file.stat().st_mtime
+                if time.time() - last_check < UPDATE_CHECK_INTERVAL:
+                    return
+            except OSError:
+                pass
+
+        # Skip if no version file (not installed via install.sh)
+        if not version_file.exists():
+            return
+
+        try:
+            # Read installed version
+            installed = version_file.read_text().strip()
+
+            # Fetch remote version with short timeout
+            req = urllib.request.Request(VERSION_URL, headers={'User-Agent': 'wf-system'})
+            with urllib.request.urlopen(req, timeout=3) as response:
+                remote = response.read().decode().strip()
+
+            # Compare versions
+            if self._version_compare(remote, installed) > 0:
+                # Newer version available
+                update_file.write_text(f"{installed}->{remote}")
+            else:
+                # No update or older - clear flag
+                if update_file.exists():
+                    update_file.unlink()
+
+            # Update last check timestamp
+            last_check_file.touch()
+
+        except Exception:
+            # Silently fail - network issues shouldn't break workflow
+            pass
 
     # -------------------------------------------------------------------------
     # Workflow Detection
@@ -464,6 +538,9 @@ class WFOrchestrator:
 
     def run_post_tool_use(self) -> Optional[Dict]:
         """Main PostToolUse handler."""
+        # Check for updates (daily, non-blocking background check)
+        self.check_for_updates()
+
         # First run handling (session start simulation)
         first_run_output = self.handle_first_run()
         if first_run_output:

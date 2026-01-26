@@ -44,6 +44,9 @@ if [ "$INSTALL_TYPE" = "global" ]; then
   mkdir -p "$TARGET_DIR/hooks/.wf-state"
 fi
 
+# Store repo directory for later use
+WF_REPO_DIR="$REPO_DIR"
+
 # Install commands
 echo "[2/4] Installing workflow commands..."
 count=0
@@ -82,6 +85,32 @@ if [ "$INSTALL_TYPE" = "global" ]; then
   else
     cp "$REPO_DIR/hooks/wf-orchestrator.py" "$TARGET_DIR/hooks/wf-orchestrator.py"
   fi
+
+  # Write version metadata
+  echo "       Writing version metadata..."
+
+  # Write installed version
+  if [ -f "$REPO_DIR/VERSION" ]; then
+    cp "$REPO_DIR/VERSION" "$TARGET_DIR/hooks/.wf-version"
+  else
+    echo "1.0.0" > "$TARGET_DIR/hooks/.wf-version"
+  fi
+
+  # Write install mode
+  if [ "$LINK_MODE" != "2" ]; then
+    echo "symlink" > "$TARGET_DIR/hooks/.wf-install-mode"
+  else
+    echo "copy" > "$TARGET_DIR/hooks/.wf-install-mode"
+  fi
+
+  # Write source path
+  echo "$REPO_DIR" > "$TARGET_DIR/hooks/.wf-source"
+
+  # Initialize last check timestamp
+  touch "$TARGET_DIR/hooks/.wf-last-check"
+
+  # Clear any existing update notification
+  rm -f "$TARGET_DIR/hooks/.wf-update-available"
 
   # Merge settings.json
   echo "[4/4] Configuring settings..."

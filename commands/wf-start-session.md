@@ -7,7 +7,22 @@ allowed-tools: Read, Bash, Grep
 
 Execute the environment-as-memory startup protocol.
 
-## 0. Load Configuration
+## 0. Check for Updates (Cached)
+
+Check if an update notification exists (written by orchestrator's daily check):
+
+```bash
+cat ~/.claude/hooks/.wf-update-available 2>/dev/null || echo ""
+```
+
+If the file exists and contains a version transition (e.g., "1.0.0->1.1.0"):
+
+> **wf-system update available**: v{old} -> v{new}
+> Run `/wf-update` to update.
+
+Continue with session start regardless - this is just a non-blocking notice.
+
+## 1. Load Configuration
 
 Check for workflow configuration:
 ```bash
@@ -19,7 +34,7 @@ Extract settings (defaults if not present):
 - `standardsFile`: defaults to "standards.md"
 - `initScript`: optional environment verification script
 
-## 0.5. Quick MCP Status Check
+## 1.5. Quick MCP Status Check
 
 Silently verify available MCP servers to understand what features are available this session:
 
@@ -49,7 +64,7 @@ If critical MCPs are missing, add to session summary:
 **Note**: Some workflow commands require MCP servers. Run `/wf-init` for setup instructions.
 ```
 
-## 1. Read Progress Log
+## 2. Read Progress Log
 
 First, check file size to ensure it's readable:
 ```bash
@@ -71,7 +86,7 @@ Understand:
 
 > **Note**: Historical sessions are archived in `.claude/session-archive/` if deeper context is needed.
 
-## 2. Read Standards (if exists)
+## 3. Read Standards (if exists)
 
 ```bash
 cat standards.md 2>/dev/null || echo "No standards file"
@@ -79,7 +94,7 @@ cat standards.md 2>/dev/null || echo "No standards file"
 
 Refresh on code conventions if the file exists.
 
-## 3. Verify Environment (if init script defined)
+## 4. Verify Environment (if init script defined)
 
 If `initScript` is defined in workflow.json:
 ```bash
@@ -98,14 +113,14 @@ ls Cargo.toml 2>/dev/null && echo "Rust project"
 ls go.mod 2>/dev/null && echo "Go project"
 ```
 
-## 4. Check Open Issues (if GitHub)
+## 5. Check Open Issues (if GitHub)
 
 If this is a GitHub repo:
 ```bash
 gh issue list --state open --limit 15 2>/dev/null || echo "No GitHub CLI or not a GitHub repo"
 ```
 
-## 5. Git Status
+## 6. Git Status
 
 Check current repository state:
 ```bash
