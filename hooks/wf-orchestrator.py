@@ -32,6 +32,7 @@ PRE_COMPACT_THRESHOLD = 75  # Trigger /wf-end-session (first alert)
 WARNING_THRESHOLD = 75      # Repeated warning threshold (same as above)
 STATE_DIR = Path(os.path.expanduser("~/.claude/hooks/.wf-state"))
 STATE_MAX_AGE_DAYS = 7      # Cleanup old state files
+PROGRESS_LINE_LIMIT = 450   # Warn if progress.md exceeds this
 
 # Update check configuration
 UPDATE_CHECK_INTERVAL = 86400  # 24 hours in seconds
@@ -248,6 +249,20 @@ class WFOrchestrator:
                 return path
         return None
 
+    def _check_progress_size(self, config: Optional[Dict[str, Any]]) -> Optional[int]:
+        """Check progress.md line count. Returns line count if over limit, None otherwise."""
+        progress_path = self._get_progress_file_path(config)
+        if not progress_path:
+            return None
+
+        try:
+            line_count = len(progress_path.read_text().splitlines())
+            if line_count > PROGRESS_LINE_LIMIT:
+                return line_count
+        except (IOError, FileNotFoundError):
+            pass
+        return None
+
     def _check_progress_wip(self, config: Optional[Dict[str, Any]]) -> Optional[str]:
         """Check progress.md for work in progress."""
         progress_path = self._get_progress_file_path(config)
@@ -327,6 +342,15 @@ class WFOrchestrator:
         """Jira workflow session start prompt."""
         jira_project = workflow.get("breakdown", {}).get("jiraProject", "PROJECT")
         project_name = workflow.get("project", workflow.get("projectName", "Unknown"))
+        progress_lines = self._check_progress_size(workflow)
+
+        # Build progress warning if needed
+        progress_warning = ""
+        if progress_lines:
+            progress_warning = (
+                f"\n\n⚠️ WARNING: progress.md has {progress_lines} lines (limit: {PROGRESS_LINE_LIMIT}). "
+                f"Run `/wf-end-session` to archive old sessions."
+            )
 
         msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-start-session or provide ticket"
         full_context = (
@@ -336,7 +360,7 @@ class WFOrchestrator:
             f"Would you like to work on a Jira ticket?\n"
             f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-breakdown`\n"
             f"- Or describe what you'd like to work on\n"
-            f"- Or run `/wf-start-session` for full context load"
+            f"- Or run `/wf-start-session` for full context load{progress_warning}"
         )
         return {
             "systemMessage": msg,
@@ -349,10 +373,19 @@ class WFOrchestrator:
     def _handle_github_session_start(self, workflow: Dict) -> Dict:
         """GitHub workflow session start with WIP detection."""
         wip = self._check_progress_wip(workflow)
+        progress_lines = self._check_progress_size(workflow)
         github = workflow.get("github", {})
         owner = github.get("owner", "")
         repo = github.get("repo", "")
         repo_display = f"{owner}/{repo}" if owner and repo else "Unknown"
+
+        # Build progress warning if needed
+        progress_warning = ""
+        if progress_lines:
+            progress_warning = (
+                f"\n\n⚠️ WARNING: progress.md has {progress_lines} lines (limit: {PROGRESS_LINE_LIMIT}). "
+                f"Run `/wf-end-session` to archive old sessions."
+            )
 
         if wip:
             msg = f"[WF] {repo_display} - WIP: {wip[:50]}{'...' if len(wip) > 50 else ''}"
@@ -361,7 +394,7 @@ class WFOrchestrator:
                 f"Repository: {repo_display}\n\n"
                 f"WIP: {wip}\n\n"
                 f"Recommended: Run `/wf-delegate` to continue with the assigned sub-task, "
-                f"or `/wf-start-session` for full context."
+                f"or `/wf-start-session` for full context.{progress_warning}"
             )
             return {
                 "systemMessage": msg,
@@ -377,7 +410,7 @@ class WFOrchestrator:
                 f"Repository: {repo_display}\n\n"
                 f"No work in progress detected.\n"
                 f"Recommended: Run `/wf-pick-issue` to select the next task, "
-                f"or `/wf-start-session` for full context."
+                f"or `/wf-start-session` for full context.{progress_warning}"
             )
             return {
                 "systemMessage": msg,

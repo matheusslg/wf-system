@@ -248,7 +248,17 @@ Then re-run QA.
 
 ## 8. Update Progress
 
-Add to progress.md:
+**First, check if archiving is needed:**
+```bash
+wc -l progress.md 2>/dev/null || echo "0"
+```
+
+If file exceeds **450 lines**, run the archive procedure before adding:
+1. Keep only last 5 sessions in main file
+2. Move older entries to `.claude/session-archive/`
+3. See `/wf-end-session` section 3 for full procedure
+
+**Then add to progress.md:**
 
 ```markdown
 ### Improvement: {area} ({date})
