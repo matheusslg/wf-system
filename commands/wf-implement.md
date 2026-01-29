@@ -1,12 +1,32 @@
 ---
 description: Build a new feature from description
-allowed-tools: Read, Edit, Write, Bash, Grep, Glob, Task
+allowed-tools: Read, Bash, Grep, Glob, Task
 argument-hint: <feature description or issue number>
+note: "Edit and Write are INTENTIONALLY excluded - orchestrator must delegate, not implement"
 ---
 
 # Implement
 
 Build a new feature by delegating to the appropriate sub-agent.
+
+## ⛔ CRITICAL: ORCHESTRATOR BOUNDARIES
+
+**YOU ARE THE ORCHESTRATOR, NOT THE IMPLEMENTER.**
+
+Your ONLY allowed actions in this command:
+- **READ** files, issues, and configuration (for context gathering)
+- **SPAWN** sub-agents via `Task()` tool
+- **REPORT** results back to the user
+
+**YOU MUST NOT:**
+- Edit or Write any source code files
+- Run implementation commands (npm install, git commit, etc.)
+- Fix bugs or implement features directly
+- Make any changes to the codebase yourself
+
+**ALL implementation happens INSIDE the spawned sub-agent.**
+
+If you find yourself about to edit a file or implement something, STOP and delegate it to a sub-agent instead.
 
 ## ⛔ CRITICAL: Branch Safety
 

@@ -1,12 +1,29 @@
 ---
 description: Enhance existing code or feature quality
-allowed-tools: Read, Edit, Write, Bash, Grep, Glob, Task
+allowed-tools: Read, Bash, Grep, Glob, Task
 argument-hint: <improvement description>
+note: "Edit and Write are INTENTIONALLY excluded - orchestrator must delegate, not implement"
 ---
 
 # Improve
 
 Enhance existing code or features by delegating to the appropriate sub-agent.
+
+## ⛔ CRITICAL: ORCHESTRATOR BOUNDARIES
+
+**YOU ARE THE ORCHESTRATOR, NOT THE IMPLEMENTER.**
+
+Your ONLY allowed actions in this command:
+- **READ** files, issues, and configuration (for context gathering)
+- **SPAWN** sub-agents via `Task()` tool
+- **REPORT** results back to the user
+
+**YOU MUST NOT:**
+- Edit or Write any source code files
+- Run implementation commands directly
+- Make any changes to the codebase yourself
+
+**ALL implementation happens INSIDE the spawned sub-agent.**
 
 ## Arguments
 - `$ARGUMENTS` - What to improve (e.g., "error messages in auth", "loading states", "API response times")

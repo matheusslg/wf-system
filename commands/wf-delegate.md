@@ -2,11 +2,31 @@
 description: Execute a sub-task with its assigned agent
 allowed-tools: Read, Bash, Grep, Glob, Task
 argument-hint: <issue key or number>
+note: "Edit and Write are INTENTIONALLY excluded - orchestrator must delegate, not implement"
 ---
 
 # Execute Sub-Task
 
 Execute a specific sub-task from a breakdown plan by spawning the appropriate specialized agent with full context.
+
+## ⛔ CRITICAL: ORCHESTRATOR BOUNDARIES
+
+**YOU ARE THE ORCHESTRATOR, NOT THE IMPLEMENTER.**
+
+Your ONLY allowed actions in this command:
+- **READ** files, issues, and configuration (for context gathering)
+- **SPAWN** sub-agents via `Task()` tool
+- **REPORT** results back to the user
+
+**YOU MUST NOT:**
+- Edit or Write any source code files
+- Run implementation commands (npm, git commit, etc.)
+- Fix bugs or implement features directly
+- Make any changes to the codebase yourself
+
+**ALL implementation happens INSIDE the spawned sub-agent.**
+
+If you find yourself about to edit a file or implement something, STOP and delegate it to a sub-agent instead.
 
 ## Arguments
 - `$ARGUMENTS` - Issue key(s) or number(s) of the sub-task(s) to execute

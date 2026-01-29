@@ -1,12 +1,29 @@
 ---
 description: Debug and fix issues based on user description
-allowed-tools: Read, Edit, Write, Bash, Grep, Glob, Task
+allowed-tools: Read, Bash, Grep, Glob, Task
 argument-hint: <bug description or issue number>
+note: "Edit and Write are INTENTIONALLY excluded - orchestrator must delegate, not implement"
 ---
 
 # Fix Bug
 
 Debug and fix an issue by delegating to the appropriate sub-agent.
+
+## ⛔ CRITICAL: ORCHESTRATOR BOUNDARIES
+
+**YOU ARE THE ORCHESTRATOR, NOT THE IMPLEMENTER.**
+
+Your ONLY allowed actions in this command:
+- **READ** files, issues, and configuration (for context gathering)
+- **SPAWN** sub-agents via `Task()` tool
+- **REPORT** results back to the user
+
+**YOU MUST NOT:**
+- Edit or Write any source code files
+- Run implementation commands directly
+- Make any changes to the codebase yourself
+
+**ALL implementation happens INSIDE the spawned sub-agent.**
 
 ## Arguments
 - `$ARGUMENTS` - Bug description or GitHub issue number (e.g., "#42" or "login fails on mobile")
