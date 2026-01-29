@@ -72,8 +72,8 @@ Once selected:
 # View full issue details
 gh issue view [number]
 
-# Create branch (if not exists)
-git checkout -b feature/[issue-number]-[short-description]
+# Create branch (if not exists) - use type based on issue labels
+git checkout -b {type}/#[issue-number]  # e.g., feat/#123, fix/#45
 
 # Assign to self
 gh issue edit [number] --add-assignee @me
@@ -85,7 +85,7 @@ gh issue edit [number] --add-assignee @me
 ## Issue Selected
 
 **Issue**: #[number] - [title]
-**Branch**: feature/[number]-[description]
+**Branch**: {type}/#[number] (e.g., feat/#123)
 **Labels**: [labels]
 
 **Description**:

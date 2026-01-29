@@ -26,7 +26,7 @@ Before doing ANY work:
 ## Working Pattern
 
 1. **Pick ONE issue** at a time
-2. **Create feature branch**: `git checkout -b feature/ISSUE-<n>-description`
+2. **Create feature branch**: `git checkout -b {type}/{ticket-key}` (e.g., `feat/SXRX-123` or `fix/#45`)
 3. **Implement** following project patterns
 4. **Test** your changes
 5. **Commit**: `git commit -m "type(scope): description"`

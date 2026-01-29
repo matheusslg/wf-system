@@ -66,7 +66,7 @@ fi
 ## Working Pattern
 
 1. **Pick ONE issue** at a time
-2. **Create feature branch**: `git checkout -b feature/ISSUE-<n>-description`
+2. **Create feature branch**: `git checkout -b {type}/{ticket-key}` (e.g., `feat/#123` or `fix/#45`)
 3. **Implement** following project patterns
 4. **Test** by running the script/hook
 5. **Commit**: `git commit -m "type(hooks): description"`
