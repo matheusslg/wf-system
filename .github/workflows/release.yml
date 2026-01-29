@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version
+        id: current
+        run: |
+          VERSION=$(cat VERSION | tr -d '\n')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get last tag
+        id: last_tag
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "tag=$LAST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Analyze commits for version bump
+        id: bump
+        run: |
+          if [ -z "${{ steps.last_tag.outputs.tag }}" ]; then
+            COMMITS=$(git log --oneline --format="%s")
+          else
+            COMMITS=$(git log ${{ steps.last_tag.outputs.tag }}..HEAD --oneline --format="%s")
+          fi
+
+          # Skip release commits
+          COMMITS=$(echo "$COMMITS" | grep -v "^chore(release):" || true)
+
+          if [ -z "$COMMITS" ]; then
+            echo "bump=none" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          BUMP="none"
+
+          if echo "$COMMITS" | grep -qE "^.*!:|BREAKING CHANGE"; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+            BUMP="minor"
+          elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:"; then
+            BUMP="patch"
+          fi
+
+          echo "bump=$BUMP" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: new_version
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${{ steps.current.outputs.version }}"
+
+          case "${{ steps.bump.outputs.bump }}" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: notes
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          if [ -z "${{ steps.last_tag.outputs.tag }}" ]; then
+            COMMITS=$(git log --oneline --format="- %s (%h)")
+          else
+            COMMITS=$(git log ${{ steps.last_tag.outputs.tag }}..HEAD --oneline --format="- %s (%h)")
+          fi
+
+          # Skip release commits in notes
+          COMMITS=$(echo "$COMMITS" | grep -v "chore(release):" || true)
+
+          DATE=$(date +%Y-%m-%d)
+
+          {
+            echo "notes<<EOF"
+            echo "## [${{ steps.new_version.outputs.version }}] - $DATE"
+            echo ""
+
+            ADDED=$(echo "$COMMITS" | grep -E "^- feat" | sed 's/^- feat[^:]*: /- /' || true)
+            if [ -n "$ADDED" ]; then
+              echo "### Added"
+              echo "$ADDED"
+              echo ""
+            fi
+
+            FIXED=$(echo "$COMMITS" | grep -E "^- fix" | sed 's/^- fix[^:]*: /- /' || true)
+            if [ -n "$FIXED" ]; then
+              echo "### Fixed"
+              echo "$FIXED"
+              echo ""
+            fi
+
+            CHANGED=$(echo "$COMMITS" | grep -E "^- (refactor|perf)" | sed 's/^- [^:]*: /- /' || true)
+            if [ -n "$CHANGED" ]; then
+              echo "### Changed"
+              echo "$CHANGED"
+              echo ""
+            fi
+
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Update VERSION file
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          echo "${{ steps.new_version.outputs.version }}" > VERSION
+
+      - name: Update CHANGELOG.md
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          TEMP_FILE=$(mktemp)
+          head -n 7 CHANGELOG.md > "$TEMP_FILE"
+          echo "" >> "$TEMP_FILE"
+          echo "${{ steps.notes.outputs.notes }}" >> "$TEMP_FILE"
+          tail -n +8 CHANGELOG.md >> "$TEMP_FILE"
+          mv "$TEMP_FILE" CHANGELOG.md
+
+      - name: Commit and tag
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add VERSION CHANGELOG.md
+          git commit -m "chore(release): v${{ steps.new_version.outputs.version }}"
+          git tag "v${{ steps.new_version.outputs.version }}"
+          git push
+          git push origin "v${{ steps.new_version.outputs.version }}"
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.bump != 'none'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.new_version.outputs.version }}
+          name: v${{ steps.new_version.outputs.version }}
+          body: ${{ steps.notes.outputs.notes }}
