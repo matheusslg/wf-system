@@ -112,7 +112,25 @@ basename "$(pwd)"
 ```
 Use directory name as default, but confirm with user.
 
-### GitHub Configuration (Optional)
+### Ticketing Platform (Required)
+
+Ask user: "Which ticketing system do you use for issue tracking?"
+
+| Option | Description |
+|--------|-------------|
+| **Jira** | Atlassian Jira (recommended for enterprise) |
+| **GitHub Issues** | GitHub Issues (simpler, integrated with repo) |
+
+**If Jira selected**:
+- Ask for Jira project key (e.g., "PROJ", "MYAPP")
+- Ask for Jira cloud ID/domain (e.g., "mycompany.atlassian.net")
+- The `ticketing` section will be configured for Jira
+
+**If GitHub Issues selected**:
+- Will use GitHub owner/repo from next section
+- The `ticketing` section will be configured for GitHub
+
+### GitHub Configuration (Optional for Jira, Required for GitHub Issues)
 
 Ask user: "Do you want to configure GitHub integration now?"
 
@@ -172,6 +190,16 @@ Create `.claude/workflow.json` with generic template:
 ```json
 {
   "project": "[project-name]",
+  "ticketing": {
+    "platform": "[jira or github]",
+    "jiraProject": "[PROJ or null if github]",
+    "jiraCloudId": "[domain.atlassian.net or null if github]"
+  },
+  "delegate": {
+    "githubOwner": "[owner or empty]",
+    "githubRepo": "[repo or empty]",
+    "defaultLabels": ["tech-lead", "tracked"]
+  },
   "github": {
     "owner": "[owner or empty]",
     "repo": "[repo or empty]"
@@ -191,8 +219,15 @@ Note: The `design` section is populated by `/wf-design-setup`.
 
 Fill in:
 - `project`: From user input or directory name
+- `ticketing.platform`: `"jira"` or `"github"` based on user choice
+- `ticketing.jiraProject`: Jira project key (if Jira selected)
+- `ticketing.jiraCloudId`: Jira cloud domain (if Jira selected)
+- `delegate.githubOwner`: GitHub owner for sub-task delegation
+- `delegate.githubRepo`: GitHub repo for sub-task delegation
 - `github.owner`: From user input or leave empty
 - `github.repo`: From user input or leave empty
+
+**Important**: The `ticketing` section determines which system `/wf-delegate`, `/wf-breakdown`, and `/wf-ticket-status` will use.
 
 Note: `scopes` and `agents` will be populated by `/wf-generate`.
 

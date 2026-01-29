@@ -6,11 +6,16 @@ argument-hint: <ticket-key or GitHub issue>
 
 # Ticket Status - Check Implementation Progress
 
-Check implementation progress for a feature tracked by breakdown via GitHub Issues.
+Check implementation progress for a feature tracked by breakdown.
+
+**⚠️ CRITICAL: Check `ticketing.platform` in workflow.json to determine where sub-tasks are tracked.**
+
+- **If `ticketing.platform` is "jira"**: Sub-tasks are tracked in Jira
+- **If `ticketing.platform` is "github"**: Sub-tasks are tracked as GitHub issues
 
 ## Arguments
 - `$ARGUMENTS` - Identifier for the feature to check
-  - Examples: `PROJECT-1023`, `#123`, `123`
+  - Examples: `PROJ-1023`, `#123`, `123`
 
 ## Flags
 - `--all` - Show all tech-lead tracked features
@@ -25,34 +30,60 @@ Check for workflow configuration:
 cat .claude/workflow.json 2>/dev/null || echo "{}"
 ```
 
-Extract:
-- `breakdown.jiraProject`: Jira project key prefix
-- `breakdown.githubOwner`: GitHub repository owner
-- `breakdown.githubRepo`: GitHub repository name
+**⚠️ FIRST: Determine ticketing platform:**
+```bash
+PLATFORM=$(cat .claude/workflow.json 2>/dev/null | jq -r '.ticketing.platform // "github"')
+echo "Ticketing platform: $PLATFORM"
+```
+
+Extract based on platform:
+
+**If platform is "jira"**:
+- `ticketing.jiraProject`: Jira project key prefix
+- `ticketing.jiraCloudId`: Jira cloud domain
+
+**If platform is "github"**:
+- `delegate.githubOwner`: GitHub repository owner
+- `delegate.githubRepo`: GitHub repository name
 
 ## 1. Handle Flags
 
 ### --all Flag
 If `$ARGUMENTS` contains `--all`:
 
+**If platform is "jira"**:
+Search Jira for tracked parent issues:
+```
+mcp__atlassian__searchJiraIssuesUsingJql(
+  jql: "project = {jiraProject} AND labels = tech-lead AND labels = tracked AND type != Sub-task",
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh search "project = {jiraProject} AND labels = tech-lead AND labels = tracked AND type != Sub-task"
+```
+
+**If platform is "github"**:
 Search for all tech-lead parent issues:
 ```
 mcp__github__search_issues(
   query: "label:tech-lead label:tracked -label:sub-task",
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo
 )
 ```
 
 Present summary:
 ```markdown
-## breakdown Tracked Features
+## Tracked Features
 
-| Source | GitHub | Title | Progress | Status |
-|--------|--------|-------|----------|--------|
-| SXRX-1023 | #123 | Feature A | 3/5 (60%) | In Progress |
-| #100 | #130 | Feature B | 5/5 (100%) | Complete |
-| SXRX-1025 | #140 | Feature C | 0/4 (0%) | Not Started |
+| Issue | Title | Progress | Status |
+|-------|-------|----------|--------|
+| {key} | Feature A | 3/5 (60%) | In Progress |
+| {key} | Feature B | 5/5 (100%) | Complete |
+| {key} | Feature C | 0/4 (0%) | Not Started |
 
 **Totals**:
 - Features: {count}
@@ -62,19 +93,28 @@ Present summary:
 
 **View specific feature**:
 ```bash
-/wf-ticket-status {PROJECT}-1023
+/wf-ticket-status {issue_key}
 ```
 ```
 
 Exit after listing.
 
 ### --blocked Flag
-Search for blocked issues:
+
+**If platform is "jira"**:
+```
+mcp__atlassian__searchJiraIssuesUsingJql(
+  jql: "project = {jiraProject} AND labels = sub-task AND labels = blocked AND status != Done",
+  cloudId: {jiraCloudId}
+)
+```
+
+**If platform is "github"**:
 ```
 mcp__github__search_issues(
   query: "label:sub-task label:blocked state:open",
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo
 )
 ```
 
@@ -89,13 +129,32 @@ Determine input type from `$ARGUMENTS`:
 
 ## 3. Find Parent Issue
 
-### If Jira Key Provided
+**If platform is "jira"**:
+
+Fetch the Jira ticket directly:
+```
+mcp__atlassian__getJiraIssue(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh get-ticket {issue_key}
+```
+
+Verify it's a parent issue (has `tech-lead` label, type is not Sub-task).
+
+**If platform is "github"**:
+
+### If Jira Key Provided (for reference only)
 Search GitHub for matching parent issue:
 ```
 mcp__github__search_issues(
   query: "[{PROJECT}-{number}] label:tech-lead -label:sub-task",
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo
 )
 ```
 
@@ -103,8 +162,8 @@ mcp__github__search_issues(
 Fetch the issue directly:
 ```
 mcp__github__get_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: {number}
 )
 ```
@@ -116,30 +175,45 @@ Verify it's a parent issue (has `tech-lead` label, not `sub-task` label).
 Error: Could not find tracked feature for `{input}`
 
 **Search options**:
-- By Jira key: `/wf-ticket-status PROJECT-1023`
-- By GitHub issue: `/wf-ticket-status #123`
 - List all: `/wf-ticket-status --all`
 
-**Create from Jira ticket**:
+**Create sub-tasks for a ticket**:
 ```bash
-/wf-breakdown PROJECT-{number}
+/wf-breakdown {issue_key}
 ```
 ```
 
 ## 4. Extract Source Reference
 
 Parse parent issue title for source reference:
-- Pattern: `[{reference}]` at start of title (e.g., `[SXRX-1023]` or `[#42]`)
+- Pattern: `[{reference}]` at start of title (e.g., `[PROJ-1023]` or `[#42]`)
 - Extract the reference identifier
 
 ## 5. Find Child Issues
+
+**If platform is "jira"**:
+
+Search for Jira sub-tasks:
+```
+mcp__atlassian__searchJiraIssuesUsingJql(
+  jql: "parent = {parentKey} AND labels = sub-task",
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh search "parent = {parentKey} AND labels = sub-task"
+```
+
+**If platform is "github"**:
 
 Search for sub-tasks linked to this parent:
 ```
 mcp__github__search_issues(
   query: "label:sub-task \"Part of #{parent_number}\"",
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo
 )
 ```
 
@@ -148,11 +222,31 @@ Alternative: Parse parent issue body for sub-task links:
 
 ## 6. Fetch Sub-Task Details
 
+**If platform is "jira"**:
+
+For each sub-task found:
+```
+mcp__atlassian__getJiraIssue(
+  issueIdOrKey: {sub_task_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+**Extract**:
+- `key` - Issue key (e.g., PROJ-124)
+- `summary` - Task title
+- `status.name` - Status (To Do, In Progress, Done, etc.)
+- `labels` - Find `agent:{name}` label
+- `assignee` - Who's working on it
+- Dependencies from description
+
+**If platform is "github"**:
+
 For each sub-task found:
 ```
 mcp__github__get_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: {sub_task_number}
 )
 ```
@@ -309,7 +403,15 @@ No sub-tasks have been started yet.
 
 ## Error Handling
 
-### GitHub MCP Not Available
+### Platform MCP Not Available
+
+**If platform is "jira" and Atlassian MCP fails**:
+```markdown
+Atlassian MCP unavailable. Falling back to jira-cli.sh...
+```
+Use `./scripts/jira-cli.sh` commands as documented above.
+
+**If platform is "github" and GitHub MCP fails**:
 ```markdown
 Error: GitHub MCP not available
 
@@ -319,14 +421,28 @@ Check that `github` is enabled in your Claude settings.
 
 ### Missing Configuration
 ```markdown
-Error: breakdown configuration not found
+Error: ticketing configuration not found
 
 Add the following to `.claude/workflow.json`:
 
+For Jira:
 ```json
 {
-  "breakdown": {
+  "ticketing": {
+    "platform": "jira",
     "jiraProject": "YOUR_PROJECT",
+    "jiraCloudId": "your-domain.atlassian.net"
+  }
+}
+```
+
+For GitHub:
+```json
+{
+  "ticketing": {
+    "platform": "github"
+  },
+  "delegate": {
     "githubOwner": "your-org",
     "githubRepo": "your-repo"
   }

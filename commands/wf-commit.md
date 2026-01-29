@@ -8,6 +8,20 @@ argument-hint: "<commit message>"
 
 Create a well-formatted conventional commit with proper message.
 
+## ⛔ CRITICAL: Branch Safety Check
+
+**BEFORE doing anything else**, check current branch:
+```bash
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "master" ]]; then
+  echo "ERROR: Cannot commit directly to $CURRENT_BRANCH branch!"
+  echo "Create a feature branch first: git checkout -b feature/your-feature"
+  exit 1
+fi
+```
+
+**NEVER commit directly to main/master.** Always use feature branches and PRs.
+
 ## Arguments
 - `$ARGUMENTS` - Optional commit message (if not provided, will auto-generate)
 

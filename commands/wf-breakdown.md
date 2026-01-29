@@ -6,9 +6,15 @@ argument-hint: <Jira ticket, GitHub issue number, or URL>
 
 # Issue Breakdown
 
-Transform Jira tickets or GitHub issues into actionable GitHub sub-task Issues with clear implementation plans and agent assignments. Acts as the bridge between product requirements and engineering execution.
+Transform Jira tickets or GitHub issues into actionable sub-tasks with clear implementation plans and agent assignments. Acts as the bridge between product requirements and engineering execution.
 
-**Behavior by source**:
+**⚠️ CRITICAL: Check `ticketing.platform` in workflow.json to determine where sub-tasks are created.**
+
+**Behavior by ticketing platform**:
+- **If `ticketing.platform` is "jira"**: Sub-tasks are created as Jira sub-task issues
+- **If `ticketing.platform` is "github"**: Sub-tasks are created as GitHub issues
+
+**Behavior by source** (legacy, only when platform is "github"):
 - **Jira ticket**: Creates a new GitHub parent issue, then creates sub-task issues linked to it
 - **GitHub issue**: Uses the existing issue as the parent, creates sub-task issues linked to it (no duplicate parent created)
 
@@ -24,17 +30,29 @@ Check for workflow configuration:
 cat .claude/workflow.json 2>/dev/null || echo "{}"
 ```
 
-Extract Breakdown settings:
-- `breakdown.jiraProject`: Jira project key prefix (e.g., "SXRX")
-- `breakdown.jiraCloudId`: Atlassian cloud ID or site URL
-- `breakdown.githubOwner`: GitHub repository owner
-- `breakdown.githubRepo`: GitHub repository name
-- `breakdown.defaultLabels`: Default labels for issues
+**⚠️ FIRST: Determine ticketing platform:**
+```bash
+PLATFORM=$(cat .claude/workflow.json 2>/dev/null | jq -r '.ticketing.platform // "github"')
+echo "Ticketing platform: $PLATFORM"
+```
+
+Extract settings based on platform:
+
+**If platform is "jira"**:
+- `ticketing.jiraProject`: Jira project key (e.g., "PROJ")
+- `ticketing.jiraCloudId`: Jira cloud domain
+- `delegate.githubOwner`: (optional) for code PRs
+- `delegate.githubRepo`: (optional) for code PRs
+
+**If platform is "github"**:
+- `delegate.githubOwner`: GitHub repository owner
+- `delegate.githubRepo`: GitHub repository name
+- `delegate.defaultLabels`: Default labels for issues
+
+Common settings:
 - `agents`: Available agents for delegation
 
-If `breakdown` config is missing, ask user for:
-- Jira project key
-- GitHub owner/repo
+If config is missing, ask user for the required settings based on platform.
 
 ## 1. Parse Input
 
@@ -48,8 +66,8 @@ Parse `$ARGUMENTS` to determine source type and extract identifier:
 - `owner/repo#42` - Owner/repo with issue number
 
 **Jira Ticket patterns**:
-- `SXRX-1023` - Full ticket key
-- `https://yoursite.atlassian.net/browse/SXRX-1023` - Full Jira URL
+- `PROJ-1023` - Full ticket key
+- `https://yoursite.atlassian.net/browse/PROJ-1023` - Full Jira URL
 - Plain number like `1023` with Jira project in config
 
 **Detection logic**:
@@ -115,7 +133,7 @@ Use Atlassian MCP to retrieve ticket details:
 
 ```
 mcp__atlassian__getJiraIssue(
-  cloudId: breakdown.jiraCloudId,
+  cloudId: ticketing.jiraCloudId,
   issueIdOrKey: "{PROJECT}-{number}"
 )
 ```
@@ -366,28 +384,93 @@ Plan has been generated but no GitHub issues were created.
 Remove `--dry-run` flag to create issues.
 ```
 
-## 9. Create GitHub Issues (After Approval)
+## 9. Create Sub-Tasks (After Approval)
 
-### Check for Existing Sub-Tasks
+**⚠️ CRITICAL: Check `ticketing.platform` to determine where to create sub-tasks.**
+
+```bash
+PLATFORM=$(cat .claude/workflow.json 2>/dev/null | jq -r '.ticketing.platform // "github"')
+```
+
+---
+
+### If Platform is "jira" → Create Jira Sub-Tasks
+
+#### Check for Existing Sub-Tasks in Jira
+```
+mcp__atlassian__searchJiraIssuesUsingJql(
+  jql: "parent = {parentKey} AND labels = sub-task",
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh search "parent = {parentKey} AND labels = sub-task"
+```
+
+If sub-tasks already exist, warn user and ask to continue or abort.
+
+#### Create Jira Sub-Tasks
+
+For each sub-task in the breakdown plan:
+```
+mcp__atlassian__createJiraIssue(
+  cloudId: {jiraCloudId},
+  projectKey: {jiraProject},
+  summary: "Sub-task: {sub_task_title}",
+  issueType: "Sub-task",
+  parentKey: {parentKey},
+  description: "{child_issue_body_adf}",
+  labels: ["sub-task", "agent:{agent_name}", "tech-lead"]
+)
+```
+
+**Note**: Jira sub-tasks require a parent issue. Use the source Jira ticket as the parent.
+
+#### Update Parent Jira Ticket
+
+Add implementation plan as a comment and add labels:
+```
+mcp__atlassian__addCommentToJiraIssue(
+  issueIdOrKey: {parentKey},
+  cloudId: {jiraCloudId},
+  body: "{implementation_plan}"
+)
+```
+
+Add labels to parent:
+```bash
+./scripts/jira-cli.sh add-label {parentKey} "tech-lead"
+./scripts/jira-cli.sh add-label {parentKey} "tracked"
+```
+
+**Skip to Section 10 after creating Jira sub-tasks.**
+
+---
+
+### If Platform is "github" → Create GitHub Issues
+
+#### Check for Existing Sub-Tasks
 ```
 mcp__github__search_issues(
   query: "[{reference}] label:sub-task",
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo
 )
 ```
 
 If sub-tasks already exist for this reference, warn user and ask to continue or abort.
 
-### 9a. If Source is GitHub Issue (Use as Parent)
+#### 9a. If Source is GitHub Issue (Use as Parent)
 
 The source GitHub issue becomes the parent - no new parent issue is created.
 
 **Update the existing issue** to add tech-lead labels and tracking:
 ```
 mcp__github__update_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: {sourceIssueNumber},
   labels: [...existing_labels, "tracked", "breakdown"]
 )
@@ -396,8 +479,8 @@ mcp__github__update_issue(
 **Append implementation plan to issue body**:
 ```
 mcp__github__update_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: {sourceIssueNumber},
   body: "{original_body}\n\n{implementation_plan_section}"
 )
@@ -429,8 +512,8 @@ Create a new GitHub parent issue to track the Jira work:
 
 ```
 mcp__github__create_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   title: "[{reference}] {summary}",
   body: "{parent_issue_body}",
   labels: ["feature", "tracked", "breakdown"]
@@ -469,8 +552,8 @@ mcp__github__create_issue(
 For each sub-task:
 ```
 mcp__github__create_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   title: "[{reference}] Sub-task: {sub_task_title}",
   body: "{child_issue_body}",
   labels: ["sub-task", "agent:{agent_name}"]
@@ -546,8 +629,8 @@ npm run test
 After creating all children, update parent issue body:
 ```
 mcp__github__update_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: parent_issue_number,
   body: "{updated_body_with_child_links}"
 )
@@ -695,8 +778,8 @@ Then run `/wf-breakdown` again.
 
 ```bash
 # From Jira ticket
-/wf-breakdown SXRX-1023
-/wf-breakdown https://gnarlysoft.atlassian.net/browse/SXRX-1023
+/wf-breakdown PROJ-1023
+/wf-breakdown https://gnarlysoft.atlassian.net/browse/PROJ-1023
 
 # From GitHub issue
 /wf-breakdown #42
@@ -705,7 +788,7 @@ Then run `/wf-breakdown` again.
 
 # With flags
 /wf-breakdown #42 --dry-run
-/wf-breakdown SXRX-1023 --skip-figma
+/wf-breakdown PROJ-1023 --skip-figma
 ```
 
 ## Related Commands

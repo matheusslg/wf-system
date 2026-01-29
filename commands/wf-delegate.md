@@ -1,7 +1,7 @@
 ---
 description: Execute a sub-task with its assigned agent
 allowed-tools: Read, Bash, Grep, Glob, Task
-argument-hint: <GitHub issue number>
+argument-hint: <issue key or number>
 ---
 
 # Execute Sub-Task
@@ -9,12 +9,13 @@ argument-hint: <GitHub issue number>
 Execute a specific sub-task from a breakdown plan by spawning the appropriate specialized agent with full context.
 
 ## Arguments
-- `$ARGUMENTS` - GitHub issue number(s) of the sub-task(s) to execute
-  - Single: `125`, `#125`
-  - Multiple (for parallel): `107 109 110 111`
+- `$ARGUMENTS` - Issue key(s) or number(s) of the sub-task(s) to execute
+  - Jira: `PROJ-123` or just `123` (project prefix added from config)
+  - GitHub: `125`, `#125`
+  - Multiple (for parallel): `PROJ-107 PROJ-109` or `107 109 110 111`
 
 ## Flags
-- `--list` - List available sub-tasks from tech-lead tracked issues
+- `--list` - List available sub-tasks from tracked issues
 - `--until-done` - Autonomous mode: work through ALL sub-tasks without human intervention
 - `--parallel` - Execute multiple tasks concurrently (use with multiple issue numbers)
 - `--force` - Override dependency checks
@@ -26,56 +27,117 @@ Check for workflow configuration:
 cat .claude/workflow.json 2>/dev/null || echo "{}"
 ```
 
-Extract:
-- `breakdown.githubOwner`: GitHub repository owner
-- `breakdown.githubRepo`: GitHub repository name
+**⚠️ CRITICAL: Check `ticketing.platform` first to determine which system to use.**
+
+Extract these fields:
+- `ticketing.platform`: **REQUIRED** - Either `"jira"` or `"github"`
+- `ticketing.jiraProject`: Jira project key (e.g., "PROJ") - when platform is "jira"
+- `ticketing.jiraCloudId`: Jira cloud domain - when platform is "jira"
+- `delegate.githubOwner`: GitHub repository owner - when platform is "github"
+- `delegate.githubRepo`: GitHub repository name - when platform is "github"
 - `agents`: Map of available agents
+
+**Platform Detection:**
+```bash
+PLATFORM=$(cat .claude/workflow.json 2>/dev/null | jq -r '.ticketing.platform // "github"')
+echo "Ticketing platform: $PLATFORM"
+```
+
+- If `"jira"` → Use Jira API (Atlassian MCP or jira-cli.sh fallback)
+- If `"github"` → Use GitHub Issues (GitHub MCP)
+- If not specified → Default to "github" for backward compatibility
 
 ## 1. Handle List Flag
 
 If `$ARGUMENTS` contains `--list`:
 
+### If platform is "jira":
+
+Search for sub-tasks with JQL:
+```
+mcp__atlassian__searchJiraIssuesUsingJql(
+  jql: "project = {jiraProject} AND labels = sub-task AND labels = tech-lead AND status != Done",
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh search "project = {jiraProject} AND labels = sub-task AND labels = tech-lead AND status != Done"
+```
+
+### If platform is "github":
+
 Search for tech-lead sub-tasks:
 ```
 mcp__github__search_issues(
   query: "label:sub-task label:tech-lead state:open",
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo
 )
 ```
 
-Present available sub-tasks:
+### Present Results
+
 ```markdown
 ## Available Sub-Tasks
 
-| # | Title | Agent | Parent | Dependencies |
-|---|-------|-------|--------|--------------|
-| #125 | Backend API endpoints | `sxrx-backend` | #123 | None |
-| #126 | Frontend components | `sxrx-frontend` | #123 | #125 |
-| #127 | Unit tests | `sxrx-qa` | #123 | #125, #126 |
+| Issue | Title | Agent | Parent | Dependencies |
+|-------|-------|-------|--------|--------------|
+| {key} | Backend API endpoints | `{project}-backend` | {parent} | None |
+| {key} | Frontend components | `{project}-frontend` | {parent} | {dep} |
+| {key} | Unit tests | `{project}-qa` | {parent} | {deps} |
 
 **Pick a sub-task**:
 ```bash
-/wf-delegate 125
+/wf-delegate {issue_key}
 ```
 ```
 
 Exit after listing.
 
-## 2. Parse Issue Number
+## 2. Parse Issue Key/Number
 
-Extract issue number from `$ARGUMENTS`:
+Extract issue identifier from `$ARGUMENTS` based on platform:
+
+### If platform is "jira":
+- `PROJ-125` -> `PROJ-125` (full key)
+- `125` -> `{jiraProject}-125` (add project prefix from config)
+
+### If platform is "github":
 - `125` -> `125`
 - `#125` -> `125`
 
-Validate it's a number.
+Validate the format matches the platform.
 
-## 3. Fetch GitHub Issue
+## 3. Fetch Issue
+
+### If platform is "jira":
+
+```
+mcp__atlassian__getJiraIssue(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh get-ticket {issue_key}
+```
+
+**Extract from response**:
+- `summary` - Issue title
+- `description` - Full task description (may need ADF to text conversion)
+- `labels` - Look for `agent:{name}` label
+- `status` - Should not be "Done"
+
+### If platform is "github":
 
 ```
 mcp__github__get_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: {parsed_number}
 )
 ```
@@ -86,13 +148,15 @@ mcp__github__get_issue(
 - `labels` - Look for `agent:{name}` label
 - `state` - Should be "open"
 
+### Error Handling
+
 **If issue not found**:
 ```markdown
-Error: GitHub issue #{number} not found
+Error: Issue {key} not found
 
 Verify:
-- Issue exists in {owner}/{repo}
-- Issue number is correct
+- Issue exists in the configured {platform} project
+- Issue key/number is correct
 
 List available sub-tasks:
 ```bash
@@ -100,40 +164,35 @@ List available sub-tasks:
 ```
 ```
 
-**If issue is closed**:
+**If issue is closed/done**:
 ```markdown
-Issue #{number} is already closed.
+Issue {key} is already closed/done.
 
-To reopen and work on it:
-```bash
-gh issue reopen {number}
-/wf-delegate {number}
-```
+To reopen and work on it, update the status first.
 ```
 
 ## 4. Validate Sub-Task
 
 Check issue has required labels:
-- `sub-task` label (confirms it's a tech-lead sub-task)
+- `sub-task` label (confirms it's a breakdown sub-task)
 - `agent:{name}` label (identifies assigned agent)
 
 **If not a sub-task**:
 ```markdown
-Error: Issue #{number} is not a breakdown sub-task
+Error: Issue {key} is not a breakdown sub-task
 
 This command only works with issues created by `/wf-breakdown`.
 Sub-tasks have the `sub-task` label.
 
 To create sub-tasks from a source issue:
 ```bash
-/wf-breakdown SXRX-1023   # From Jira
-/wf-breakdown #42         # From GitHub issue
+/wf-breakdown {parent_issue_key}
 ```
 ```
 
 **If no agent label**:
 ```markdown
-Error: No agent assignment found on issue #{number}
+Error: No agent assignment found on issue {key}
 
 The issue should have a label like `agent:{project}-backend`.
 
@@ -142,19 +201,16 @@ The issue should have a label like `agent:{project}-backend`.
 ls .claude/agents/*.md
 ```
 
-**To fix**, add the appropriate label:
-```bash
-gh issue edit {number} --add-label "agent:{project}-backend"
-```
+**To fix**, add the appropriate label to the issue in {platform}.
 
-Then run `/wf-delegate {number}` again.
+Then run `/wf-delegate {key}` again.
 ```
 
 ## 5. Extract Agent Name
 
 Parse agent from labels:
 - Find label matching pattern `agent:*`
-- Extract agent name (e.g., `agent:sxrx-backend` -> `sxrx-backend`)
+- Extract agent name (e.g., `agent:myproject-backend` -> `myproject-backend`)
 
 ## 6. Check Dependencies
 
@@ -165,8 +221,8 @@ Parse issue body for dependency mentions:
 For each dependency:
 ```
 mcp__github__get_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: {dependency_number}
 )
 ```
@@ -215,7 +271,7 @@ ls .claude/agents/*.md
 2. Manually create `.claude/agents/{agent_name}.md`
 3. Re-assign to existing agent:
    ```bash
-   gh issue edit {number} --remove-label "agent:{agent_name}" --add-label "agent:sxrx-backend"
+   gh issue edit {number} --remove-label "agent:{agent_name}" --add-label "agent:{project}-backend"
    ```
 ```
 
@@ -268,12 +324,14 @@ You are being delegated this task from the breakdown.
 - Work on other tasks
 - Modify code outside your scope
 - Skip testing
+- ⛔ **NEVER push to main/master branch directly** - always use feature branches
 
 ### Session Protocol Reminder
 Before starting:
 1. Read `progress.md` for current state
 2. Read `standards.md` for conventions
-3. Create feature branch if not exists
+3. **Create feature branch if not on one** - NEVER work on main/master
+4. Verify: `git branch --show-current` should NOT be main/master
 
 ### Screenshot Documentation (IMPORTANT)
 Document your work with screenshots at key milestones. This creates a visual audit trail.
@@ -444,8 +502,8 @@ Use GitHub MCP to push screenshots to a dedicated folder:
 ```
 # For each screenshot, read as base64 and push
 mcp__github__push_files(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   branch: "main",  # or current feature branch
   files: [
     {
@@ -467,8 +525,8 @@ mcp__github__push_files(
 ```
 # Alternative: Push screenshots one by one
 mcp__github__create_or_update_file(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   path: ".github/issue-screenshots/{issue_number}/{filename}",
   content: "{base64_encoded_content}",
   message: "docs: add screenshot {filename} for issue #{issue_number}",
@@ -495,13 +553,29 @@ https://raw.githubusercontent.com/myorg/myrepo/main/.github/issue-screenshots/12
 rm -rf /tmp/issue-{issue_number}
 ```
 
-## 12. Update GitHub Issue
+## 12. Update Issue with Completion Comment
 
-Add completion comment:
+### If platform is "jira":
+
+```
+mcp__atlassian__addCommentToJiraIssue(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId},
+  body: "{completion_comment}"
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh add-comment {issue_key} "{completion_comment}"
+```
+
+### If platform is "github":
+
 ```
 mcp__github__add_issue_comment(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: {number},
   body: "{completion_comment}"
 )
@@ -925,10 +999,27 @@ Only after pipeline validation passes:
 ```
 
 If yes:
+
+### If platform is "jira":
+Transition to "Done" status:
+```
+mcp__atlassian__transitionJiraIssue(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId},
+  transitionId: {done_transition_id}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh transition {issue_key} done
+```
+
+### If platform is "github":
 ```
 mcp__github__update_issue(
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo,
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
   issue_number: {number},
   state: "closed"
 )
@@ -966,7 +1057,15 @@ mcp__github__update_issue(
 
 ## Error Handling
 
-### GitHub MCP Not Available
+### Ticketing Platform MCP Not Available
+
+**If platform is "jira" and Atlassian MCP fails**:
+```markdown
+Atlassian MCP unavailable. Falling back to jira-cli.sh...
+```
+Use `./scripts/jira-cli.sh` commands as documented above.
+
+**If platform is "github" and GitHub MCP fails**:
 ```markdown
 Error: GitHub MCP not available
 
@@ -1099,18 +1198,32 @@ Starting autonomous execution...
 
 After completing each task (or at start if no issue number provided):
 
+### If platform is "jira":
+```
+mcp__atlassian__searchJiraIssuesUsingJql(
+  jql: "project = {jiraProject} AND labels = sub-task AND status != Done ORDER BY created ASC",
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh search "project = {jiraProject} AND labels = sub-task AND status != Done"
+```
+
+### If platform is "github":
 ```
 mcp__github__search_issues(
   query: "label:sub-task state:open",
-  owner: breakdown.githubOwner,
-  repo: breakdown.githubRepo
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo
 )
 ```
 
 For each issue found, check:
 1. Has `sub-task` label
-2. Is `open` state
-3. All dependencies are closed (parse body for "Depends on: #X")
+2. Is open/not done state
+3. All dependencies are closed (parse body for "Depends on: {key}")
 
 **Priority order**:
 1. Tasks with no dependencies first

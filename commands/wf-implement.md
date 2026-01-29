@@ -8,6 +8,20 @@ argument-hint: <feature description or issue number>
 
 Build a new feature by delegating to the appropriate sub-agent.
 
+## ⛔ CRITICAL: Branch Safety
+
+**NEVER work on main/master branch.** Before starting implementation:
+```bash
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "master" ]]; then
+  echo "ERROR: On protected branch. Create a feature branch first."
+  # Create branch from issue number or description
+  git checkout -b feature/issue-{number}
+fi
+```
+
+All commits and pushes MUST go to feature branches, then submitted as PRs.
+
 ## Arguments
 - `$ARGUMENTS` - Feature description or GitHub issue number (e.g., "#42" or "Add dark mode toggle")
 

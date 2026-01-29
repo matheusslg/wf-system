@@ -842,6 +842,56 @@ ls -lh $2
 \`\`\`
 ```
 
+#### Jira (if ticketing.platform is "jira")
+
+**File: `.claude/skills/jira/SKILL.md`**
+```markdown
+---
+description: Jira operations (fallback when Atlassian MCP unavailable)
+allowed-tools: Bash, Read
+argument-hint: <command> [args]
+---
+
+# Jira CLI Skill
+
+Direct Jira API fallback when Atlassian MCP server is unavailable or fails.
+
+## When to Use
+
+Use this skill when:
+- Atlassian MCP server returns errors or is not authenticated
+- You need to perform Jira operations and MCP is unavailable
+
+**Always try Atlassian MCP first.** Use this as a fallback.
+
+## Available Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `get-ticket` | Get ticket details | `/jira get-ticket PROJ-123` |
+| `get-transitions` | List available transitions | `/jira get-transitions PROJ-123` |
+| `transition` | Move ticket to new status | `/jira transition PROJ-123 in-progress` |
+| `add-comment` | Add comment to ticket | `/jira add-comment PROJ-123 "Done"` |
+| `search` | Search with JQL | `/jira search "project = PROJ"` |
+| `add-label` | Add label to ticket | `/jira add-label PROJ-123 tech-lead` |
+| `remove-label` | Remove label | `/jira remove-label PROJ-123 tech-lead` |
+
+## Configuration
+
+Requires these environment variables in `.env`:
+- `JIRA_BASE_URL` - e.g., `https://mycompany.atlassian.net`
+- `JIRA_EMAIL` - Your Atlassian email
+- `JIRA_API_TOKEN` - API token from https://id.atlassian.com/manage-profile/security/api-tokens
+
+## Task
+
+Execute the Jira CLI command:
+
+\`\`\`bash
+./scripts/jira-cli.sh ${@}
+\`\`\`
+```
+
 #### Git / GitHub
 
 **File: `.claude/skills/gh-pr/SKILL.md`**
@@ -1013,6 +1063,15 @@ Verify all dependencies are installed:
 | Git/GitHub | gh-pr, gh-issues, gh-pr-status |
 | Any project | deps-check, env-check |
 
+**Ticketing Platform Skills** (based on `ticketing.platform` in workflow.json):
+
+| Platform | Skills to Generate |
+|----------|-------------------|
+| `"jira"` | jira (CLI fallback for Atlassian MCP) |
+| `"github"` | gh-issues (already in Git/GitHub above) |
+
+**Important**: Check `ticketing.platform` in workflow.json to determine which ticketing-related skills to generate.
+
 **Pattern for any new technology:**
 ```
 [tech]-build    → Build/compile
@@ -1157,8 +1216,19 @@ Summarize what was generated:
 
 ## 11. Suggest Workflow
 
+First, check the ticketing platform:
+```bash
+PLATFORM=$(cat .claude/workflow.json 2>/dev/null | jq -r '.ticketing.platform // "github"')
+```
+
 Based on project state, suggest next command:
 
+**If platform is "jira"**:
+- If PRD.md exists but no Jira tickets → `/wf-parse-prd` (will create Jira tickets)
+- If Jira tickets exist → `/wf-pick-issue`
+- Otherwise → `/wf-start-session`
+
+**If platform is "github"**:
 - If PRD.md exists but no GitHub issues → `/wf-parse-prd`
 - If GitHub issues exist → `/wf-pick-issue`
 - Otherwise → `/wf-start-session`
