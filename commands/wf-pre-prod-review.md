@@ -6,7 +6,7 @@ argument-hint: "[PR number, branch, or commit range]"
 
 # Pre-Production Review
 
-Multi-agent audit to validate implementation is production-ready before merge. Spawns 5 parallel review agents, each focused on a specific quality dimension.
+Multi-agent audit to validate implementation is production-ready before merge. Analyzes the changes first, then spawns as many parallel review agents as needed — each focused on a relevant quality dimension.
 
 **This is READ-ONLY. No code is modified.**
 
@@ -120,15 +120,45 @@ CONTEXT_SUMMARY:
   - ...
 ```
 
-## 3. Spawn Parallel Review Agents
+## 3. Determine Review Dimensions
 
-Spawn **5 agents in parallel** using the Task tool. Each agent receives the full list of changed files and instructions to READ and analyze their specific dimension.
+Based on the context gathered in step 2, decide which review dimensions are relevant. **Do not spawn agents for dimensions that don't apply to the changes.**
 
-**IMPORTANT**: All 5 Task() calls must be made in a SINGLE response to run in parallel.
+### Dimension Selection Guide
+
+| Dimension | Spawn When |
+|-----------|------------|
+| **Code Quality & Logic** | Always — any code change needs this |
+| **Security** | Auth files, API endpoints, user input handling, crypto, env/config, dependency changes, data storage |
+| **Performance & Scalability** | DB queries, API endpoints, data fetching, loops over collections, UI components rendering lists, large data processing |
+| **Error Handling & Resilience** | External calls (API, DB, third-party), async operations, network code, event-driven logic |
+| **Testing & Coverage Gaps** | New source files, new functions/endpoints, logic branch changes |
+| **Database & Migrations** | Migration files, schema changes, ORM model changes, raw SQL |
+| **API Contract & Compatibility** | API route changes, response shape changes, GraphQL schema, OpenAPI spec |
+| **Infrastructure & Deployment** | CI/CD files, Dockerfiles, terraform/IaC, env configs, deployment scripts |
+| **Dependency Audit** | package.json, requirements.txt, go.mod, Gemfile, pom.xml, or any lock file changes |
+| **Accessibility** | UI component changes, HTML templates, CSS/styling, form elements |
+
+You may also spawn **additional dimensions not listed here** if the changes warrant it (e.g., internationalization, compliance, data privacy). Use your judgment.
+
+### Selection Rules
+
+1. Analyze the changed files from step 2
+2. Match them against the dimension table above
+3. Select all dimensions that have at least one matching file/pattern
+4. **Code Quality & Logic** is always included as a baseline
+
+## 4. Spawn Parallel Review Agents
+
+Spawn agents for **each selected dimension** in parallel using the Task tool.
+
+**IMPORTANT**: All Task() calls must be made in a SINGLE response to run in parallel.
+
+Each agent receives the full list of changed files and instructions to READ and analyze their specific dimension. Below is the prompt catalog for each dimension.
 
 ---
 
-### Agent 1: Code Quality & Logic
+### Code Quality & Logic
 
 ```
 Task(
@@ -178,7 +208,7 @@ FAIL = Critical logic errors that will cause bugs in production",
 
 ---
 
-### Agent 2: Security
+### Security
 
 ```
 Task(
@@ -232,7 +262,7 @@ FAIL = Exploitable vulnerabilities that must be fixed before production",
 
 ---
 
-### Agent 3: Performance & Scalability
+### Performance & Scalability
 
 ```
 Task(
@@ -287,7 +317,7 @@ FAIL = Will cause outages or severe degradation in production",
 
 ---
 
-### Agent 4: Error Handling & Resilience
+### Error Handling & Resilience
 
 ```
 Task(
@@ -340,7 +370,7 @@ FAIL = Critical paths will crash or hang silently in production",
 
 ---
 
-### Agent 5: Testing & Coverage Gaps
+### Testing & Coverage Gaps
 
 ```
 Task(
@@ -391,9 +421,268 @@ FAIL = Critical paths are untested and could break undetected",
 )
 ```
 
-## 4. Collect & Consolidate Results
+### Database & Migrations
 
-After all 5 agents complete:
+```
+Task(
+  subagent_type: "general-purpose",
+  prompt: "You are a database reviewer performing a pre-production audit.
+
+## Your Focus: Database & Migrations
+
+Review the following changed files for database safety issues.
+
+### Changed Files
+{CHANGED_FILES_LIST}
+
+### What to Look For
+- Migrations that are not reversible (no down/rollback)
+- Destructive operations without data backup (DROP TABLE, DROP COLUMN)
+- Long-running locks (ALTER TABLE on large tables without concurrency strategy)
+- Missing indexes for new queries or foreign keys
+- Schema changes that break existing queries
+- Raw SQL with string interpolation (injection risk)
+- Missing NOT NULL constraints or default values
+- ORM model changes not reflected in migrations
+- Data migrations mixed with schema migrations
+- Missing transaction wrapping for multi-step migrations
+
+### How to Work
+1. Read each migration and schema file
+2. Check for reversibility and safety
+3. Cross-reference ORM models with migration files
+4. Look for queries that would break with the schema change
+
+### Output Format
+For each finding:
+- **Severity**: CRITICAL / WARNING / INFO
+- **File**: path/to/migration.ts:42
+- **Issue**: Clear description of the database risk
+- **Impact**: What happens if this runs in production
+
+End with your verdict: PASS / CONCERNS / FAIL
+
+PASS = Migrations are safe and reversible
+CONCERNS = Some risks that should be reviewed with DBA
+FAIL = Will cause data loss or extended downtime in production",
+  description: "Pre-prod audit: Database & Migrations"
+)
+```
+
+---
+
+### API Contract & Compatibility
+
+```
+Task(
+  subagent_type: "general-purpose",
+  prompt: "You are an API contract reviewer performing a pre-production audit.
+
+## Your Focus: API Contract & Compatibility
+
+Review the following changed files for breaking API changes.
+
+### Changed Files
+{CHANGED_FILES_LIST}
+
+### What to Look For
+- Removed or renamed API endpoints
+- Changed response shapes (removed fields, type changes)
+- Changed request parameter names or types
+- Removed or changed enum values
+- Changed HTTP methods or status codes
+- Missing API versioning for breaking changes
+- Changed authentication requirements
+- Changed rate limits or payload size limits
+- GraphQL schema breaking changes (removed fields, changed types)
+- OpenAPI/Swagger spec out of sync with implementation
+
+### How to Work
+1. Read each API route/controller/handler file
+2. Compare response shapes before and after
+3. Check for removed or renamed fields
+4. Look for changes that would break existing clients
+
+### Output Format
+For each finding:
+- **Severity**: CRITICAL / WARNING / INFO
+- **File**: path/to/route.ts:42
+- **Issue**: Clear description of the contract change
+- **Breaking**: Yes/No — would existing clients break?
+
+End with your verdict: PASS / CONCERNS / FAIL
+
+PASS = No breaking changes to API contracts
+CONCERNS = Changes that might affect some clients
+FAIL = Breaking changes that will crash existing consumers",
+  description: "Pre-prod audit: API Contract & Compatibility"
+)
+```
+
+---
+
+### Infrastructure & Deployment
+
+```
+Task(
+  subagent_type: "general-purpose",
+  prompt: "You are an infrastructure reviewer performing a pre-production audit.
+
+## Your Focus: Infrastructure & Deployment
+
+Review the following changed files for deployment safety.
+
+### Changed Files
+{CHANGED_FILES_LIST}
+
+### What to Look For
+- CI/CD pipeline changes that skip tests or checks
+- Dockerfile changes that increase attack surface or break builds
+- Environment variable changes without documentation
+- New required env vars missing from deployment configs
+- Terraform/IaC changes without plan review
+- Missing health checks or readiness probes
+- Changed ports, domains, or networking configs
+- Missing rollback strategy for infrastructure changes
+- Secrets or credentials in config files
+- Resource limits removed or significantly increased
+
+### How to Work
+1. Read each infra/config/deployment file
+2. Check for missing env vars in deployment templates
+3. Verify CI/CD changes don't skip safety checks
+4. Look for changes that could cause deployment failures
+
+### Output Format
+For each finding:
+- **Severity**: CRITICAL / WARNING / INFO
+- **File**: path/to/config.yml:42
+- **Issue**: Clear description of the deployment risk
+- **Scenario**: What fails during or after deployment
+
+End with your verdict: PASS / CONCERNS / FAIL
+
+PASS = Deployment configs are safe and complete
+CONCERNS = Some configs should be double-checked
+FAIL = Deployment will fail or expose the system",
+  description: "Pre-prod audit: Infrastructure & Deployment"
+)
+```
+
+---
+
+### Dependency Audit
+
+```
+Task(
+  subagent_type: "general-purpose",
+  prompt: "You are a dependency reviewer performing a pre-production audit.
+
+## Your Focus: Dependency Audit
+
+Review the following changed files for dependency risks.
+
+### Changed Files
+{CHANGED_FILES_LIST}
+
+### What to Look For
+- Major version bumps that may include breaking changes
+- New dependencies with low adoption or maintenance
+- Removed dependencies still imported in code
+- Duplicate dependencies (different packages doing the same thing)
+- Dependencies with known security vulnerabilities
+- Pinned versions vs ranges (stability vs updates)
+- Dev dependencies accidentally added to production
+- Large dependencies that significantly increase bundle size
+- Dependencies with restrictive licenses
+- Lock file conflicts or inconsistencies
+
+### How to Work
+1. Read the dependency manifest changes (package.json, requirements.txt, etc.)
+2. Read the lock file changes if present
+3. Cross-reference with imports in changed source files
+4. Check for unused or missing dependencies
+
+### Output Format
+For each finding:
+- **Severity**: CRITICAL / WARNING / INFO
+- **File**: package.json:42
+- **Issue**: Clear description of the dependency risk
+- **Action**: What should be done
+
+End with your verdict: PASS / CONCERNS / FAIL
+
+PASS = Dependencies are safe and well-managed
+CONCERNS = Some dependency choices should be reviewed
+FAIL = Vulnerable or broken dependencies that block release",
+  description: "Pre-prod audit: Dependency Audit"
+)
+```
+
+---
+
+### Accessibility
+
+```
+Task(
+  subagent_type: "general-purpose",
+  prompt: "You are an accessibility reviewer performing a pre-production audit.
+
+## Your Focus: Accessibility
+
+Review the following changed files for accessibility compliance.
+
+### Changed Files
+{CHANGED_FILES_LIST}
+
+### What to Look For
+- Missing alt text on images
+- Form inputs without labels or aria-label
+- Interactive elements not keyboard accessible
+- Missing ARIA roles or attributes on dynamic content
+- Color contrast issues (text on background)
+- Focus management missing on modals, dialogs, or route changes
+- Missing skip navigation links
+- Non-semantic HTML (div soup instead of proper elements)
+- Missing lang attribute changes for i18n
+- Touch targets too small (< 44x44px)
+- Animations without reduced-motion support
+- Error messages not announced to screen readers
+
+### How to Work
+1. Read each UI component and template file
+2. Check for semantic HTML usage
+3. Verify interactive elements have proper labeling
+4. Look for focus management on dynamic content
+
+### Output Format
+For each finding:
+- **Severity**: CRITICAL / WARNING / INFO
+- **File**: path/to/component.tsx:42
+- **Issue**: Clear description of the accessibility gap
+- **WCAG**: Relevant guideline (e.g., WCAG 2.1 Level A/AA)
+
+End with your verdict: PASS / CONCERNS / FAIL
+
+PASS = UI changes meet accessibility standards
+CONCERNS = Some gaps that may affect certain users
+FAIL = Significant barriers that block users with disabilities",
+  description: "Pre-prod audit: Accessibility"
+)
+```
+
+---
+
+### Custom Dimensions
+
+If the changes suggest a dimension not covered above (e.g., internationalization, data privacy, compliance), spawn an additional agent with a focused prompt following the same output format:
+- Severity: CRITICAL / WARNING / INFO
+- File references
+- Verdict: PASS / CONCERNS / FAIL
+
+## 5. Collect & Consolidate Results
+
+After all spawned agents complete:
 
 1. **Parse each agent's output** for findings and verdict
 2. **Aggregate by severity**:
@@ -406,7 +695,7 @@ After all 5 agents complete:
    - Any agent returned CONCERNS (none FAIL) → overall is **NEEDS ATTENTION**
    - All agents returned PASS → overall is **READY FOR PRODUCTION**
 
-## 5. Production Readiness Report
+## 6. Production Readiness Report
 
 Output the final report:
 
@@ -417,27 +706,25 @@ Output the final report:
 **Base**: [base ref, e.g., main]
 **Files Changed**: [count]
 **Lines Changed**: +[added] / -[removed]
+**Dimensions Reviewed**: [count]
 **Review Date**: [date]
 
 ### Critical Issues (Must Fix)
-- [ ] file:line - [issue description] (found by: [agent dimension])
-- [ ] file:line - [issue description] (found by: [agent dimension])
+- [ ] file:line - [issue description] (found by: [dimension])
 
 ### Warnings (Should Fix)
-- [ ] file:line - [issue description] (found by: [agent dimension])
-- [ ] file:line - [issue description] (found by: [agent dimension])
+- [ ] file:line - [issue description] (found by: [dimension])
 
 ### Informational
-- file:line - [note] (found by: [agent dimension])
+- file:line - [note] (found by: [dimension])
 
 ### Agent Verdicts
 | Dimension | Verdict | Findings |
 |-----------|---------|----------|
-| Code Quality & Logic | PASS/CONCERNS/FAIL | X critical, Y warnings |
-| Security | PASS/CONCERNS/FAIL | X critical, Y warnings |
-| Performance & Scalability | PASS/CONCERNS/FAIL | X critical, Y warnings |
-| Error Handling & Resilience | PASS/CONCERNS/FAIL | X critical, Y warnings |
-| Testing & Coverage Gaps | PASS/CONCERNS/FAIL | X critical, Y warnings |
+| [dimension name] | PASS/CONCERNS/FAIL | X critical, Y warnings |
+| ... | ... | ... |
+
+(Only dimensions that were spawned appear in this table)
 
 ### Overall Verdict
 READY FOR PRODUCTION / NEEDS ATTENTION / NOT READY
@@ -470,7 +757,7 @@ If any agent fails to return results:
 ```
 Agent [{dimension}] did not complete successfully.
 
-Partial results from {N}/5 agents are shown below.
+Partial results from the remaining agents are shown below.
 Re-run to retry, or review the missing dimension manually.
 ```
 
