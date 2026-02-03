@@ -1,23 +1,20 @@
 #!/usr/bin/env bash
 # jira-cli.sh — Lightweight Jira REST API wrapper
 #
-# Configuration (checked in order):
+# Configuration (checked in order, first match wins):
 #   1. Already-exported environment variables
-#   2. Project-level .env file
-#   3. Global ~/.config/wf-system/.env (set once, works across all projects)
+#   2. Project-level .env file (recommended — each project can have its own Jira account)
+#   3. Global ~/.config/wf-system/.env (fallback for single-account setups)
 #
 # Required variables:
 #   JIRA_BASE_URL  - e.g., https://mycompany.atlassian.net
 #   JIRA_EMAIL     - Your Atlassian email
 #   JIRA_API_TOKEN - API token from https://id.atlassian.com/manage-profile/security/api-tokens
 #
-# Quick setup (global, one-time):
-#   mkdir -p ~/.config/wf-system
-#   cat > ~/.config/wf-system/.env << 'EOF'
+# Setup — add to your project's .env:
 #   JIRA_BASE_URL=https://yourcompany.atlassian.net
 #   JIRA_EMAIL=you@company.com
 #   JIRA_API_TOKEN=your-token-here
-#   EOF
 #
 # Usage:
 #   ./scripts/jira-cli.sh get-ticket PROJ-123
@@ -59,18 +56,13 @@ load_env() {
   if [[ -z "${JIRA_BASE_URL:-}" || -z "${JIRA_EMAIL:-}" || -z "${JIRA_API_TOKEN:-}" ]]; then
     echo "Error: Missing Jira configuration." >&2
     echo "" >&2
-    echo "Quick setup (global, one-time):" >&2
+    echo "Add these to your project's .env file:" >&2
     echo "" >&2
-    echo "  mkdir -p ~/.config/wf-system" >&2
-    echo "  cat > ~/.config/wf-system/.env << 'EOF'" >&2
     echo "  JIRA_BASE_URL=https://yourcompany.atlassian.net" >&2
     echo "  JIRA_EMAIL=you@company.com" >&2
     echo "  JIRA_API_TOKEN=your-token-here" >&2
-    echo "  EOF" >&2
     echo "" >&2
     echo "Get your API token at: https://id.atlassian.com/manage-profile/security/api-tokens" >&2
-    echo "" >&2
-    echo "Or add to your project's .env file instead." >&2
     exit 1
   fi
 }

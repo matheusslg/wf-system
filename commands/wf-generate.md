@@ -877,28 +877,21 @@ fi
 
 Check if credentials are already configured:
 ```bash
-# Check global config
-cat ~/.config/wf-system/.env 2>/dev/null | grep -q JIRA_BASE_URL && echo "Global Jira config found" || echo "No global config"
-
-# Check project .env
-cat .env 2>/dev/null | grep -q JIRA_BASE_URL && echo "Project Jira config found" || echo "No project config"
+cat .env 2>/dev/null | grep -q JIRA_BASE_URL && echo "Jira config found" || echo "No Jira config"
 ```
 
-If neither exists, inform the user:
+If not found, inform the user:
 
 ```
-Jira CLI needs credentials. Set them up once (globally) and they'll work across all projects:
+Jira CLI needs credentials. Add these to your project's .env file:
 
-  mkdir -p ~/.config/wf-system
-  cat > ~/.config/wf-system/.env << 'EOF'
   JIRA_BASE_URL=https://yourcompany.atlassian.net
   JIRA_EMAIL=your-email@company.com
   JIRA_API_TOKEN=your-api-token
-  EOF
 
 Get your API token at: https://id.atlassian.com/manage-profile/security/api-tokens
 
-You can also add these to a project-level .env if you need per-project overrides.
+Each project can have its own .env with different Jira accounts.
 ```
 
 **Step 3: Create the Jira skill**
@@ -932,10 +925,7 @@ Interact with Jira using the local CLI script. Falls back to Atlassian MCP if th
 
 ## Configuration
 
-Credentials are loaded in order:
-1. Already-exported environment variables
-2. Project `.env` file
-3. Global `~/.config/wf-system/.env` (recommended — set once, works everywhere)
+Credentials are loaded from your project's `.env` file (each project can use a different Jira account).
 
 Required variables:
 - `JIRA_BASE_URL` - e.g., `https://mycompany.atlassian.net`

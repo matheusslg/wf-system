@@ -128,17 +128,13 @@ fi
 If jira-cli.sh was synced, check if credentials are configured:
 
 ```bash
-# Check for Jira credentials (global or project)
-if [[ ! -f "$HOME/.config/wf-system/.env" ]] && ! grep -q JIRA_BASE_URL .env 2>/dev/null; then
+if ! grep -q JIRA_BASE_URL .env 2>/dev/null; then
   echo ""
-  echo "Note: Jira credentials not found. Set up global config (one-time):"
+  echo "Note: Jira credentials not found. Add these to your project's .env:"
   echo ""
-  echo "  mkdir -p ~/.config/wf-system"
-  echo "  cat > ~/.config/wf-system/.env << 'EOF'"
   echo "  JIRA_BASE_URL=https://yourcompany.atlassian.net"
   echo "  JIRA_EMAIL=you@company.com"
   echo "  JIRA_API_TOKEN=your-token-here"
-  echo "  EOF"
   echo ""
   echo "Get your token at: https://id.atlassian.com/manage-profile/security/api-tokens"
 fi
