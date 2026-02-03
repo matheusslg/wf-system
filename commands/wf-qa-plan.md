@@ -352,10 +352,16 @@ Please specify the branch:
 ```
 jira-cli.sh failed: Missing Jira configuration.
 
-Set these environment variables in your .env file:
-  JIRA_BASE_URL  - e.g., https://mycompany.atlassian.net
-  JIRA_EMAIL     - Your Atlassian email
-  JIRA_API_TOKEN - API token from https://id.atlassian.com/manage-profile/security/api-tokens
+Quick setup (global, one-time — works across all projects):
+
+  mkdir -p ~/.config/wf-system
+  cat > ~/.config/wf-system/.env << 'EOF'
+  JIRA_BASE_URL=https://yourcompany.atlassian.net
+  JIRA_EMAIL=you@company.com
+  JIRA_API_TOKEN=your-token-here
+  EOF
+
+Get your API token at: https://id.atlassian.com/manage-profile/security/api-tokens
 
 Falling back to Atlassian MCP...
 ```
