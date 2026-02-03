@@ -104,7 +104,43 @@ cd {SOURCE_PATH} && git pull origin main && ./install.sh
 
 Note: The install script will prompt for installation preferences.
 
-## 8. Clear Update Flag
+## 8. Sync Scripts to Current Project
+
+After updating wf-system, check if the current project uses Jira and needs scripts synced:
+
+```bash
+# Check if this project uses Jira
+PLATFORM=$(cat .claude/workflow.json 2>/dev/null | jq -r '.ticketing.platform // "github"')
+```
+
+If platform is `"jira"`:
+
+```bash
+# Sync jira-cli.sh from wf-system to project
+if [[ -f "{SOURCE_PATH}/scripts/jira-cli.sh" ]]; then
+  mkdir -p scripts
+  cp "{SOURCE_PATH}/scripts/jira-cli.sh" scripts/jira-cli.sh
+  chmod +x scripts/jira-cli.sh
+  echo "Synced scripts/jira-cli.sh to project"
+fi
+```
+
+If jira-cli.sh was synced, check if credentials are configured:
+
+```bash
+if ! grep -q JIRA_BASE_URL .env 2>/dev/null; then
+  echo ""
+  echo "Note: Jira credentials not found. Add these to your project's .env:"
+  echo ""
+  echo "  JIRA_BASE_URL=https://yourcompany.atlassian.net"
+  echo "  JIRA_EMAIL=you@company.com"
+  echo "  JIRA_API_TOKEN=your-token-here"
+  echo ""
+  echo "Get your token at: https://id.atlassian.com/manage-profile/security/api-tokens"
+fi
+```
+
+## 9. Clear Update Flag
 
 After successful update, remove the update-available flag:
 
@@ -112,7 +148,7 @@ After successful update, remove the update-available flag:
 rm -f ~/.claude/hooks/.wf-update-available
 ```
 
-## 9. Report Result
+## 10. Report Result
 
 ```markdown
 ## Update Complete

@@ -49,7 +49,16 @@ mcp__github__issue_read(
 )
 ```
 
-**If Jira**:
+**If Jira** (use jira-cli.sh as primary, Atlassian MCP as fallback):
+```bash
+# Primary: jira-cli.sh
+TICKET=$(./scripts/jira-cli.sh get-ticket {ticket_key})
+
+# Get sub-tasks
+SUBTASKS=$(./scripts/jira-cli.sh get-subtasks {ticket_key})
+```
+
+If jira-cli.sh fails (missing env vars, network error), fall back to Atlassian MCP:
 ```
 mcp__atlassian__getJiraIssue(
   cloudId: {jiraCloudId},
@@ -272,7 +281,23 @@ Prerequisites
 
 ### If Jira:
 
-Post the QA plan as a comment on the ticket:
+Post the QA plan as a comment on the ticket (use jira-cli.sh as primary, Atlassian MCP as fallback):
+
+**Primary — jira-cli.sh**:
+
+The QA plan text must be converted to Jira's ADF (Atlassian Document Format) for rich rendering with headings and tables. Write the ADF JSON to a temp file, then post:
+
+```bash
+# Write ADF JSON to temp file
+cat > /tmp/qa-plan-adf.json << 'ADEOF'
+{adf_json_body}
+ADEOF
+
+# Post as rich comment
+./scripts/jira-cli.sh add-comment-raw {ticket_key} "$(cat /tmp/qa-plan-adf.json)"
+```
+
+**Fallback — Atlassian MCP** (if jira-cli.sh fails):
 ```
 mcp__atlassian__addCommentToJiraIssue(
   issueIdOrKey: "{ticket_key}",
@@ -321,6 +346,21 @@ Could not find a branch or PR for ticket {ticket_key}.
 
 Please specify the branch:
 /wf-qa-plan {ticket_key} --branch feature/my-branch
+```
+
+### Jira CLI Not Configured
+```
+jira-cli.sh failed: Missing Jira configuration.
+
+Add these to your project's .env file:
+
+  JIRA_BASE_URL=https://yourcompany.atlassian.net
+  JIRA_EMAIL=you@company.com
+  JIRA_API_TOKEN=your-token-here
+
+Get your API token at: https://id.atlassian.com/manage-profile/security/api-tokens
+
+Falling back to Atlassian MCP...
 ```
 
 ### Ticket Not Found
