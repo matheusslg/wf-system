@@ -844,25 +844,64 @@ ls -lh $2
 
 #### Jira (if ticketing.platform is "jira")
 
+**Step 1: Copy jira-cli.sh script into the project**
+
+The script source lives in the wf-system repo. Copy it into the user's project:
+
+```bash
+# Find wf-system location (where this command runs from)
+WF_SYSTEM_DIR=$(dirname "$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")")
+
+# Create scripts directory in user's project
+mkdir -p scripts
+
+# Copy jira-cli.sh from wf-system into the project
+# The script is at: {wf-system-repo}/scripts/jira-cli.sh
+# Search common locations:
+for dir in "$HOME/wf-system" "$HOME/Documents/Projects/wf-system" "$HOME/projects/wf-system"; do
+  if [[ -f "$dir/scripts/jira-cli.sh" ]]; then
+    cp "$dir/scripts/jira-cli.sh" scripts/jira-cli.sh
+    chmod +x scripts/jira-cli.sh
+    break
+  fi
+done
+
+# If not found via search, download from GitHub
+if [[ ! -f scripts/jira-cli.sh ]]; then
+  curl -sL https://raw.githubusercontent.com/matheusslg/wf-system/main/scripts/jira-cli.sh -o scripts/jira-cli.sh
+  chmod +x scripts/jira-cli.sh
+fi
+```
+
+**Step 2: Prompt user to configure Jira credentials**
+
+Check if `.env` already has Jira vars. If not, inform the user:
+
+```
+Jira CLI requires these environment variables in your .env file:
+
+  JIRA_BASE_URL=https://yourcompany.atlassian.net
+  JIRA_EMAIL=your-email@company.com
+  JIRA_API_TOKEN=your-api-token
+
+Get your API token at: https://id.atlassian.com/manage-profile/security/api-tokens
+
+Add them to .env before using Jira commands.
+```
+
+**Step 3: Create the Jira skill**
+
 **File: `.claude/skills/jira/SKILL.md`**
 ```markdown
 ---
-description: Jira operations (fallback when Atlassian MCP unavailable)
+description: Jira operations via CLI
 allowed-tools: Bash, Read
 argument-hint: <command> [args]
 ---
 
 # Jira CLI Skill
 
-Direct Jira API fallback when Atlassian MCP server is unavailable or fails.
-
-## When to Use
-
-Use this skill when:
-- Atlassian MCP server returns errors or is not authenticated
-- You need to perform Jira operations and MCP is unavailable
-
-**Always try Atlassian MCP first.** Use this as a fallback.
+Interact with Jira using the local CLI script. Falls back to Atlassian MCP if the script is unavailable.
 
 ## Available Commands
 
@@ -871,10 +910,13 @@ Use this skill when:
 | `get-ticket` | Get ticket details | `/jira get-ticket PROJ-123` |
 | `get-transitions` | List available transitions | `/jira get-transitions PROJ-123` |
 | `transition` | Move ticket to new status | `/jira transition PROJ-123 in-progress` |
-| `add-comment` | Add comment to ticket | `/jira add-comment PROJ-123 "Done"` |
+| `add-comment` | Add plain text comment | `/jira add-comment PROJ-123 "Done"` |
+| `add-comment-raw` | Add rich ADF comment | `/jira add-comment-raw PROJ-123 '{...}'` |
 | `search` | Search with JQL | `/jira search "project = PROJ"` |
 | `add-label` | Add label to ticket | `/jira add-label PROJ-123 tech-lead` |
 | `remove-label` | Remove label | `/jira remove-label PROJ-123 tech-lead` |
+| `create-subtask` | Create sub-task | `/jira create-subtask PROJ-123 "Title"` |
+| `get-subtasks` | Get sub-tasks | `/jira get-subtasks PROJ-123` |
 
 ## Configuration
 
@@ -890,6 +932,8 @@ Execute the Jira CLI command:
 \`\`\`bash
 ./scripts/jira-cli.sh ${@}
 \`\`\`
+
+If the script fails or is missing, fall back to the Atlassian MCP server.
 ```
 
 #### Git / GitHub
