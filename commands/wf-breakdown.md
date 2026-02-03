@@ -249,9 +249,9 @@ Based on ticket content, identify affected areas:
 # Search for similar patterns
 grep -r "<relevant_keyword>" --include="*.ts" --include="*.tsx" -l | head -20
 
-# Check existing structure
-ls -la sxrx-api/src/modules/ 2>/dev/null
-ls -la sxrx-app/src/ 2>/dev/null
+# Check existing structure (adapt paths to your project)
+ls -la src/ 2>/dev/null
+ls -la packages/ 2>/dev/null
 ```
 
 **Determine scope**:
@@ -274,12 +274,12 @@ Create atomic, assignable sub-tasks:
 
 | Task Type | Agent | Trigger |
 |-----------|-------|---------|
-| Controllers, services, entities, DTOs | `sxrx-backend` | NestJS/MikroORM work |
-| Components, pages, hooks, services | `sxrx-frontend` | React/Next.js work |
-| Unit tests, E2E tests, coverage | `sxrx-qa` | Test creation |
-| Terraform, AWS, CI/CD | `sxrx-infra` | Infrastructure changes |
-| iOS, Android, Capacitor plugins | `sxrx-capacitor` | Mobile platform |
-| Cross-cutting code review | `sxrx-fullstack-reviewer` | PR validation |
+| Controllers, services, entities, DTOs | `{project}-backend` | Backend framework work |
+| Components, pages, hooks, services | `{project}-frontend` | Frontend framework work |
+| Unit tests, E2E tests, coverage | `{project}-qa` | Test creation |
+| Terraform, AWS, CI/CD | `{project}-infra` | Infrastructure changes |
+| iOS, Android, Capacitor plugins | `{project}-mobile` | Mobile platform |
+| Cross-cutting code review | `{project}-reviewer` | PR validation |
 
 ### Dependency Ordering
 Typical order:
@@ -615,7 +615,7 @@ Part of #{parent_issue_number} ([{reference}]({referenceUrl}))
 
 ## Validation Commands
 ```bash
-cd sxrx-{api|app}
+cd {project-directory}
 npx tsc --noEmit
 npm run lint
 npm run test
