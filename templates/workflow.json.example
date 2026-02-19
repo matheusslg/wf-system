@@ -32,6 +32,11 @@
     "maxTasks": 5
   },
 
+  "teams": {
+    "enabled": true,
+    "maxDeveloperTeammates": 3
+  },
+
   "progressFile": "progress.md",
   "standardsFile": "standards.md"
 }
