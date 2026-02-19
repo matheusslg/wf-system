@@ -436,7 +436,7 @@ class WFOrchestrator:
             self.state["pre_compact_ran"] = True
             self._save_state()
 
-            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST RUN /wf-end-session NOW"
+            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST CALL SKILL /wf-end-session NOW"
             full_context = (
                 f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
                 f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
@@ -456,7 +456,7 @@ class WFOrchestrator:
                 }
             }
         elif pct >= WARNING_THRESHOLD:
-            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST RUN /wf-end-session NOW"
+            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST CALL SKILL /wf-end-session NOW"
             full_context = (
                 f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
                 f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
