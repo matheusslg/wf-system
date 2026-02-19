@@ -31,6 +31,13 @@
 | **Ticket Breakdown** | Break down tickets into sub-tasks with agent delegation |
 | **Autonomous Mode** | `--until-done` flag processes all sub-tasks without intervention |
 | **Multi-Agent Pipeline** | Developer → Reviewer → QA workflow enforcement |
+| **Agent Teams** | Persistent teammates with parallel developers and direct DMs |
+| **Adversarial Review** | Cross-examination between independent review agents |
+| **Pre-Production Audit** | Multi-dimensional independent review before merge |
+| **QA Plan Generation** | Structured test plans posted as ticket comments |
+| **PR Comment Handling** | Evaluate, fix, and respond to PR review comments |
+| **Custom Agent Creation** | Create specialized agents with custom expertise and skills |
+| **Self-Update System** | Check for and apply wf-system updates |
 | **Design Integration** | Figma, design systems, and design tokens support |
 | **Multi-Platform** | Works with both GitHub Issues and Jira |
 
@@ -118,6 +125,8 @@ Once set up, your daily workflow looks like this:
 | `/wf-init` | Bootstrap minimal workflow structure (checks for required MCPs) |
 | `/wf-generate` | Generate agents and skills based on detected tech stack |
 | `/wf-design-setup` | Configure design resources (Figma, design system, tokens) |
+| `/wf-create-agent` | Create a custom agent with specified expertise |
+| `/wf-update` | Check for and apply wf-system updates |
 
 ### PRD & Planning
 
@@ -146,12 +155,14 @@ Once set up, your daily workflow looks like this:
 | `/wf-refactor` | Restructure code without changing behavior |
 | `/wf-improve` | Enhance existing code or feature quality |
 | `/wf-debug` | Deep investigation for complex issues |
+| `/wf-investigate` | Explore codebase to understand how things work |
 
 ### Ticket Management
 
 | Command | Description |
 |---------|-------------|
 | `/wf-delegate` | Execute sub-task with agent (`--until-done` for autonomous mode) |
+| `/wf-team-delegate` | Team-based pipeline delegation with persistent teammates |
 | `/wf-ticket-status` | Check implementation progress for a tracked ticket |
 | `/wf-create-ticket` | Create GitHub/Jira ticket from user story |
 
@@ -160,6 +171,10 @@ Once set up, your daily workflow looks like this:
 | Command | Description |
 |---------|-------------|
 | `/wf-review` | Review recent code changes or a specific PR |
+| `/wf-pre-prod-review` | Multi-agent pre-production audit (independent reviewers) |
+| `/wf-team-review` | Adversarial review with cross-examination between reviewers |
+| `/wf-pr-comments` | Evaluate, fix, and respond to PR review comments |
+| `/wf-qa-plan` | Generate structured QA test plan from a ticket |
 | `/wf-commit` | Create a well-formatted conventional commit |
 
 > See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed documentation.
@@ -173,23 +188,36 @@ WF System creates `.claude/workflow.json` in your project root:
 ```json
 {
   "project": "my-project",
+  "description": "Short project description",
+
   "github": {
     "owner": "your-username",
     "repo": "your-repo"
   },
-  "design": {
-    "figma": {
-      "fileKey": "abc123",
-      "fileUrl": "https://figma.com/design/abc123/..."
-    },
-    "system": "shadcn",
-    "styleGuide": "docs/STYLE_GUIDE.md"
+
+  "breakdown": {
+    "enabled": true,
+    "defaultAssignee": "your-username",
+    "labelPrefix": "task/",
+    "agents": {
+      "frontend": { "label": "frontend", "description": "React/Next.js UI work" },
+      "backend": { "label": "backend", "description": "API and database work" },
+      "infra": { "label": "infra", "description": "Infrastructure and DevOps" }
+    }
   },
-  "scopes": ["frontend", "backend", "api"],
-  "agents": {
-    "frontend": { "file": "frontend.md", "label": "frontend" },
-    "backend": { "file": "backend.md", "label": "backend" }
-  }
+
+  "autonomy": {
+    "enabled": false,
+    "maxTasks": 5
+  },
+
+  "teams": {
+    "enabled": true,
+    "maxDeveloperTeammates": 3
+  },
+
+  "progressFile": "progress.md",
+  "standardsFile": "standards.md"
 }
 ```
 
@@ -250,6 +278,27 @@ Developer (frontend/backend)
        Close
 ```
 
+### Agent Teams Pipeline
+
+When using `/wf-team-delegate`, persistent teammates replace stateless subagents. Teammates retain context across retries and communicate directly:
+
+```
+Team Lead (orchestrator)
+    ├── Developer-1  ─┐
+    ├── Developer-2  ─┤ (parallel, persistent teammates)
+    ├── Developer-3  ─┘
+    ├── Reviewer       ← cross-reviews via direct DMs
+    └── QA             ← retests with full context
+
+  ┌──────────────────────────────────────────┐
+  │  Developer completes → Reviewer reviews  │
+  │  Reviewer requests changes → Developer   │
+  │  fixes (keeps full context, no re-read)  │
+  │  Reviewer approves → QA validates        │
+  │  QA passes → Issue closed                │
+  └──────────────────────────────────────────┘
+```
+
 ---
 
 ## Requirements
@@ -272,6 +321,7 @@ WF System works best with these MCP servers installed:
 | **[GitHub MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/github)** | Issue management, PRs, ticket tracking | Recommended |
 | **[Figma MCP](https://github.com/figma/figma-mcp-server)** | Design context, tokens, screenshots | Optional |
 | **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** | Visual verification, UI screenshots | Optional |
+| **[Atlassian MCP](https://github.com/atlassian/atlassian-mcp-server)** | Jira issue management (for Jira-based projects) | Optional |
 | **[Context7](https://github.com/upstash/context7)** | Library documentation lookup | Optional |
 
 > `/wf-init` will check for these and guide installation if missing.
