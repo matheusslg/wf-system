@@ -38,6 +38,7 @@
 | **PR Comment Handling** | Evaluate, fix, and respond to PR review comments |
 | **Custom Agent Creation** | Create specialized agents with custom expertise and skills |
 | **Self-Update System** | Check for and apply wf-system updates |
+| **Browser E2E Testing** | Ad-hoc and suite-based browser testing with screenshots |
 | **Design Integration** | Figma, design systems, and design tokens support |
 | **Multi-Platform** | Works with both GitHub Issues and Jira |
 
@@ -175,6 +176,7 @@ Once set up, your daily workflow looks like this:
 | `/wf-team-review` | Adversarial review with cross-examination between reviewers |
 | `/wf-pr-comments` | Evaluate, fix, and respond to PR review comments |
 | `/wf-qa-plan` | Generate structured QA test plan from a ticket |
+| `/wf-e2e` | Run browser-based E2E tests or interactive scenarios |
 | `/wf-commit` | Create a well-formatted conventional commit |
 
 > See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed documentation.
@@ -321,6 +323,7 @@ WF System works best with these MCP servers installed:
 | **[GitHub MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/github)** | Issue management, PRs, ticket tracking | Recommended |
 | **[Figma MCP](https://github.com/figma/figma-mcp-server)** | Design context, tokens, screenshots | Optional |
 | **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** | Visual verification, UI screenshots | Optional |
+| **[agent-browser](https://github.com/vercel-labs/agent-browser)** | Browser automation CLI for E2E testing and UI verification | `npm i -g agent-browser` |
 | **[Atlassian MCP](https://github.com/atlassian/atlassian-mcp-server)** | Jira issue management (for Jira-based projects) | Optional |
 | **[Context7](https://github.com/upstash/context7)** | Library documentation lookup | Optional |
 

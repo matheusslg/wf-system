@@ -393,6 +393,7 @@ Generate skills based on detected technologies:
 | pytest or requirements.txt with Python | py-test, py-lint |
 | PostgreSQL/MySQL detected | db-connect, db-dump |
 | Git repo detected | gh-pr, gh-issues |
+| Any project with UI (always) | agent-browser, visual-verify |
 
 ### Ask User Which Skills
 
@@ -1086,6 +1087,59 @@ Verify all dependencies are installed:
 \`\`\`
 ```
 
+#### Browser & Visual Testing (always for UI projects)
+
+The `agent-browser` skill is a **vendor skill** shipped with the `agent-browser` npm package. Instead of generating it inline, **copy it from wf-system** which keeps the vendor copy in sync.
+
+The `visual-verify` skill is also copied from wf-system. It has been updated to use agent-browser as the primary browser tool.
+
+**Step 1: Copy agent-browser skill from wf-system**
+
+```bash
+# Find wf-system location
+for dir in "$HOME/wf-system" "$HOME/Documents/Projects/wf-system" "$HOME/projects/wf-system"; do
+  if [[ -d "$dir/.claude/skills/agent-browser" ]]; then
+    WF_SYSTEM_DIR="$dir"
+    break
+  fi
+done
+
+# Copy agent-browser skill (SKILL.md + references/ + templates/)
+if [[ -n "$WF_SYSTEM_DIR" ]]; then
+  mkdir -p .claude/skills/agent-browser/references .claude/skills/agent-browser/templates
+  cp "$WF_SYSTEM_DIR/.claude/skills/agent-browser/SKILL.md" .claude/skills/agent-browser/SKILL.md
+  cp "$WF_SYSTEM_DIR/.claude/skills/agent-browser/references/"*.md .claude/skills/agent-browser/references/
+  cp "$WF_SYSTEM_DIR/.claude/skills/agent-browser/templates/"*.sh .claude/skills/agent-browser/templates/
+fi
+```
+
+If wf-system dir not found, fall back to copying directly from the npm package:
+```bash
+AB_SKILL=$(npm root -g 2>/dev/null)/agent-browser/skills/agent-browser
+if [[ -d "$AB_SKILL" ]]; then
+  mkdir -p .claude/skills/agent-browser/references .claude/skills/agent-browser/templates
+  cp "$AB_SKILL/SKILL.md" .claude/skills/agent-browser/SKILL.md
+  cp "$AB_SKILL/references/"*.md .claude/skills/agent-browser/references/ 2>/dev/null || true
+  cp "$AB_SKILL/templates/"*.sh .claude/skills/agent-browser/templates/ 2>/dev/null || true
+fi
+```
+
+If neither source is available, skip and inform the user:
+> agent-browser skill not found. Install with `npm i -g agent-browser` to enable browser automation skills.
+
+**Step 2: Copy visual-verify skill from wf-system**
+
+```bash
+if [[ -n "$WF_SYSTEM_DIR" ]] && [[ -f "$WF_SYSTEM_DIR/.claude/skills/visual-verify/SKILL.md" ]]; then
+  mkdir -p .claude/skills/visual-verify
+  cp "$WF_SYSTEM_DIR/.claude/skills/visual-verify/SKILL.md" .claude/skills/visual-verify/SKILL.md
+fi
+```
+
+This ensures the project gets the latest visual-verify with agent-browser as the primary browser option.
+
+**Note on Merge mode**: When re-running `/wf-generate` with "Merge" selected, if `.claude/skills/agent-browser/` or `.claude/skills/visual-verify/` already exist, **overwrite them** — these are vendor-managed skills, not user-customized. This keeps them in sync with wf-system updates.
+
 ### Skill Generation Logic
 
 **This table shows examples - generate skills for ANY detected technology:**
@@ -1112,6 +1166,7 @@ Verify all dependencies are installed:
 | MySQL | mysql-status, mysql-dump |
 | Redis | redis-cli |
 | Git/GitHub | gh-pr, gh-issues, gh-pr-status |
+| Any UI project | agent-browser, visual-verify |
 | Any project | deps-check, env-check |
 
 **Ticketing Platform Skills** (based on `ticketing.platform` in workflow.json):
@@ -1149,10 +1204,10 @@ Determine which skills apply to which agent type:
 
 | Agent Role | Skills to Assign |
 |------------|------------------|
-| UI/Frontend (`*-ui`, `*-frontend`) | `visual-verify`, `next-*`, `react-*`, `vue-*` |
+| UI/Frontend (`*-ui`, `*-frontend`) | `visual-verify`, `agent-browser`, `next-*`, `react-*`, `vue-*` |
 | Backend (`*-backend`, `*-api`) | `nest-*`, `express-*`, `fastapi-*`, `django-*`, `db-*` |
-| Fullstack (`*-fullstack`) | All UI skills + all backend skills |
-| QA/Test (`*-qa`, `*-test`) | `*-test`, `*-lint`, `*-e2e` |
+| Fullstack (`*-fullstack`) | All UI skills + all backend skills (includes `visual-verify`, `agent-browser`) |
+| QA/Test (`*-qa`, `*-test`) | `*-test`, `*-lint`, `*-e2e`, `agent-browser` |
 | Infra (`*-infra`, `*-devops`) | `docker-*`, `pulumi-*`, `tf-*` |
 | Reviewer (`*-reviewer`) | None (read-only agent) |
 | Generic (`*-dev`) | `gh-pr`, `gh-issues`, `deps-check`, `env-check` |
@@ -1191,7 +1246,7 @@ for agent in .claude/agents/*.md; do
   # Determine role from filename
   if [[ "$agent_name" == *"-ui"* ]] || [[ "$agent_name" == *"-frontend"* ]]; then
     # Assign UI-related skills
-    skills="visual-verify"
+    skills="visual-verify, agent-browser"
     [ -d ".claude/skills/next-build" ] && skills="$skills, next-build"
     [ -d ".claude/skills/next-lint" ] && skills="$skills, next-lint"
   elif [[ "$agent_name" == *"-backend"* ]] || [[ "$agent_name" == *"-api"* ]]; then
@@ -1201,8 +1256,12 @@ for agent in .claude/agents/*.md; do
     [ -d ".claude/skills/db-status" ] && skills="${skills:+$skills, }db-status"
   elif [[ "$agent_name" == *"-fullstack"* ]]; then
     # Assign both UI and backend skills
-    skills="visual-verify"
+    skills="visual-verify, agent-browser"
     # ... add all relevant skills
+  elif [[ "$agent_name" == *"-qa"* ]] || [[ "$agent_name" == *"-test"* ]]; then
+    # Assign QA/testing skills
+    skills="agent-browser"
+    # ... add test-related skills
   fi
 
   # Update agent file with skills
@@ -1217,6 +1276,7 @@ Some skills should be available to most development agents:
 | Skill | Assign To |
 |-------|-----------|
 | `visual-verify` | Any agent with UI responsibilities |
+| `agent-browser` | Any agent with UI or QA responsibilities |
 | `gh-pr` | All development agents |
 | `gh-issues` | All development agents |
 | `deps-check` | All development agents |

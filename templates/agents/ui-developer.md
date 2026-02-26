@@ -2,7 +2,7 @@
 name: {{project}}-ui
 description: UI/Frontend developer for {{project}}. Use for implementing UI components, styling, and visual features.
 tools: Read, Edit, Write, Bash, Grep, Glob
-skills: visual-verify
+skills: visual-verify, agent-browser
 model: opus
 ---
 

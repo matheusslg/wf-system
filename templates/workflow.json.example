@@ -37,6 +37,12 @@
     "maxDeveloperTeammates": 3
   },
 
+  "browser": {
+    "baseUrl": "http://localhost:3000",
+    "authState": null,
+    "viewport": { "width": 1280, "height": 720 }
+  },
+
   "progressFile": "progress.md",
   "standardsFile": "standards.md"
 }
