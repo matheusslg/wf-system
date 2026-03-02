@@ -310,7 +310,7 @@ If task requires expertise outside existing agents:
 
 **CRITICAL**: Do NOT create GitHub issues until explicit user approval.
 
-Present the plan:
+First, present the plan as a markdown summary (without any text-based prompt at the end):
 
 ```markdown
 # Implementation Plan: {reference}
@@ -352,29 +352,38 @@ Present the plan:
 2. Sub-task 2 (depends on 1)
 3. Sub-task 3 (depends on 1)
 4. Sub-task 4 (depends on 2, 3)
-
----
-
-**Ready to create GitHub issues?**
-- `yes` / `approve` - Create all issues
-- `no` / `cancel` - Abort
-- `modify N` - Edit sub-task N
-- `add` - Add new sub-task
-- `remove N` - Remove sub-task N
 ```
+
+**Then, immediately use `AskUserQuestion` to get the user's decision:**
+
+```
+AskUserQuestion(
+  questions: [{
+    question: "Ready to create the sub-task issues? You can also request modifications.",
+    header: "Approval",
+    options: [
+      { label: "Approve", description: "Create all sub-task issues as shown in the plan above" },
+      { label: "Modify", description: "Request changes to the plan (add, remove, or edit sub-tasks)" },
+      { label: "Cancel", description: "Abort without creating any issues" }
+    ],
+    multiSelect: false
+  }]
+)
+```
+
+**Do NOT print a text-based prompt asking the user to type "yes" or "approve" in the chat. Always use `AskUserQuestion`.**
 
 ## 8. Handle User Response
 
-**Valid approval signals**:
-- `yes`, `approve`, `proceed`, `create`, `go ahead`
+Based on the `AskUserQuestion` response:
 
-**Valid rejection signals**:
-- `no`, `cancel`, `stop`, `abort`
+**If "Approve"**: Proceed to Step 9 to create the issues.
 
-**Modification signals**:
-- `modify 2` - Re-prompt for sub-task 2 details
-- `add` - Ask for new sub-task details
-- `remove 3` - Remove sub-task 3 from plan
+**If "Modify"**: Ask the user what changes they want (add, remove, or edit sub-tasks). After incorporating changes, return to Step 7 to present the updated plan and use `AskUserQuestion` again for approval.
+
+**If "Cancel"**: Abort the breakdown and inform the user that no issues were created.
+
+**If user selects "Other"** (free-text): Parse their response for modification instructions and apply them, then return to Step 7.
 
 **If `--dry-run` flag was set**:
 ```markdown
