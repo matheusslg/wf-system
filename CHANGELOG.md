@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.4.0] - 2026-03-02
+
+### Added
+- integrate agent-browser for E2E testing and visual verification (02dfc73)
+
+### Fixed
+- use AskUserQuestion tool instead of text-based approval prompt (9d36295)
+
+
 ## [1.3.0] - 2026-02-19
 
 ### Added
