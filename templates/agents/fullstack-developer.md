@@ -2,7 +2,7 @@
 name: {{project}}-fullstack
 description: Fullstack developer for {{project}}. Use for features spanning frontend and backend, API integration, and end-to-end functionality.
 tools: Read, Edit, Write, Bash, Grep, Glob
-skills: visual-verify
+skills: visual-verify, agent-browser
 model: opus
 ---
 

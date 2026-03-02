@@ -1,20 +1,27 @@
 ---
 name: visual-verify
 description: Verify UI matches Figma designs. Use when implementing UI components, after styling changes, or when user asks to check visual accuracy. Takes screenshots and compares against Figma mockups.
-allowed-tools: Read, Bash, mcp__figma__get_screenshot, mcp__figma__get_design_context, mcp__MCP_DOCKER__browser_navigate, mcp__MCP_DOCKER__browser_take_screenshot, mcp__MCP_DOCKER__browser_snapshot, mcp__playwright__browser_navigate, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot
+allowed-tools: Read, Bash(agent-browser:*), mcp__figma__get_screenshot, mcp__figma__get_design_context, mcp__playwright__browser_navigate, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot
 ---
 
 # Visual Verify
 
-Verify rendered UI matches the Figma design. Attempts Chrome first, falls back to Playwright MCP.
+Verify rendered UI matches the Figma design. Tries agent-browser first, then Chrome extension, then Playwright MCP.
 
 ## Prerequisites
 
-### Option A: Chrome Extension (Recommended for main agent)
+### Option A: agent-browser CLI (Recommended)
+Globally installed CLI for browser automation. Works headless, supports screenshots, snapshots, and visual diffs.
+```bash
+npm i -g agent-browser
+```
+See: https://github.com/vercel-labs/agent-browser
+
+### Option B: Chrome Extension (For main agent with auth state)
 - Install [Claude in Chrome extension](https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn) (v1.0.36+)
 - Start Claude with `claude --chrome`
 
-### Option B: Playwright MCP Server (For sub-agents or headless)
+### Option C: Playwright MCP Server (For sub-agents or headless)
 Add to your MCP config (`~/.claude/settings.json` or project `.mcp.json`):
 ```json
 {
@@ -55,22 +62,21 @@ If not responding (non-200), warn user:
 
 Try browser tools in this order (use first available):
 
-**Option 1: Chrome Extension** (best - has auth state):
+**Option 1: agent-browser CLI** (recommended - headless, fast, supports diffs):
+```bash
+agent-browser open [URL] && agent-browser wait --load networkidle && agent-browser screenshot
+```
+
+**Option 2: Chrome Extension** (has auth state from user's browser):
 ```
 browser_navigate to [URL]
 browser_take_screenshot
 ```
 
-**Option 2: Playwright MCP** (official Microsoft server):
+**Option 3: Playwright MCP** (official Microsoft server):
 ```
 mcp__playwright__browser_navigate to [URL]
 mcp__playwright__browser_take_screenshot
-```
-
-**Option 3: MCP_DOCKER Playwright** (fallback):
-```
-mcp__MCP_DOCKER__browser_navigate to [URL]
-mcp__MCP_DOCKER__browser_take_screenshot
 ```
 
 Use whichever browser tools are available in your current session.
@@ -89,7 +95,12 @@ nodeId: [extracted, convert 1-2 to 1:2]
 
 ### 5. Compare & Report
 
-Compare the rendered screenshot against Figma design:
+Compare the rendered screenshot against Figma design.
+
+**Visual diff with agent-browser** (if baseline exists):
+```bash
+agent-browser diff screenshot --baseline [baseline.png]
+```
 
 **Report format:**
 ```markdown
@@ -135,7 +146,8 @@ Verify the login page matches the Figma design at [figma-url]
 
 ## Notes
 
-- Chrome extension required for authenticated external pages
-- Playwright works for localhost without auth
+- agent-browser is the preferred tool for headless screenshot capture and visual diffs
+- Chrome extension required for authenticated external pages (user's existing browser session)
+- Playwright MCP works as a fallback for sub-agents or headless environments
 - Always check dev server is running before verification
 - Figma comparison is optional but recommended for design accuracy

@@ -280,6 +280,22 @@ Generate a structured QA test plan from a ticket and post it as a comment.
 - Step-by-step instructions with expected results
 - Edge cases and regression tests
 
+### `/wf-e2e`
+
+Run browser-based E2E tests or interactive test scenarios using agent-browser.
+
+**Modes:**
+- **Suite mode** (no args): Detects and runs existing E2E test framework (Playwright, Cypress)
+- **File mode**: Runs a specific test file
+- **Ad-hoc mode**: Opens a URL and executes an AI-driven test scenario
+
+**Features:**
+- Auto-detects Playwright, Cypress, or WebDriverIO configuration
+- Ad-hoc mode uses agent-browser snapshot-ref workflow for reliable interaction
+- Screenshots captured on failure to `.e2e-results/`
+- Supports auth state persistence via `browser.authState` config
+- Console errors and accessibility snapshots captured with failures
+
 ### `/wf-commit`
 Create a conventional commit with proper formatting.
 
