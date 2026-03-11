@@ -98,8 +98,8 @@ async function main() {
   const sensitivity = parseFloat(args.sensitivity || '0.1');
 
   if (!img1Path || !img2Path || !outputPath) {
-    console.error('Usage: pixelmatch-diff.js --img1 <path> --img2 <path> --output <path> [--sensitivity <0-1>]');
-    process.exit(1);
+    console.log(JSON.stringify({ error: 'Usage: pixelmatch-diff.js --img1 <path> --img2 <path> --output <path> [--sensitivity <0-1>]', matchPercent: 0, mismatchPixels: 0, totalPixels: 0, diffImage: '' }));
+    return;
   }
 
   const meta1 = await sharp(img1Path).metadata();
@@ -143,6 +143,5 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error(err.message);
-  process.exit(1);
+  console.log(JSON.stringify({ error: err.message, matchPercent: 0, mismatchPixels: 0, totalPixels: 0, diffImage: '' }));
 });
