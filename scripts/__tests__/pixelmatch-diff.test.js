@@ -71,3 +71,25 @@ test('sensitivity flag affects results', () => {
   ));
   expect(lenient.mismatchPixels).toBeLessThanOrEqual(strict.mismatchPixels);
 });
+
+test('auto-resizes images with different dimensions', async () => {
+  const green = Buffer.alloc(20 * 20 * 4, 0);
+  for (let i = 0; i < 20 * 20; i++) {
+    green[i * 4] = 0;
+    green[i * 4 + 1] = 255;
+    green[i * 4 + 2] = 0;
+    green[i * 4 + 3] = 255;
+  }
+  await sharp(green, { raw: { width: 20, height: 20, channels: 4 } })
+    .png()
+    .toFile(path.join(TMP, 'green_20x20.png'));
+
+  const result = execSync(
+    `node ${SCRIPT} --img1 ${TMP}/red.png --img2 ${TMP}/green_20x20.png --output ${TMP}/diff_resize.png`,
+    { encoding: 'utf8' }
+  );
+  const json = JSON.parse(result);
+  expect(json.matchPercent).toBeDefined();
+  expect(json.totalPixels).toBe(400); // 20x20
+  expect(fs.existsSync(json.diffImage)).toBe(true);
+});
