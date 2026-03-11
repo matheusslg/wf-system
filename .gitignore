@@ -9,3 +9,6 @@ Thumbs.db
 *.swp
 *.swo
 *~
+node_modules/
+scripts/__test_tmp__/
+scripts/__test_tmp_report__/
