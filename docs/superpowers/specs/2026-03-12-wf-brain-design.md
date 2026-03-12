@@ -150,12 +150,20 @@ wf-brain review --approve-all      # approve everything pending
 # List / browse
 wf-brain list [--category <cat>] [--limit 20] [--recent]
 
+# Edit an approved entry
+wf-brain edit <id> --content "updated content" [--category <cat>] [--tags "new,tags"]
+
+# Delete an approved entry
+wf-brain delete <id>
+
 # Stats
 wf-brain stats                     # entry count by category, pending count
 
 # Init (creates the database, seeds from existing context)
 wf-brain init [--project-dir <path>]
 ```
+
+The `--project-dir` flag on `init` sets the directory where `.claude/brain.db` is created. Defaults to current working directory. All other commands auto-detect the brain DB by walking up from CWD looking for `.claude/brain.db`.
 
 ### Output Format
 
@@ -398,3 +406,73 @@ When community users run `/wf-update` to get latest wf-system:
 | Claude memory (`~/.claude/.../memory/`) | User-level memory | Brain is project-level; they complement each other |
 | Context7 MCP | Framework docs | External docs; brain is internal project knowledge |
 | GitHub MCP | Issue/PR data | Brain captures knowledge derived from issues, not the issues themselves |
+
+## Files to Modify (Existing Commands/Hooks)
+
+### `hooks/wf-orchestrator.py`
+- In `handle_post_tool_use()` first-run detection block: add brain search call via `subprocess.run(['node', 'scripts/wf-brain.js', 'search', keywords, '--limit', '5'])`, parse JSON stdout, append to `additionalContext`
+- Add pending count check via `wf-brain stats`, include nudge if pending > 0
+- Note: Python shelling out to Node.js — handle `FileNotFoundError` if node not installed
+
+### `commands/wf-init.md`
+- After workflow.json creation step: add brain init step — run `node scripts/wf-brain.js init`
+- After MCP registration step: add `wf-brain` entry to `.mcp.json`
+
+### `commands/wf-start-session.md`
+- After MCP status verification (§2): add brain availability check — run `wf-brain stats`
+- If brain DB doesn't exist, run `wf-brain init`
+- Include brain stats in session summary output
+
+### `commands/wf-end-session.md`
+- Before the final commit step: add brain extraction section
+- Agent reviews session and proposes entries using this prompt template:
+
+```
+Review this session's work. Extract 0-3 knowledge entries worth preserving.
+Only extract entries that are:
+- Non-obvious (not derivable by reading the code)
+- Reusable (would help future sessions working in this area)
+- Specific (not generic advice)
+
+For each entry, provide: category, tags, and content (2-4 sentences).
+Skip if nothing worth preserving — an empty session is fine.
+```
+
+### `commands/wf-delegate.md`
+- In §3 (agent prompt construction): after issue body injection, add brain search using issue title keywords, append results as "Project Knowledge:" section
+
+### `commands/wf-team-delegate.md`
+- In §3 (team creation): after loading issue context, add brain search using issue title keywords, include in the developer teammate's initial prompt
+- In §7 (monitoring loop): after pipeline completes (all APPROVED/PASSED), add extraction step using same prompt template as wf-end-session
+
+## Seeding Algorithm (`wf-brain init`)
+
+When initializing from existing project files:
+
+### From `standards.md`:
+1. Read the file
+2. Split on `##` headings — each heading becomes a potential entry
+3. Filter: skip sections under 50 characters (too short to be useful)
+4. For each section: category = `convention`, tags = extracted from heading text, source = `seed:standards.md`
+5. Store directly (not pending — these are canonical)
+
+### From `progress.md`:
+1. Read the file
+2. Look for lines containing "decision:", "chose", "because", "instead of", "switched to"
+3. Extract the containing paragraph (heading + body)
+4. For each: category = `decision` or `history`, tags = extracted keywords, source = `seed:progress.md`
+5. Store directly
+
+### Seeding limits:
+- Max 20 entries from standards.md
+- Max 10 entries from progress.md
+- Skip if entry content is > 500 characters (too verbose — brain entries should be concise)
+
+## Performance Expectations
+
+- **Embedding generation**: ~200ms per entry (MiniLM is fast)
+- **Search latency**: < 500ms for databases under 5,000 entries
+- **First run**: ~30-60s (model download + dep install)
+- **Model loading**: ~2s cold start, cached in memory for subsequent calls within same process
+- **Database size**: ~1MB per 1,000 entries (text + embeddings)
+- **Recommended max**: 5,000 entries. Beyond that, consider pruning old `history` entries
