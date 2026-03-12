@@ -9,3 +9,10 @@ Thumbs.db
 *.swp
 *.swo
 *~
+node_modules/
+scripts/__test_tmp__/
+scripts/__test_tmp_report__/
+
+# wf-brain
+.claude/brain.db
+.claude/mcp-servers/wf-brain/node_modules/

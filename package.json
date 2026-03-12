@@ -1,0 +1,29 @@
+{
+  "name": "wf-system",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">   <h1 align=\"center\">WF System</h1>   <p align=\"center\">     <strong>A workflow management system for Claude Code</strong>   </p>   <p align=\"center\">     Session management, progress tracking, and seamless GitHub/Jira integration   </p> </p>",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matheusslg/wf-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/matheusslg/wf-system/issues"
+  },
+  "homepage": "https://github.com/matheusslg/wf-system#readme",
+  "devDependencies": {
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
+    "sharp": "^0.34.5"
+  }
+}

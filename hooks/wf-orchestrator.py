@@ -294,6 +294,65 @@ class WFOrchestrator:
         return None
 
     # -------------------------------------------------------------------------
+    # Brain Integration
+    # -------------------------------------------------------------------------
+
+    def _brain_search(self, keywords: str, limit: int = 5) -> Optional[str]:
+        """Search the brain for relevant knowledge."""
+        if not keywords or not keywords.strip():
+            return None
+        try:
+            hooks_dir = Path(__file__).parent
+            wf_system_root = hooks_dir.parent
+            cli_path = wf_system_root / "scripts" / "wf-brain.js"
+
+            if not cli_path.exists():
+                return None
+
+            result = subprocess.run(
+                ["node", str(cli_path), "search", keywords, "--limit", str(limit)],
+                capture_output=True, text=True, timeout=10, cwd=self.cwd
+            )
+            if result.returncode != 0:
+                return None
+
+            entries = json.loads(result.stdout.strip())
+            if not entries or not isinstance(entries, list):
+                return None
+
+            lines = ["Brain Context (auto-retrieved):"]
+            for entry in entries:
+                cat = entry.get("category", "")
+                content = entry.get("content", "")
+                match_pct = entry.get("matchPercent", "")
+                lines.append(f"- [{cat}] ({match_pct}% match) {content}")
+
+            return "\n".join(lines)
+        except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError, Exception):
+            return None
+
+    def _brain_stats(self) -> Optional[Dict[str, Any]]:
+        """Get brain stats (entry count, pending count)."""
+        try:
+            hooks_dir = Path(__file__).parent
+            wf_system_root = hooks_dir.parent
+            cli_path = wf_system_root / "scripts" / "wf-brain.js"
+
+            if not cli_path.exists():
+                return None
+
+            result = subprocess.run(
+                ["node", str(cli_path), "stats"],
+                capture_output=True, text=True, timeout=10, cwd=self.cwd
+            )
+            if result.returncode != 0:
+                return None
+
+            return json.loads(result.stdout.strip())
+        except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError, Exception):
+            return None
+
+    # -------------------------------------------------------------------------
     # Session Start Handling
     # -------------------------------------------------------------------------
 
@@ -352,6 +411,18 @@ class WFOrchestrator:
                 f"Run `/wf-end-session` to archive old sessions."
             )
 
+        # Brain integration
+        brain_context = ""
+        brain_search = self._brain_search(project_name)
+        if brain_search:
+            brain_context = f"\n\n{brain_search}"
+
+        brain_nudge = ""
+        brain_stats = self._brain_stats()
+        if brain_stats and brain_stats.get("totalPending", 0) > 0:
+            count = brain_stats["totalPending"]
+            brain_nudge = f"\n\nBrain: {count} pending entries awaiting review. Run /wf-brain-review to process them."
+
         msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-start-session or provide ticket"
         full_context = (
             f"SESSION START - Jira Workflow Detected\n"
@@ -361,6 +432,7 @@ class WFOrchestrator:
             f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-breakdown`\n"
             f"- Or describe what you'd like to work on\n"
             f"- Or run `/wf-start-session` for full context load{progress_warning}"
+            f"{brain_context}{brain_nudge}"
         )
         return {
             "systemMessage": msg,
@@ -387,6 +459,19 @@ class WFOrchestrator:
                 f"Run `/wf-end-session` to archive old sessions."
             )
 
+        # Brain integration — inject relevant knowledge
+        brain_context = ""
+        if wip:
+            brain_search = self._brain_search(wip)
+            if brain_search:
+                brain_context = f"\n\n{brain_search}"
+
+        brain_nudge = ""
+        brain_stats = self._brain_stats()
+        if brain_stats and brain_stats.get("totalPending", 0) > 0:
+            count = brain_stats["totalPending"]
+            brain_nudge = f"\n\nBrain: {count} pending entries awaiting review. Run /wf-brain-review to process them."
+
         if wip:
             msg = f"[WF] {repo_display} - WIP: {wip[:50]}{'...' if len(wip) > 50 else ''}"
             full_context = (
@@ -395,6 +480,7 @@ class WFOrchestrator:
                 f"WIP: {wip}\n\n"
                 f"Recommended: Run `/wf-delegate` to continue with the assigned sub-task, "
                 f"or `/wf-start-session` for full context.{progress_warning}"
+                f"{brain_context}{brain_nudge}"
             )
             return {
                 "systemMessage": msg,
@@ -411,6 +497,7 @@ class WFOrchestrator:
                 f"No work in progress detected.\n"
                 f"Recommended: Run `/wf-pick-issue` to select the next task, "
                 f"or `/wf-start-session` for full context.{progress_warning}"
+                f"{brain_context}{brain_nudge}"
             )
             return {
                 "systemMessage": msg,
@@ -427,6 +514,10 @@ class WFOrchestrator:
     def handle_context_check(self) -> Optional[Dict]:
         """Check context usage and trigger /wf-end-session if needed."""
         # Skip context warnings in external loop mode (Ralph handles restarts)
+
+        # Skip if session-handoff.py handles context monitoring
+        if os.environ.get("WF_DISABLE_CONTEXT_CHECK", "false") == "true":
+            return None
         if os.environ.get("WF_EXTERNAL_LOOP", "false") == "true":
             return None
 

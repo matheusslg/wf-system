@@ -296,6 +296,41 @@ Run browser-based E2E tests or interactive test scenarios using agent-browser.
 - Supports auth state persistence via `browser.authState` config
 - Console errors and accessibility snapshots captured with failures
 
+### `/wf-match-figma [url] [figma-url] [--batch] [--selector] [--threshold] [--breakpoints] [--sensitivity]`
+Pixel-level visual comparison between rendered UI and Figma designs.
+
+**Modes:**
+- **Live**: `wf-match-figma http://localhost:3000/page https://figma.com/design/...`
+- **Attached**: Paste Figma URL + attach screenshot image
+- **Batch**: `wf-match-figma --batch` — runs all keyFrames from workflow.json
+
+**Output:**
+- Match percentage per page/breakpoint
+- Diff overlay images
+- HTML report with side-by-side comparison
+- Terminal PASS/FAIL summary (default threshold: 80%)
+
+### `/wf-ai-qa [test-file | pages | flows | all]`
+AI-driven exploratory testing that simulates real users navigating the app.
+
+**Modes:**
+- **Structured**: Executes specific test cases with steps and expected results
+- **Exploratory**: Simulates real users discovering UX gaps and bugs
+
+**Features:**
+- Reads scenarios from `__ai__/tests/pages/` and `__ai__/tests/flows/`
+- Records sessions with `agent-browser record`
+- Generates structured reports in `__ai__/reports/`
+- Supports API endpoint testing and mobile device markers
+
+### `/wf-brain-review`
+Review pending brain knowledge entries — approve, reject, or edit.
+
+**Process:**
+1. Lists all pending entries with source and category
+2. Interactive review: approve, reject, edit, skip, quit
+3. Reports summary of actions taken
+
 ### `/wf-commit`
 Create a conventional commit with proper formatting.
 
