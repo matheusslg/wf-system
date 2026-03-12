@@ -81,6 +81,30 @@ grep -n "^### Session" progress.md | head -6 | tail -1
 
 **Target file size**: Keep progress file under 400 lines for reliable AI reading.
 
+## 3.5. Brain Knowledge Extraction
+
+Review this session's work and extract knowledge worth preserving.
+
+**Only extract entries that are:**
+- Non-obvious (not derivable by reading the code)
+- Reusable (would help future sessions working in this area)
+- Specific (not generic advice)
+
+For each entry worth preserving (0-3 per session):
+
+```bash
+node scripts/wf-brain.js propose --category <category> --tags "<tags>" --source "session-end" "<content>"
+```
+
+**Categories**: architecture, domain, convention, gotcha, decision, history
+
+**Skip if nothing worth preserving** — an empty session is fine. Quality over quantity.
+
+If entries were proposed, report:
+```
+Brain: proposed {N} entries from this session. Run /wf-brain-review to review them.
+```
+
 ## 4. Check for Uncommitted Changes
 
 ```bash

@@ -240,7 +240,13 @@ Read each agent file and spawn as persistent teammates with Agent Teams communic
 
 ### Spawn Developer Teammate(s)
 
-For each unique developer agent needed:
+For each unique developer agent needed, first search the brain for relevant context:
+
+```bash
+node scripts/wf-brain.js search "{issue_title}" --limit 3 2>/dev/null
+```
+
+Format each result as: `- [{category}] {content}`. Store as `brain_search_results` (empty string if brain not available or no results).
 
 ```bash
 cat .claude/agents/{agent_file}
@@ -267,11 +273,47 @@ Task(
   - After fixing issues, reply via SendMessage to the reviewer/QA confirming what you fixed
   - Check TaskList periodically for new tasks assigned to you
 
+  ## CRITICAL: Git Branch + Push + PR Workflow
+
+  **BEFORE writing any code**, create a feature branch:
+  ```bash
+  git checkout -b feat/issue-{parent_issue_number}
+  ```
+
+  Use `{parent_issue_number}` (the epic/parent issue number, NOT the sub-task number).
+
+  **After implementing ALL sub-tasks** (and after reviewer/QA fixes if any):
+  1. Stage and commit with conventional commits (you should already be doing this)
+  2. Push the branch:
+     ```bash
+     git push -u origin feat/issue-{parent_issue_number}
+     ```
+  3. Create a Pull Request using the GitHub MCP tool:
+     ```
+     mcp__github__create_pull_request(
+       owner: "{github_owner}",
+       repo: "{github_repo}",
+       title: "feat: {parent_issue_title}",
+       body: "Implements #{parent_issue_number}\n\nSub-tasks:\n- {list of sub-task titles}",
+       head: "feat/issue-{parent_issue_number}",
+       base: "main"
+     )
+     ```
+  4. **Output the PR URL** in your final message so the orchestrator can capture it.
+
+  **Important:**
+  - Create the branch FIRST, before any file edits
+  - Push and create the PR AFTER all review/QA feedback is addressed
+  - If you need to fix reviewer/QA issues, commit and push again (the PR updates automatically)
+
   **Your first task:**
   Implement issue #{number}: {title}
 
   **Issue description:**
   {issue_body}
+
+  **Project Knowledge (from brain):**
+  {brain_search_results}
 
   **Acceptance criteria:**
   {acceptance_criteria}
@@ -436,23 +478,68 @@ TaskCreate(subject: "Review #127")                        → id=8, owner: "revi
 TaskCreate(subject: "QA #127")                            → id=9, owner: "qa", blockedBy: [8]
 ```
 
-## 7. Monitor & Coordinate
+## 7. Blocking Monitoring Loop
 
-The team lead monitors the shared TaskList and coordinates the pipeline.
+**CRITICAL: YOU MUST NOW ENTER A BLOCKING POLLING LOOP. Do NOT end your turn. Do NOT proceed to Section 8 until exit conditions are met. Your turn stays alive by calling tools (sleep + TaskList) in a loop.**
 
-### Monitoring Loop
+This is the core coordination mechanism. You (the team lead) stay active by **polling** — calling `Bash("sleep 45")` then checking the filesystem and task state on each iteration. This keeps your turn alive while teammates work in the background. **You MUST NOT end your turn or produce a final response until the loop exits.**
 
-Poll TaskList periodically to track progress:
+### CRITICAL: You Cannot Receive Messages
+
+**You are running in non-interactive (`--print`) mode.** This means:
+- **Ending your turn = ending the session permanently.** There are NO follow-up turns.
+- **Agent messages (SendMessage) will NOT be delivered to you.** Messages queue but your turn never yields to receive them.
+- **Do NOT exit the loop "to allow message delivery"** — that kills the entire session and all agents.
+- **Your ONLY way to observe progress** is via `TaskList()` (for task status/verdicts) and `Bash` (for filesystem changes like modified files, git log, etc.)
+- **Stay in the loop until exit conditions are met.** Even if you've been polling for 30+ minutes, that is NORMAL. Do not break out early.
+
+### How It Works
+
+Teammates update task statuses via `TaskUpdate` as they work. You poll `TaskList()` every ~45 seconds to check for status changes and verdicts. You also check the filesystem directly (`ls -la`, `wc -l`, `git status`) to verify actual file changes.
+
+**IMPORTANT**: Do NOT just spawn agents and print a status table. You MUST enter this loop immediately after spawning. Your turn does not end until ALL exit conditions are met.
+
+### The Loop
 
 ```
-TaskList()
+iteration = 0
+WHILE true:
+    iteration += 1
+
+    1. CALL Bash("sleep 45")           ← keeps your turn alive, DO NOT SKIP
+
+    2. CHECK PROGRESS via filesystem:
+       - Bash("find . -name '*.sqf' -newer /tmp/loop-marker -o -name '*.ts' -newer /tmp/loop-marker | head -20")
+       - Bash("git diff --stat 2>/dev/null || true")
+       - Touch marker: Bash("touch /tmp/loop-marker") on first iteration
+
+    3. CHECK task verdicts (if TaskList is available):
+       - tasks = TaskList()
+       - FOR each task: IF has verdict metadata → handle verdict (see below)
+       - IF TaskList not available, rely on filesystem checks only
+
+    4. CHECK if pipeline stages are complete:
+       - Developer done? Check if files are modified/created as expected
+       - Reviewer done? Check for review comments or verdict in task metadata
+       - QA done? Check for test results or verdict in task metadata
+       - IF issue pipeline fully complete → close issue immediately
+
+    5. Log progress status table (every 3rd iteration to reduce noise)
+
+    6. CHECK exit conditions:
+       - IF all issues are closed or marked blocked → EXIT loop
+       - IF 90-minute wallclock timeout exceeded → EXIT loop
+       - IF all remaining issues are blocked (retry limit exceeded) → EXIT loop
+       - **DO NOT EXIT for any other reason (e.g., "messages queued", "been polling too long")**
+
+    7. CONTINUE (go back to step 1)
 ```
 
-For each task, check:
-1. **Status**: pending, in_progress, completed
-2. **Metadata**: Check for verdict fields
+**NEVER break out of this loop early.** The only valid exits are the conditions in step 6. Polling for 30, 45, or even 60 minutes is completely normal for agent team work.
 
 ### Handling Verdicts
+
+On each loop iteration, scan all tasks returned by `TaskList()` for verdict metadata.
 
 **When a reviewer task completes with metadata `{verdict: "APPROVED"}`:**
 - The QA task automatically unblocks (via dependency chain)
@@ -486,15 +573,41 @@ SendMessage(
 - Add "blocked" label to the issue and report to user.
 
 **When a QA task completes with metadata `{verdict: "PASSED"}`:**
-- Pipeline complete for this issue. Proceed to close.
-```markdown
-## QA Complete: #{number}
+- **Close the issue immediately** (do not defer to Section 8):
 
-**Verdict**: PASSED
-**Pipeline**: Developer ✅ → Reviewer ✅ → QA ✅
+  **If platform is "github":**
+  ```
+  mcp__github__update_issue(
+    owner: delegate.githubOwner,
+    repo: delegate.githubRepo,
+    issue_number: {number},
+    state: "closed"
+  )
+  ```
 
-Ready to close issue.
-```
+  **If platform is "jira":**
+  ```
+  mcp__atlassian__transitionJiraIssue(
+    issueIdOrKey: {issue_key},
+    cloudId: {jiraCloudId},
+    transitionId: {done_transition_id}
+  )
+  ```
+
+- Upload any screenshots for this issue:
+  ```bash
+  ls /tmp/issue-{issue_number}/*.png 2>/dev/null
+  ```
+  If screenshots exist, upload them as issue comments (same logic as wf-delegate Section 11.5).
+
+- Log:
+  ```markdown
+  ## Pipeline Complete: #{number}
+
+  **Verdict**: PASSED
+  **Pipeline**: Developer ✅ → Reviewer ✅ → QA ✅
+  **Issue**: CLOSED
+  ```
 
 **When a QA task has metadata `{verdict: "FAILED"}`:**
 - Send context to developer:
@@ -508,6 +621,21 @@ SendMessage(
 ```
 - Same retry limit logic (max 3).
 
+**When developer completes and NO reviewer or QA exists:**
+- Close the issue immediately (same close logic as QA PASSED above).
+
+### Closing Issues Inside the Loop
+
+Only close an issue when its FULL pipeline has completed:
+
+| Condition | Can Close? |
+|-----------|------------|
+| No reviewer AND no QA agents | Yes (after developer completes) |
+| Reviewer exists, got APPROVED | Continue to QA |
+| QA exists, got PASSED | Yes — close NOW |
+| Reviewer returned CHANGES_REQUESTED | NO - fix and re-review |
+| QA returned FAILED | NO - fix and re-test |
+
 ### Pipeline Rules
 
 | Teammate | Verdict | Next Step |
@@ -515,7 +643,7 @@ SendMessage(
 | developer | Task complete | → Reviewer reviews (auto-unblocked) |
 | reviewer | APPROVED | → QA tests (auto-unblocked) |
 | reviewer | CHANGES_REQUESTED | → Lead messages developer to fix |
-| qa | PASSED | → Close issue |
+| qa | PASSED | → Close issue immediately |
 | qa | FAILED | → Lead messages developer to fix |
 
 ### Retry Tracking
@@ -529,23 +657,68 @@ Max 3 retries per stage. On exceeding:
 2. Report to user with full context
 3. In `--until-done` mode, skip this issue and continue with others
 
-## 8. Issue Management
+### Progress Status Table
 
-### Close Issues After Pipeline Completion
+On each loop iteration, log a table showing current state:
 
-Only close an issue when its FULL pipeline has completed:
+```markdown
+## Pipeline Status (iteration {N})
 
-**Pre-close checklist (same as wf-delegate):**
+| Issue | Developer | Reviewer | QA | Issue Status |
+|-------|-----------|----------|----|--------------|
+| #125  | ✅ Done   | ✅ APPROVED | 🔄 In Progress | Open |
+| #126  | ✅ Done   | 🔄 In Progress | ⏳ Blocked | Open |
+| #127  | ⏳ Blocked | ⏳ Blocked | ⏳ Blocked | Open |
+```
 
-| Condition | Can Close? |
-|-----------|------------|
-| No reviewer AND no QA agents | Yes (after developer completes) |
-| Reviewer exists, got APPROVED | Continue to QA |
-| QA exists, got PASSED | Yes |
-| Reviewer returned CHANGES_REQUESTED | NO - fix and re-review |
-| QA returned FAILED | NO - fix and re-test |
+### Exit Conditions
 
-### If platform is "github":
+The loop exits when ANY of these is true:
+
+1. **All issues resolved**: Every issue is either closed or marked blocked
+2. **Timeout**: 90-minute wallclock timeout exceeded — log remaining state and proceed to cleanup
+3. **All blocked**: Every remaining open issue has exceeded its retry limit — no further progress possible
+4. **No progress**: TaskList has shown identical statuses for 10+ consecutive iterations (~7.5 minutes) — teammates may be stuck
+
+### Knowledge Extraction (Post-Pipeline)
+
+After all pipelines complete and before cleanup, review the pipeline outcomes and propose knowledge entries:
+
+For each completed pipeline, consider:
+- Did the reviewer find non-obvious issues? → gotcha candidate
+- Did QA find bugs that required fixes? → gotcha candidate
+- Were there architectural decisions made during implementation? → decision candidate
+
+For each entry worth preserving (0-2 per pipeline):
+```bash
+node scripts/wf-brain.js propose --category <category> --tags "<tags>" --source "issue:{issue_number}" "<content>"
+```
+
+On exit, proceed to **Section 8 (Post-Pipeline Verification)**.
+
+### Stalled Teammates
+
+If `TaskList()` shows identical statuses for 10+ consecutive polls (no task progress), a teammate may be stuck. Refer to **Error Handling: Teammate Unresponsive** below for recovery steps.
+
+## 8. Post-Pipeline Verification
+
+**This section runs ONCE after the monitoring loop (Section 7) exits.**
+
+The monitoring loop closes issues as each pipeline completes. This step is a safety net to catch any issues that should have been closed but weren't (e.g., API call failure during the loop).
+
+### Final Verification
+
+```
+tasks = TaskList()
+```
+
+For each issue in the pipeline:
+1. Check if the issue's QA task (or final pipeline stage) has verdict PASSED/APPROVED
+2. Check if the issue is still open in the tracker
+
+If an issue should be closed but isn't:
+
+**If platform is "github":**
 ```
 mcp__github__update_issue(
   owner: delegate.githubOwner,
@@ -555,7 +728,7 @@ mcp__github__update_issue(
 )
 ```
 
-### If platform is "jira":
+**If platform is "jira":**
 ```
 mcp__atlassian__transitionJiraIssue(
   issueIdOrKey: {issue_key},
@@ -564,15 +737,46 @@ mcp__atlassian__transitionJiraIssue(
 )
 ```
 
-### Upload Screenshots
+### Push Branch and Create PR (if developer didn't)
 
-After pipeline completion, check for screenshots:
+After verifying all pipeline stages passed, ensure the branch is pushed and a PR exists:
 
 ```bash
-ls /tmp/issue-{issue_number}/*.png 2>/dev/null
+# Check if branch was pushed and PR created
+git log --oneline main..HEAD
 ```
 
-If screenshots exist, upload them as issue comments (same logic as wf-delegate Section 11.5).
+If there are commits above main but no PR was created by the developer:
+1. Push the branch: `Bash("git push -u origin feat/issue-{parent_issue_number}")`
+2. Create PR via GitHub MCP tool (same as developer instructions in Section 5)
+
+**CRITICAL — Output the PR URL for pipeline capture:**
+
+After confirming the PR exists (created by developer or by you), output it in this exact format:
+
+```
+PR_URL: https://github.com/{owner}/{repo}/pull/{number}
+```
+
+This line is parsed by `InvokeClaudeStep` and stored as `ctx.variables.prUrl`, which `ForEachIssue` uses for auto-merge on the next iteration.
+
+### Summary Before Cleanup
+
+Log a final status table before proceeding to Section 9 (Cleanup):
+
+```markdown
+## Final Pipeline Status
+
+| Issue | Pipeline Result | Issue Status | PR | Notes |
+|-------|----------------|--------------|-----|-------|
+| #125  | ✅ All stages passed | Closed | PR #4 merged | — |
+| #126  | ✅ All stages passed | Closed | PR #5 merged | — |
+| #127  | ❌ Blocked | Open | — | Review retry limit exceeded |
+
+PR_URL: https://github.com/{owner}/{repo}/pull/{latest_pr_number}
+
+**Proceeding to Section 9 (Cleanup).**
+```
 
 ## 9. Cleanup
 

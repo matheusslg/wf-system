@@ -326,6 +326,28 @@ Build comprehensive context for the agent:
 ### Task Details
 {issue_body}
 
+### Project Knowledge
+
+Search the brain for relevant context:
+
+```bash
+node scripts/wf-brain.js search "{issue_title}" --limit 3 2>/dev/null
+```
+
+If results found, include in the task context:
+
+```markdown
+### Project Knowledge (from brain)
+{brain_search_results_formatted}
+```
+
+Format each result as:
+```
+- [{category}] {content}
+```
+
+If no results or brain not available, skip this section silently.
+
 ### Agent Instructions
 You are being delegated this task from the breakdown.
 

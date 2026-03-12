@@ -323,6 +323,14 @@ AI-driven exploratory testing that simulates real users navigating the app.
 - Generates structured reports in `__ai__/reports/`
 - Supports API endpoint testing and mobile device markers
 
+### `/wf-brain-review`
+Review pending brain knowledge entries — approve, reject, or edit.
+
+**Process:**
+1. Lists all pending entries with source and category
+2. Interactive review: approve, reject, edit, skip, quit
+3. Reports summary of actions taken
+
 ### `/wf-commit`
 Create a conventional commit with proper formatting.
 
