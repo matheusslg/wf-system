@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.5.0] - 2026-03-12
+
+### Added
+- integrate brain into init, session, delegate, and team-delegate commands (b75753a)
+- integrate brain search + pending nudge into orchestrator (f476b57)
+- add MCP server wrapping CLI tools (a851ea7)
+- add interactive review command for pending entries (83761d8)
+- add seeding from standards.md and progress.md on init (734c6a6)
+- add CLI entry point with all commands (2c125bf)
+- add hybrid search with keyword fallback (e602bbc)
+- add embedding module with MiniLM integration (894b34d)
+- add database layer with schema, CRUD, and migrations (4f4614d)
+- add match-figma skill for sub-agent visual comparison (d2bdd32)
+- add /wf-match-figma command for pixel-level Figma comparison (236eb12)
+- add HTML report generation to pixelmatch-diff.js (3a7c158)
+- add pixelmatch-diff.js for pixel-level image comparison (f3d625a)
+
+### Fixed
+- always exit 0 from pixelmatch-diff.js per spec (1018be5)
+
+
 ## [1.4.0] - 2026-03-02
 
 ### Added
