@@ -72,9 +72,41 @@ async function run(argv) {
     const projectDir = args['project-dir'] || process.cwd();
     const dbPath = require('path').join(projectDir, '.claude', 'brain.db');
     const conn = db.initDb(dbPath);
+
+    // Seed from existing project files (only on fresh brain)
+    const seed = require('./seed');
+    let seeded = 0;
+    const existingStats = db.getStats(conn);
+
+    if (existingStats.totalEntries === 0) {
+      const standardsPath = require('path').join(projectDir, 'standards.md');
+      if (require('fs').existsSync(standardsPath)) {
+        const content = require('fs').readFileSync(standardsPath, 'utf8');
+        const entries = seed.parseStandards(content);
+        for (const entry of entries) {
+          try {
+            db.insertEntry(conn, { ...entry, embedding: null });
+            seeded++;
+          } catch {}
+        }
+      }
+
+      const progressPath = require('path').join(projectDir, 'progress.md');
+      if (require('fs').existsSync(progressPath)) {
+        const content = require('fs').readFileSync(progressPath, 'utf8');
+        const entries = seed.parseProgress(content);
+        for (const entry of entries) {
+          try {
+            db.insertEntry(conn, { ...entry, embedding: null });
+            seeded++;
+          } catch {}
+        }
+      }
+    }
+
     const stats = db.getStats(conn);
     conn.close();
-    output({ success: true, dbPath, ...stats }, pretty);
+    output({ success: true, dbPath, seeded, ...stats }, pretty);
     return;
   }
 
