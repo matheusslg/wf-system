@@ -84,6 +84,17 @@ describe('wf-brain CLI', () => {
       const result = runJson(['list', '--category', 'architecture']);
       assert.ok(result.every(e => e.category === 'architecture'));
     });
+
+    it('respects --limit', () => {
+      const result = runJson(['list', '--limit', '1']);
+      assert.strictEqual(result.length, 1);
+    });
+
+    it('supports --recent ordering', () => {
+      const result = runJson(['list', '--recent']);
+      assert.ok(Array.isArray(result));
+      assert.ok(result.length > 0);
+    });
   });
 
   describe('search', () => {
@@ -115,6 +126,14 @@ describe('wf-brain CLI', () => {
       const proposed = runJson(['propose', '--category', 'gotcha', 'Reject this one']);
       const result = runJson(['review', '--reject', String(proposed.id)]);
       assert.strictEqual(result.status, 'rejected');
+    });
+
+    it('approves all pending entries', () => {
+      runJson(['propose', '--category', 'gotcha', '--force', 'Bulk approve A']);
+      runJson(['propose', '--category', 'gotcha', '--force', 'Bulk approve B']);
+      const result = runJson(['review', '--approve-all']);
+      assert.ok(result.approved >= 2);
+      assert.ok(Array.isArray(result.entryIds));
     });
   });
 
