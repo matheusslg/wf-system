@@ -4,8 +4,36 @@
 > **Keep this file under 400 lines** - archive old sessions to `.claude/session-archive/`
 
 ## Current Status
-**Phase**: Development Ready
-**Last Updated**: 2026-01-15
+**Phase**: wf-brain Implementation (3/10 tasks done)
+**Last Updated**: 2026-03-12
+
+---
+
+### Session 17 (2026-03-12)
+**Focus**: wf-brain RAG system — design spec review + implementation plan + start execution
+**Completed**:
+- [x] Approved wf-brain design spec (`docs/superpowers/specs/2026-03-12-wf-brain-design.md`)
+- [x] Wrote full implementation plan (10 tasks, 3 chunks) — `docs/superpowers/plans/2026-03-12-wf-brain.md`
+- [x] Plan reviewed by spec-document-reviewer, 7 issues found and fixed
+- [x] Task 1: Package setup + Database layer (`scripts/wf-brain/db.js`, 13 tests passing)
+- [x] Task 2: Embedding module (`scripts/wf-brain/embed.js`, 3 tests passing)
+- [x] Task 3: Search module (`scripts/wf-brain/search.js`, 9 tests passing)
+**In Progress**:
+- [ ] Task 4: CLI entry point + all commands (next up)
+- [ ] Tasks 5-10 remaining (seeding, MCP server, review command, orchestrator, command mods, integration)
+**Commits (wf-system, branch: feat/agent-browser-integration)**:
+- `abcb048` - docs: add wf-brain implementation plan
+- `4f4614d` - feat(wf-brain): add database layer with schema, CRUD, and migrations
+- `894b34d` - feat(wf-brain): add embedding module with MiniLM integration
+- `e602bbc` - feat(wf-brain): add hybrid search with keyword fallback
+**Blockers**: None
+**Decisions**:
+- Using subagent-driven development (sonnet for implementers, opus for reviews)
+- Skipping formal 2-stage review for mechanical tasks where tests pass clean
+**Next**:
+1. Continue from Task 4 (CLI entry point + all commands)
+2. Then Tasks 5-10 sequentially
+3. After all tasks: final code review + finishing-a-development-branch
 
 ---
 
