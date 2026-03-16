@@ -63,8 +63,14 @@ if [ "$INSTALL_TYPE" = "global" ]; then
 fi
 
 for cmd in "$REPO_DIR/commands/"wf-*.md; do
-  if [ -f "$cmd" ]; then
+  if [ -f "$cmd" ] || [ -L "$cmd" ]; then
     target="$TARGET_DIR/commands/$(basename "$cmd")"
+
+    # Skip if source and target resolve to the same path
+    if [ "$(realpath "$cmd" 2>/dev/null)" = "$(realpath "$target" 2>/dev/null)" ]; then
+      count=$((count + 1))
+      continue
+    fi
 
     if [ "$INSTALL_TYPE" = "global" ] && [ "$LINK_MODE" != "2" ]; then
       ln -sf "$cmd" "$target"
@@ -80,10 +86,14 @@ echo "       Installed $count commands"
 if [ "$INSTALL_TYPE" = "global" ]; then
   echo "[3/4] Installing orchestrator hook..."
 
-  if [ "$LINK_MODE" != "2" ]; then
-    ln -sf "$REPO_DIR/hooks/wf-orchestrator.py" "$TARGET_DIR/hooks/wf-orchestrator.py"
+  SRC="$REPO_DIR/hooks/wf-orchestrator.py"
+  DST="$TARGET_DIR/hooks/wf-orchestrator.py"
+  if [ "$(realpath "$SRC" 2>/dev/null)" = "$(realpath "$DST" 2>/dev/null)" ]; then
+    echo "       Hook already in place (same path)"
+  elif [ "$LINK_MODE" != "2" ]; then
+    ln -sf "$SRC" "$DST"
   else
-    cp "$REPO_DIR/hooks/wf-orchestrator.py" "$TARGET_DIR/hooks/wf-orchestrator.py"
+    cp "$SRC" "$DST"
   fi
 
   # Write version metadata
