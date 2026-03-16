@@ -16,6 +16,7 @@ Usage:
 import sys
 import json
 import os
+import re
 import subprocess
 import urllib.request
 import time
@@ -198,12 +199,34 @@ class WFOrchestrator:
     # -------------------------------------------------------------------------
 
     def _get_context_usage(self) -> Tuple[int, float]:
-        """Get current context usage from the most recent API call.
+        """Get current context usage via Claude Code /context command.
 
-        The transcript logs all API calls. The most recent input_tokens +
-        cache_read_input_tokens represents current context window size,
-        NOT the sum of all historical tokens.
+        Primary: runs `claude -p -r <session_id> "/context"` to get
+        authoritative token data directly from Claude Code.
+        Fallback: parses transcript JSONL if the CLI call fails.
         """
+        # Primary: ask Claude Code for real context data
+        if self.session_id and self.session_id != "unknown":
+            try:
+                result = subprocess.run(
+                    ["claude", "-p", "-r", self.session_id, "/context", "--output-format", "json"],
+                    capture_output=True, text=True, timeout=5,
+                    env={k: v for k, v in os.environ.items() if k != "CLAUDECODE"},
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    data = json.loads(result.stdout)
+                    text = data.get("result", "")
+                    m = re.search(r'\*\*Tokens:\*\*\s+([\d.]+)k?\s*/\s*([\d.]+)k?\s*\((\d+)%\)', text)
+                    if m:
+                        pct = float(m.group(3))
+                        current_str, max_str = m.group(1), m.group(2)
+                        current = int(float(current_str) * 1000)
+                        max_tokens = int(float(max_str) * 1000)
+                        return current, pct
+            except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError, Exception):
+                pass
+
+        # Fallback: parse transcript JSONL
         if not self.transcript_path or not os.path.exists(self.transcript_path):
             return 0, 0.0
 
@@ -216,7 +239,6 @@ class WFOrchestrator:
                     try:
                         entry = json.loads(line)
                         usage = entry.get("message", {}).get("usage", {})
-                        # Current context = input tokens + cached tokens being read
                         input_tokens = usage.get("input_tokens", 0)
                         cache_read = usage.get("cache_read_input_tokens", 0)
                         if input_tokens > 0 or cache_read > 0:
