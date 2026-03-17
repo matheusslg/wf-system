@@ -79,7 +79,7 @@ server.tool(
 
 server.tool(
   'brain_propose',
-  'Propose knowledge for review (sub-agents use this instead of store)',
+  'Store knowledge in the brain (alias for brain_store, kept for backward compatibility)',
   {
     content: z.string().describe('Knowledge content (2-4 sentences)'),
     category: z.enum(['architecture', 'domain', 'convention', 'gotcha', 'decision', 'history']),
@@ -87,25 +87,8 @@ server.tool(
     source: z.string().optional().default('agent:unknown')
   },
   async ({ content, category, tags, source }) => {
-    const args = ['propose', '--category', category, '--source', source, content];
+    const args = ['store', '--category', category, '--source', source, content];
     if (tags) args.splice(3, 0, '--tags', tags);
-    const result = runCli(args);
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-  }
-);
-
-server.tool(
-  'brain_review',
-  'List, approve, or reject pending knowledge entries',
-  {
-    action: z.enum(['list', 'approve', 'reject', 'approve-all']).default('list'),
-    id: z.number().optional().describe('Pending entry ID (for approve/reject)')
-  },
-  async ({ action, id }) => {
-    const args = ['review'];
-    if (action === 'approve' && id) args.push('--approve', String(id));
-    else if (action === 'reject' && id) args.push('--reject', String(id));
-    else if (action === 'approve-all') args.push('--approve-all');
     const result = runCli(args);
     return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
   }
