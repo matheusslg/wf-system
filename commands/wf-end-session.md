@@ -93,16 +93,16 @@ Review this session's work and extract knowledge worth preserving.
 For each entry worth preserving (0-3 per session):
 
 ```bash
-node scripts/wf-brain.js propose --category <category> --tags "<tags>" --source "session-end" "<content>"
+node scripts/wf-brain.js store --category <category> --tags "<tags>" --source "session-end" "<content>"
 ```
 
 **Categories**: architecture, domain, convention, gotcha, decision, history
 
 **Skip if nothing worth preserving** — an empty session is fine. Quality over quantity.
 
-If entries were proposed, report:
+If entries were stored, report:
 ```
-Brain: proposed {N} entries from this session. Run /wf-brain-review to review them.
+Brain: stored {N} entries from this session.
 ```
 
 ## 4. Check for Uncommitted Changes

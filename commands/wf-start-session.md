@@ -74,17 +74,12 @@ node scripts/wf-brain.js stats 2>/dev/null || echo "BRAIN_NOT_FOUND"
 
 **If brain exists**: Include stats in the session summary:
 ```markdown
-**Brain**: {totalEntries} entries, {totalPending} pending review
+**Brain**: {totalEntries} entries
 ```
 
 **If brain doesn't exist**: Auto-initialize:
 ```bash
 node scripts/wf-brain.js init
-```
-
-If pending entries > 0, add a nudge:
-```markdown
-**Brain**: {N} pending entries awaiting review. Run `/wf-brain-review` to process them.
 ```
 
 ## 2. Read Progress Log

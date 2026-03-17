@@ -682,7 +682,7 @@ The loop exits when ANY of these is true:
 
 ### Knowledge Extraction (Post-Pipeline)
 
-After all pipelines complete and before cleanup, review the pipeline outcomes and propose knowledge entries:
+After all pipelines complete and before cleanup, review the pipeline outcomes and store knowledge entries:
 
 For each completed pipeline, consider:
 - Did the reviewer find non-obvious issues? → gotcha candidate
@@ -691,7 +691,7 @@ For each completed pipeline, consider:
 
 For each entry worth preserving (0-2 per pipeline):
 ```bash
-node scripts/wf-brain.js propose --category <category> --tags "<tags>" --source "issue:{issue_number}" "<content>"
+node scripts/wf-brain.js store --category <category> --tags "<tags>" --source "issue:{issue_number}" "<content>"
 ```
 
 On exit, proceed to **Section 8 (Post-Pipeline Verification)**.
