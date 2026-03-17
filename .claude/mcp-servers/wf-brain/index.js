@@ -15,9 +15,8 @@ const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
 const { z } = require('zod');
 
-// Resolve CLI path relative to wf-system root
-const WF_SYSTEM_ROOT = path.resolve(__dirname, '..', '..', '..');
-const CLI_PATH = path.join(WF_SYSTEM_ROOT, 'scripts', 'wf-brain.js');
+// Resolve CLI path from ~/.claude/scripts/ (installed location)
+const CLI_PATH = path.join(process.env.HOME || require('os').homedir(), '.claude', 'scripts', 'wf-brain.js');
 
 function runCli(args, cwd) {
   try {

@@ -36,19 +36,21 @@ esac
 
 # Create directories
 echo
-echo "[1/4] Creating directories..."
+echo "[1/5] Creating directories..."
 mkdir -p "$TARGET_DIR/commands"
 
 if [ "$INSTALL_TYPE" = "global" ]; then
   mkdir -p "$TARGET_DIR/hooks"
   mkdir -p "$TARGET_DIR/hooks/.wf-state"
+  mkdir -p "$TARGET_DIR/scripts"
+  mkdir -p "$TARGET_DIR/mcp-servers/wf-brain"
 fi
 
 # Store repo directory for later use
 WF_REPO_DIR="$REPO_DIR"
 
 # Install commands
-echo "[2/4] Installing workflow commands..."
+echo "[2/5] Installing workflow commands..."
 count=0
 
 # Ask symlink vs copy for global install
@@ -84,7 +86,7 @@ echo "       Installed $count commands"
 
 # Install hook (global only)
 if [ "$INSTALL_TYPE" = "global" ]; then
-  echo "[3/4] Installing orchestrator hook..."
+  echo "[3/5] Installing orchestrator hook..."
 
   SRC="$REPO_DIR/hooks/wf-orchestrator.py"
   DST="$TARGET_DIR/hooks/wf-orchestrator.py"
@@ -94,6 +96,50 @@ if [ "$INSTALL_TYPE" = "global" ]; then
     ln -sf "$SRC" "$DST"
   else
     cp "$SRC" "$DST"
+  fi
+
+  # Install brain scripts
+  echo "[4/5] Installing brain scripts..."
+
+  # wf-brain.js entry point
+  SRC="$REPO_DIR/scripts/wf-brain.js"
+  DST="$TARGET_DIR/scripts/wf-brain.js"
+  if [ -f "$SRC" ]; then
+    if [ "$(realpath "$SRC" 2>/dev/null)" = "$(realpath "$DST" 2>/dev/null)" ]; then
+      echo "       Brain CLI already in place"
+    elif [ "$LINK_MODE" != "2" ]; then
+      ln -sf "$SRC" "$DST"
+    else
+      cp "$SRC" "$DST"
+    fi
+
+    # wf-brain/ module directory
+    if [ -d "$REPO_DIR/scripts/wf-brain" ]; then
+      if [ "$LINK_MODE" != "2" ]; then
+        ln -sfn "$REPO_DIR/scripts/wf-brain" "$TARGET_DIR/scripts/wf-brain"
+      else
+        rm -rf "$TARGET_DIR/scripts/wf-brain"
+        cp -r "$REPO_DIR/scripts/wf-brain" "$TARGET_DIR/scripts/wf-brain"
+      fi
+    fi
+
+    # MCP server
+    for f in index.js package.json; do
+      SRC="$REPO_DIR/.claude/mcp-servers/wf-brain/$f"
+      DST="$TARGET_DIR/mcp-servers/wf-brain/$f"
+      if [ -f "$SRC" ]; then
+        if [ "$(realpath "$SRC" 2>/dev/null)" = "$(realpath "$DST" 2>/dev/null)" ]; then
+          :
+        elif [ "$LINK_MODE" != "2" ]; then
+          ln -sf "$SRC" "$DST"
+        else
+          cp "$SRC" "$DST"
+        fi
+      fi
+    done
+    echo "       Brain scripts + MCP server installed"
+  else
+    echo "       Brain scripts not found (skipping)"
   fi
 
   # Write version metadata
@@ -123,7 +169,7 @@ if [ "$INSTALL_TYPE" = "global" ]; then
   rm -f "$TARGET_DIR/hooks/.wf-update-available"
 
   # Merge settings.json
-  echo "[4/4] Configuring settings..."
+  echo "[5/5] Configuring settings..."
   SETTINGS="$TARGET_DIR/settings.json"
 
   if [ -f "$SETTINGS" ]; then
@@ -159,8 +205,9 @@ if [ "$INSTALL_TYPE" = "global" ]; then
     echo "       Created new settings file"
   fi
 else
-  echo "[3/4] Skipping hook (project-level install)"
-  echo "[4/4] Skipping global settings (project-level install)"
+  echo "[3/5] Skipping hook (project-level install)"
+  echo "[4/5] Skipping brain scripts (project-level install)"
+  echo "[5/5] Skipping global settings (project-level install)"
   echo
   echo "  Note: Orchestrator hook is only available with global install."
   echo "  Commands will work, but auto-context monitoring won't be active."

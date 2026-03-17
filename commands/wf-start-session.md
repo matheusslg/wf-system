@@ -69,7 +69,7 @@ If critical MCPs are missing, add to session summary:
 Check if the project brain is available:
 
 ```bash
-node scripts/wf-brain.js stats 2>/dev/null || echo "BRAIN_NOT_FOUND"
+node ~/.claude/scripts/wf-brain.js stats 2>/dev/null || echo "BRAIN_NOT_FOUND"
 ```
 
 **If brain exists**: Include stats in the session summary:
@@ -79,7 +79,7 @@ node scripts/wf-brain.js stats 2>/dev/null || echo "BRAIN_NOT_FOUND"
 
 **If brain doesn't exist**: Auto-initialize:
 ```bash
-node scripts/wf-brain.js init
+node ~/.claude/scripts/wf-brain.js init
 ```
 
 ## 2. Read Progress Log
