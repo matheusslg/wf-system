@@ -10,15 +10,15 @@ Interactive review of pending knowledge entries proposed by sub-agents and sessi
 ## 1. Check Brain Availability
 
 ```bash
-node scripts/wf-brain.js stats
+node ~/.claude/scripts/wf-brain.js stats
 ```
 
-If error: "No brain.db found. Run `/wf-init` or `node scripts/wf-brain.js init` first."
+If error: "No brain.db found. Run `/wf-init` or `node ~/.claude/scripts/wf-brain.js init` first."
 
 ## 2. Get Pending Entries
 
 ```bash
-node scripts/wf-brain.js review
+node ~/.claude/scripts/wf-brain.js review
 ```
 
 Parse the JSON output. If empty array:
@@ -44,13 +44,13 @@ Use AskUserQuestion to get the user's choice for each entry.
 
 ### Actions
 
-**approve**: Run `node scripts/wf-brain.js review --approve {id}`. Confirm: "Approved — added to brain as entry #{entryId}"
+**approve**: Run `node ~/.claude/scripts/wf-brain.js review --approve {id}`. Confirm: "Approved — added to brain as entry #{entryId}"
 
-**reject**: Run `node scripts/wf-brain.js review --reject {id}`. Confirm: "Rejected."
+**reject**: Run `node ~/.claude/scripts/wf-brain.js review --reject {id}`. Confirm: "Rejected."
 
 **edit**: Ask user for updated content (pre-fill current). Then approve with modified content:
-1. `node scripts/wf-brain.js review --approve {id}`
-2. `node scripts/wf-brain.js edit {entryId} --content "{updated}"`
+1. `node ~/.claude/scripts/wf-brain.js review --approve {id}`
+2. `node ~/.claude/scripts/wf-brain.js edit {entryId} --content "{updated}"`
 
 **skip**: Move to next entry.
 

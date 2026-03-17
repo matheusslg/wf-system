@@ -93,7 +93,7 @@ Review this session's work and extract knowledge worth preserving.
 For each entry worth preserving (0-3 per session):
 
 ```bash
-node scripts/wf-brain.js store --category <category> --tags "<tags>" --source "session-end" "<content>"
+node ~/.claude/scripts/wf-brain.js store --category <category> --tags "<tags>" --source "session-end" "<content>"
 ```
 
 **Categories**: architecture, domain, convention, gotcha, decision, history

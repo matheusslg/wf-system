@@ -324,9 +324,7 @@ class WFOrchestrator:
         if not keywords or not keywords.strip():
             return None
         try:
-            hooks_dir = Path(__file__).parent
-            wf_system_root = hooks_dir.parent
-            cli_path = wf_system_root / "scripts" / "wf-brain.js"
+            cli_path = Path.home() / ".claude" / "scripts" / "wf-brain.js"
 
             if not cli_path.exists():
                 return None

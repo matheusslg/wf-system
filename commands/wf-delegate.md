@@ -331,7 +331,7 @@ Build comprehensive context for the agent:
 Search the brain for relevant context:
 
 ```bash
-node scripts/wf-brain.js search "{issue_title}" --limit 3 2>/dev/null
+node ~/.claude/scripts/wf-brain.js search "{issue_title}" --limit 3 2>/dev/null
 ```
 
 If results found, include in the task context:

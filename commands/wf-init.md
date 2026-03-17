@@ -188,7 +188,7 @@ mkdir -p .claude/session-archive
 Initialize the knowledge brain for the project:
 
 ```bash
-node scripts/wf-brain.js init --project-dir "$(pwd)"
+node ~/.claude/scripts/wf-brain.js init --project-dir "$(pwd)"
 ```
 
 This creates `.claude/brain.db` and seeds from `standards.md` and `progress.md` if they exist.
@@ -205,12 +205,13 @@ If `.mcp.json` exists in the project root, add the wf-brain MCP server entry. If
   "mcpServers": {
     "wf-brain": {
       "command": "node",
-      "args": [".claude/mcp-servers/wf-brain/index.js"],
-      "cwd": "${workspaceFolder}"
+      "args": ["$HOME/.claude/mcp-servers/wf-brain/index.js"]
     }
   }
 }
 ```
+
+> Note: Claude Code expands `$HOME` in MCP server args. Do NOT use `~` as Node.js won't expand it.
 
 If `.mcp.json` already exists and already has a `wf-brain` entry, skip.
 
