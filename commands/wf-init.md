@@ -200,18 +200,24 @@ If `node` is not available, skip with a warning:
 
 If `.mcp.json` exists in the project root, add the wf-brain MCP server entry. If `.mcp.json` doesn't exist, create it:
 
+Resolve the user's home directory and use the **absolute path**:
+
+```bash
+echo "$HOME/.claude/mcp-servers/wf-brain/index.js"
+```
+
+Use the resolved path in `.mcp.json` (do NOT use `~` or `$HOME` — neither gets expanded):
+
 ```json
 {
   "mcpServers": {
     "wf-brain": {
       "command": "node",
-      "args": ["$HOME/.claude/mcp-servers/wf-brain/index.js"]
+      "args": ["/absolute/path/to/.claude/mcp-servers/wf-brain/index.js"]
     }
   }
 }
 ```
-
-> Note: Claude Code expands `$HOME` in MCP server args. Do NOT use `~` as Node.js won't expand it.
 
 If `.mcp.json` already exists and already has a `wf-brain` entry, skip.
 
