@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.9.1] - 2026-03-18
+
+### Fixed
+- use absolute paths in .mcp.json instead of /home/runner (#15) (94d2904)
+
+
 ## [1.9.0] - 2026-03-17
 
 ### Added
