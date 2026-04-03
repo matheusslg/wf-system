@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.10.0] - 2026-04-03
+
+### Added
+- fetch and inject issue comments in fix-bug, implement, and breakdown (0c55ad1)
+- fetch and inject issue comments into agent context (9ed827d)
+- fetch and inject issue comments into agent context (d848b6d)
+- add relay report, help text, tips, and cleanup (ae903ce)
+- add relay sequencing to monitoring loop (338680c)
+- add rolling context window injection for relay (eeba875)
+- add relay handoff generation phase (b8318c9)
+- add relay dependency chain task creation (ef59ed2)
+- add topological sort for relay chain detection (1be502e)
+- add --relay and --on-failure flags (e3b98a4)
+
+### Fixed
+- fix step numbering, define chain_subdir, add Jira comment (738e431)
+
+
 ## [1.9.1] - 2026-03-18
 
 ### Fixed
