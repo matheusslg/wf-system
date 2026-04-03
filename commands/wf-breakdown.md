@@ -115,6 +115,25 @@ mcp__github__get_issue(
 - `reference`: `#{issueNumber}` or full URL
 - `referenceUrl`: `https://github.com/{owner}/{repo}/issues/{issueNumber}`
 
+### Fetch Issue Comments
+
+Fetch the last 10 comments — they may contain clarifications, scope changes, or requirements not in the description:
+
+**If GitHub issue:**
+```bash
+gh api repos/{owner}/{repo}/issues/{issueNumber}/comments --jq '.[0:10] | reverse | .[] | "**\(.user.login)** (\(.created_at)):\n\(.body)\n"'
+```
+
+**If Jira ticket:**
+```
+mcp__atlassian__getJiraIssueComments(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+Store as `issue_comments`. Include when building the breakdown context so sub-task descriptions can incorporate comment insights.
+
 **If issue not found**:
 ```markdown
 Error: Could not find GitHub issue #{issueNumber}
@@ -320,6 +339,14 @@ First, present the plan as a markdown summary (without any text-based prompt at 
 **Source**: {sourceType} - [{reference}]({referenceUrl})
 **Type**: {issueType}
 **Priority**: {priority}
+
+{IF issue_comments is not empty:}
+### Discussion & Comments (last 10)
+
+Review these comments for additional requirements, clarifications, or scope changes that should be reflected in sub-task breakdown:
+
+{issue_comments}
+{END IF}
 
 ## Design Context
 {figma_analysis_or_"No design references found"}
