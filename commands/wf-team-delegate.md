@@ -391,6 +391,42 @@ Task(
   - Push and create the PR AFTER all review/QA feedback is addressed
   - If you need to fix reviewer/QA issues, commit and push again (the PR updates automatically)
 
+  {IF IS_RELAY AND step_index > 0:}
+  ## Relay Context
+
+  You are step {step_index + 1} of {total_steps} in a relay pipeline. Previous agents have worked on this codebase before you. Use their handoffs to understand what changed and avoid duplicating work or conflicting with existing patterns.
+
+  {IF step_index >= 3:}
+  ### Previous Handoffs (available on disk — read if you need deeper context)
+  {FOR i in range(1, step_index - 1):}
+  - `{RELAY_DIR}/{chain_subdir}handoff-{i}-{issue_number_at_i}.md` (step {i})
+  {END FOR}
+  {END IF}
+
+  ### Recent Handoffs
+
+  {IF step_index >= 2:}
+  #### Step {step_index - 1}: #{issue_at_step_minus_2}
+  ```
+  {full content of handoff file at step_index - 2}
+  ```
+
+  ---
+  {END IF}
+
+  #### Step {step_index}: #{issue_at_step_minus_1}
+  ```
+  {full content of handoff file at step_index - 1}
+  ```
+
+  ---
+
+  **Use the information above to:**
+  - Avoid duplicating patterns or utilities already created
+  - Build on conventions established by previous agents
+  - Be aware of known issues from previous steps
+  {END IF}
+
   **Your first task:**
   Implement issue #{number}: {title}
 
@@ -405,6 +441,11 @@ Task(
 
   Wait for task assignment via TaskList before starting work."
 )
+```
+
+To read the handoff file content for injection:
+```bash
+cat {RELAY_DIR}/{chain_subdir}handoff-{step}-{issue}.md 2>/dev/null || echo "Handoff not available"
 ```
 
 ### Spawn Reviewer Teammate (if exists)
