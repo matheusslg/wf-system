@@ -832,6 +832,47 @@ Max 3 retries per stage. On exceeding:
 2. Report to user with full context
 3. In `--until-done` mode, skip this issue and continue with others
 
+### Relay Pipeline Progression
+
+**This logic runs ONLY when `IS_RELAY` is true.**
+
+When the monitoring loop detects a relay step's pipeline is fully complete (all stages passed OR skipped-on-failure):
+
+1. **Request handoff** (Section 7.5):
+   - Send handoff request to the developer
+   - Wait for handoff file to appear on disk
+   - Read the handoff content
+
+2. **Determine next step**:
+   - Look up the current chain and find the next issue in sequence
+   - If no next issue in this chain → this chain is complete
+
+3. **Inject context and unblock next step**:
+   - Read the last 2 handoff files from disk
+   - Build the relay context section (per Section 5 relay context template)
+   - Send the relay context to the next developer via SendMessage:
+     ```
+     SendMessage(
+       type: "message",
+       recipient: "developer{-N if multiple chains}",
+       content: "Your next task is now unblocked. Here is the relay context from previous agents:\n\n{relay_context_section}\n\nYour task: Implement #{next_issue}: {title}\n\n{issue_body}",
+       summary: "Relay: unblocking step {next_step} — #{next_issue}"
+     )
+     ```
+   - Mark the next implementation task as unblocked (the `blockedBy` dependency should auto-resolve when the previous QA task is marked complete)
+
+4. **Update progress table**:
+   - Add handoff status to the progress log:
+     ```markdown
+     ## Relay Progress
+
+     | Step | Issue | Pipeline | Handoff | Status |
+     |------|-------|----------|---------|--------|
+     | 1    | #101  | ✅ All passed | ✅ Generated | Complete |
+     | 2    | #102  | 🔄 In Progress | ⏳ Pending | Active |
+     | 3    | #103  | ⏳ Blocked | ⏳ Pending | Queued |
+     ```
+
 ### Progress Status Table
 
 On each loop iteration, log a table showing current state:
@@ -854,6 +895,16 @@ The loop exits when ANY of these is true:
 2. **Timeout**: 90-minute wallclock timeout exceeded — log remaining state and proceed to cleanup
 3. **All blocked**: Every remaining open issue has exceeded its retry limit — no further progress possible
 4. **No progress**: TaskList has shown identical statuses for 10+ consecutive iterations (~7.5 minutes) — teammates may be stuck
+5. **Relay failure (`--on-failure=stop`)**: If `IS_RELAY` and `ON_FAILURE == "stop"` and any relay step's pipeline failed after retry limit → EXIT loop immediately. Mark all remaining relay tasks as blocked. Report:
+   ```markdown
+   ## Relay Halted
+
+   Relay stopped at step {step_index} (#{issue_number}) due to --on-failure=stop.
+   Pipeline failure: {stage} failed after {retry_count} retries.
+
+   **Completed steps**: {list}
+   **Remaining steps**: {list} (not started)
+   ```
 
 ### Knowledge Extraction (Post-Pipeline)
 
