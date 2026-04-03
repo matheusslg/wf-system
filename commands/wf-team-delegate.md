@@ -173,6 +173,7 @@ If `IS_RELAY` is true:
 - Use `RELAY_ORDER` as-is. All issues form a single relay chain. No parallelism.
 - Set `RELAY_CHAINS = [RELAY_ORDER]` (single chain)
 - Set `RELAY_DIR = /tmp/relay-{parent_issue_number}`
+- Set `CHAIN_SUBDIR = ""` (no subdirectory — files go directly in RELAY_DIR)
 
 **With `--until-done` (auto-detect from dependency graph):**
 
@@ -203,6 +204,7 @@ If `IS_RELAY` is true:
    ```
 5. Set `RELAY_CHAINS = chains`
 6. Set `RELAY_DIR = /tmp/relay-{parent_issue_number}`
+7. Set `CHAIN_SUBDIR = "chain-{root_issue}/"` for each chain (substituting the chain's root issue number)
 
 **Create relay directory:**
 ```bash
@@ -406,7 +408,7 @@ Task(
   {IF step_index >= 3:}
   ### Previous Handoffs (available on disk — read if you need deeper context)
   {FOR i in range(1, step_index - 1):}
-  - `{RELAY_DIR}/{chain_subdir}handoff-{i}-{issue_number_at_i}.md` (step {i})
+  - `{RELAY_DIR}/{CHAIN_SUBDIR}handoff-{i}-{issue_number_at_i}.md` (step {i})
   {END FOR}
   {END IF}
 
@@ -452,7 +454,7 @@ Task(
 
 To read the handoff file content for injection:
 ```bash
-cat {RELAY_DIR}/{chain_subdir}handoff-{step}-{issue}.md 2>/dev/null || echo "Handoff not available"
+cat {RELAY_DIR}/{CHAIN_SUBDIR}handoff-{step}-{issue}.md 2>/dev/null || echo "Handoff not available"
 ```
 
 ### Spawn Reviewer Teammate (if exists)
@@ -949,7 +951,7 @@ SendMessage(
   recipient: "developer",
   content: "Your pipeline for #{issue_number} is complete. Before the next agent takes over, generate a RELAY HANDOFF document.
 
-Write this file: {RELAY_DIR}/{chain_subdir}handoff-{step_index}-{issue_number}.md
+Write this file: {RELAY_DIR}/{CHAIN_SUBDIR}handoff-{step_index + 1}-{issue_number}.md
 
 Use this EXACT template:
 
@@ -996,7 +998,7 @@ IMPORTANT: Write the file to disk using the Write tool. Confirm when done.",
 After sending the handoff request, poll for the file:
 
 ```
-WHILE handoff file does not exist at {RELAY_DIR}/{chain_subdir}handoff-{step_index}-{issue_number}.md:
+WHILE handoff file does not exist at {RELAY_DIR}/{CHAIN_SUBDIR}handoff-{step_index + 1}-{issue_number}.md:
   Bash("sleep 15")
   Check if file exists: Bash("test -f '{path}' && echo EXISTS || echo MISSING")
   If 5 polls pass with no file (75 seconds), send a reminder:
@@ -1020,6 +1022,15 @@ If the pipeline for this step ended due to retry limit exceeded (not QA PASSED /
     owner: delegate.githubOwner,
     repo: delegate.githubRepo,
     issue_number: {number},
+    body: "⚠️ Relay pipeline: skipped after {retry_count} failed attempts at {stage}. Relay continued to next task. See handoff: {handoff_path}"
+  )
+  ```
+
+  **If platform is "jira":**
+  ```
+  mcp__atlassian__addCommentToJiraIssue(
+    issueIdOrKey: {issue_key},
+    cloudId: {jiraCloudId},
     body: "⚠️ Relay pipeline: skipped after {retry_count} failed attempts at {stage}. Relay continued to next task. See handoff: {handoff_path}"
   )
   ```
