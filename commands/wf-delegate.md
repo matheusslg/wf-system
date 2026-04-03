@@ -468,6 +468,40 @@ mcp__playwright__browser_take_screenshot(
 - Or skip screenshots if purely backend logic
 ```
 
+## 9.5. Transition Jira Issue to In Progress
+
+**If platform is "jira":**
+
+Before spawning the agent, transition the sub-task to "In Progress" so the board reflects active work.
+
+First, discover available transitions:
+```
+mcp__atlassian__getJiraIssueTransitions(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+Find the transition whose `name` matches "In Progress" (case-insensitive). Store as `in_progress_transition_id`.
+
+Then transition:
+```
+mcp__atlassian__transitionJiraIssue(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId},
+  transitionId: {in_progress_transition_id}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh transition {issue_key} "In Progress"
+```
+
+If transition fails (e.g., workflow doesn't have "In Progress"), log a warning and continue — don't block the pipeline.
+
+**If platform is "github":** No action needed (GitHub issues don't have status workflows).
+
 ## 10. Spawn Agent via Task Tool
 
 **Note**: The Task tool doesn't support custom agent names directly. We work around this by:
@@ -1092,7 +1126,16 @@ Only after pipeline validation passes:
 If yes:
 
 ### If platform is "jira":
-Transition to "Done" status:
+Discover available transitions, then transition to "Done":
+```
+mcp__atlassian__getJiraIssueTransitions(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+Find the transition whose `name` matches "Done" (case-insensitive). Store as `done_transition_id`.
+
 ```
 mcp__atlassian__transitionJiraIssue(
   issueIdOrKey: {issue_key},

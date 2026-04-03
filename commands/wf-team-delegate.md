@@ -370,6 +370,44 @@ TeamCreate(
 )
 ```
 
+## 4.5. Transition Jira Issues to In Progress
+
+**If platform is "jira":**
+
+Before spawning teammates, transition each sub-task to "In Progress" so the board reflects active work.
+
+For each issue being worked on:
+
+First, discover available transitions:
+```
+mcp__atlassian__getJiraIssueTransitions(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+Find the transition whose `name` matches "In Progress" (case-insensitive). Store as `in_progress_transition_id`.
+
+Then transition:
+```
+mcp__atlassian__transitionJiraIssue(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId},
+  transitionId: {in_progress_transition_id}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh transition {issue_key} "In Progress"
+```
+
+If transition fails (e.g., workflow doesn't have "In Progress"), log a warning and continue — don't block the pipeline.
+
+**Note for relay mode (`--relay`):** Only transition the FIRST issue in each chain to "In Progress" now. Subsequent issues should be transitioned when their turn comes (when the previous pipeline completes).
+
+**If platform is "github":** No action needed.
+
 ## 5. Spawn Teammates
 
 Read each agent file and spawn as persistent teammates with Agent Teams communication instructions appended.
@@ -820,6 +858,14 @@ SendMessage(
   ```
 
   **If platform is "jira":**
+  Discover available transitions, then transition to "Done":
+  ```
+  mcp__atlassian__getJiraIssueTransitions(
+    issueIdOrKey: {issue_key},
+    cloudId: {jiraCloudId}
+  )
+  ```
+  Find the transition whose `name` matches "Done" (case-insensitive). Store as `done_transition_id`.
   ```
   mcp__atlassian__transitionJiraIssue(
     issueIdOrKey: {issue_key},
@@ -1114,6 +1160,14 @@ mcp__github__update_issue(
 ```
 
 **If platform is "jira":**
+Discover available transitions, then transition to "Done":
+```
+mcp__atlassian__getJiraIssueTransitions(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+Find the transition whose `name` matches "Done" (case-insensitive). Store as `done_transition_id`.
 ```
 mcp__atlassian__transitionJiraIssue(
   issueIdOrKey: {issue_key},
