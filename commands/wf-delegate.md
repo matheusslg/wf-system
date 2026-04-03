@@ -168,6 +168,47 @@ mcp__github__get_issue(
 - `labels` - Look for `agent:{name}` label
 - `state` - Should be "open"
 
+### Fetch Issue Comments
+
+Fetch the last 10 comments to provide additional context to the agent.
+
+**If platform is "github":**
+```
+mcp__github__list_issues(
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
+  issue_number: {parsed_number},
+  per_page: 10,
+  sort: "created",
+  direction: "desc"
+)
+```
+
+Note: If the MCP tool for listing issue comments is not available, use:
+```bash
+gh api repos/{owner}/{repo}/issues/{parsed_number}/comments --jq '.[0:10] | reverse | .[] | "**\(.user.login)** (\(.created_at)):\n\(.body)\n"'
+```
+
+**If platform is "jira":**
+```
+mcp__atlassian__getJiraIssueComments(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh get-comments {issue_key} --limit 10
+```
+
+**Extract and format comments** (last 10, chronological order):
+```markdown
+- **{author}** ({date}): {comment_body}
+```
+
+Store as `issue_comments`. If no comments exist or fetching fails, set to empty string and skip silently.
+
 ### Error Handling
 
 **If issue not found**:
@@ -325,6 +366,14 @@ Build comprehensive context for the agent:
 
 ### Task Details
 {issue_body}
+
+{IF issue_comments is not empty:}
+### Discussion & Comments (last 10)
+
+The following comments may contain additional context, clarifications, or requirements not captured in the description above. Treat the issue description as the primary source of truth, but use these comments for supplementary context.
+
+{issue_comments}
+{END IF}
 
 ### Project Knowledge
 

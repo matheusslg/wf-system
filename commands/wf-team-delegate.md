@@ -279,6 +279,48 @@ For each valid issue, collect:
 - **Agent label**: `agent:{name}` label (e.g., `agent:backend`)
 - **Dependencies**: Other issues this depends on
 - **Files hint**: Files mentioned in the issue body (if any)
+- **Comments**: Last 10 comments (see below)
+
+### Fetch Issue Comments
+
+For each issue, fetch the last 10 comments to provide additional context.
+
+**If platform is "github":**
+```bash
+gh api repos/{owner}/{repo}/issues/{number}/comments --jq '.[0:10] | reverse | .[] | "**\(.user.login)** (\(.created_at)):\n\(.body)\n"'
+```
+
+Or via MCP:
+```
+mcp__github__list_issues(
+  owner: delegate.githubOwner,
+  repo: delegate.githubRepo,
+  issue_number: {number},
+  per_page: 10,
+  sort: "created",
+  direction: "desc"
+)
+```
+
+**If platform is "jira":**
+```
+mcp__atlassian__getJiraIssueComments(
+  issueIdOrKey: {issue_key},
+  cloudId: {jiraCloudId}
+)
+```
+
+Or use jira-cli.sh fallback:
+```bash
+./scripts/jira-cli.sh get-comments {issue_key} --limit 10
+```
+
+**Format comments** (last 10, chronological order):
+```markdown
+- **{author}** ({date}): {comment_body}
+```
+
+Store as `issue_comments`. If no comments or fetching fails, set to empty string.
 
 ## 3. Resolve Pipeline Agents
 
@@ -441,6 +483,14 @@ Task(
 
   **Issue description:**
   {issue_body}
+
+  {IF issue_comments is not empty:}
+  **Discussion & Comments (last 10):**
+
+  The following comments may contain additional context, clarifications, or requirements not in the description. Treat the description as primary source of truth; use comments for supplementary context.
+
+  {issue_comments}
+  {END IF}
 
   **Project Knowledge (from brain):**
   {brain_search_results}

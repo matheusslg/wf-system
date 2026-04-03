@@ -76,6 +76,25 @@ Extract:
 - `body` - Feature description, acceptance criteria
 - `labels` - May indicate area (frontend, backend, api, etc.)
 
+### Fetch Issue Comments
+
+Fetch the last 10 comments for additional context (clarifications, design decisions, scope changes):
+
+**If issue number provided:**
+```bash
+gh api repos/{owner}/{repo}/issues/{parsed_number}/comments --jq '.[0:10] | reverse | .[] | "**\(.user.login)** (\(.created_at)):\n\(.body)\n"'
+```
+
+Store as `issue_comments`. If no comments or fetching fails, skip silently.
+
+Include in feature context passed to the agent:
+```markdown
+{IF issue_comments is not empty:}
+### Discussion & Comments (last 10)
+{issue_comments}
+{END IF}
+```
+
 ### If Description
 
 Parse the description to understand:

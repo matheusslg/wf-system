@@ -59,6 +59,25 @@ Extract:
 - `body` - Bug description, steps to reproduce
 - `labels` - May indicate area (frontend, backend, api, etc.)
 
+### Fetch Issue Comments
+
+Fetch the last 10 comments for additional context (reproduction steps, workarounds, related findings):
+
+**If issue number provided:**
+```bash
+gh api repos/{owner}/{repo}/issues/{parsed_number}/comments --jq '.[0:10] | reverse | .[] | "**\(.user.login)** (\(.created_at)):\n\(.body)\n"'
+```
+
+Store as `issue_comments`. If no comments or fetching fails, skip silently.
+
+Include in bug context passed to the agent:
+```markdown
+{IF issue_comments is not empty:}
+### Discussion & Comments (last 10)
+{issue_comments}
+{END IF}
+```
+
 ### If Description
 
 Parse the description to understand:
