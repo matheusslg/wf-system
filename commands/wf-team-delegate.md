@@ -41,6 +41,8 @@ Your ONLY allowed actions:
 - `--list` - List available sub-tasks from tracked issues
 - `--until-done` - Autonomous mode: work through ALL sub-tasks using persistent teammates
 - `--force` - Override dependency checks
+- `--relay` - Sequential execution with context handoffs between agents. With explicit issue numbers, execution follows the given order. With `--until-done`, auto-detects order from dependency graph (topological sort). Independent chains run in parallel, dependency chains run as relays.
+- `--on-failure=continue|stop` - Relay mode only. `continue` (default): skip failed tasks and flag issues in handoff. `stop`: halt the entire relay on failure.
 
 ## 0. Load Configuration
 
@@ -137,6 +139,24 @@ Exit after listing.
 ## 2. Fetch & Validate Issues
 
 Parse issue numbers from `$ARGUMENTS` (strip `#`, `--flags`, etc.).
+
+### Validate Relay Flags
+
+If `--relay` is present in `$ARGUMENTS`:
+- If NO explicit issue numbers AND `--until-done` is NOT present → error:
+  ```
+  Error: --relay requires either explicit issue numbers or --until-done flag.
+  Usage: /wf-team-delegate --relay #101 #102 #103
+         /wf-team-delegate --relay --until-done
+  ```
+- Parse `--on-failure` value. If not provided, default to `continue`. If value is not `continue` or `stop` → error:
+  ```
+  Error: --on-failure must be 'continue' or 'stop'. Got: '{value}'
+  ```
+- Store relay state:
+  - `IS_RELAY = true`
+  - `ON_FAILURE = "continue"` or `"stop"`
+  - `RELAY_ORDER = [list of issue numbers in argument order]` (empty if `--until-done`)
 
 ### Fetch Issue Details
 
