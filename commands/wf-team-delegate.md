@@ -158,6 +158,71 @@ If `--relay` is present in `$ARGUMENTS`:
   - `ON_FAILURE = "continue"` or `"stop"`
   - `RELAY_ORDER = [list of issue numbers in argument order]` (empty if `--until-done`)
 
+### Resolve Relay Execution Order
+
+If `IS_RELAY` is true:
+
+**With explicit issue numbers (`RELAY_ORDER` is not empty):**
+- Use `RELAY_ORDER` as-is. All issues form a single relay chain. No parallelism.
+- Set `RELAY_CHAINS = [RELAY_ORDER]` (single chain)
+- Set `RELAY_DIR = /tmp/relay-{parent_issue_number}`
+
+**With `--until-done` (auto-detect from dependency graph):**
+
+1. Fetch all open sub-tasks (same as `--list` logic in Section 1)
+2. Build dependency graph from issue metadata:
+   - For each issue, extract "Depends on: #X, #Y" from the issue body
+   - Build adjacency list: `deps[issue] = [list of issues it depends on]`
+3. Topological sort to determine execution order
+4. Partition into relay chains:
+   ```
+   chains = []
+   visited = set()
+
+   For each issue with no dependents (root nodes), sorted by issue number:
+     chain = []
+     current = root
+     WHILE current is not None:
+       chain.append(current)
+       visited.add(current)
+       # Find the next issue that depends ONLY on current (and already-visited)
+       next = find issue where ALL deps are in visited AND current is a dep
+       current = next
+     chains.append(chain)
+
+   # Any remaining unvisited issues form their own single-item chains
+   For each unvisited issue:
+     chains.append([issue])
+   ```
+5. Set `RELAY_CHAINS = chains`
+6. Set `RELAY_DIR = /tmp/relay-{parent_issue_number}`
+
+**Create relay directory:**
+```bash
+mkdir -p {RELAY_DIR}
+# For each chain, create subdirectory
+# Single explicit chain: no subdirectory needed
+# Multiple auto-detected chains: mkdir -p {RELAY_DIR}/chain-{root_issue}/
+```
+
+Log the resolved order:
+```markdown
+## Relay Execution Order
+
+| Chain | Issues | Mode |
+|-------|--------|------|
+| Chain #101 | #101 → #102 → #103 | Relay (sequential + handoffs) |
+| Chain #104 | #104 → #105 | Relay (sequential + handoffs) |
+
+Chains run in PARALLEL. Issues within a chain run SEQUENTIALLY with handoffs.
+```
+
+If there are NO dependency chains (all issues independent):
+```markdown
+Note: No dependencies detected between tasks. --relay has no effect — all tasks will run in parallel (same as without --relay).
+```
+Set `IS_RELAY = false` and continue with normal parallel mode.
+
 ### Fetch Issue Details
 
 ### If platform is "github":
