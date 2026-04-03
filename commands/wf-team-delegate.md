@@ -563,6 +563,55 @@ TaskCreate(subject: "Review #127")                        → id=8, owner: "revi
 TaskCreate(subject: "QA #127")                            → id=9, owner: "qa", blockedBy: [8]
 ```
 
+### Relay Mode Task Creation
+
+If `IS_RELAY` is true:
+
+For each relay chain in `RELAY_CHAINS`:
+
+```
+# Chain: #101 → #102 → #103
+# previous_qa_task_id tracks the last pipeline's final task
+
+previous_qa_task_id = None
+
+For step_index, issue in enumerate(chain):
+  # --- Implementation task ---
+  TaskCreate(subject: "Implement #{issue}: {title}", description: "Relay step {step_index + 1} of {len(chain)}...")
+  → impl_task_id
+
+  # Block on previous pipeline's final stage (if not first in chain)
+  IF previous_qa_task_id is not None:
+    TaskUpdate(taskId: impl_task_id, addBlockedBy: [previous_qa_task_id])
+
+  TaskUpdate(taskId: impl_task_id, owner: "developer")
+
+  # --- Review task (if reviewer exists) ---
+  IF reviewer_agent exists:
+    TaskCreate(subject: "Review #{issue}", description: "...")
+    → review_task_id
+    TaskUpdate(taskId: review_task_id, addBlockedBy: [impl_task_id])
+    TaskUpdate(taskId: review_task_id, owner: "reviewer")
+
+  # --- QA task (if QA exists) ---
+  IF qa_agent exists:
+    qa_blocked_by = review_task_id IF reviewer exists ELSE impl_task_id
+    TaskCreate(subject: "QA #{issue}", description: "...")
+    → qa_task_id
+    TaskUpdate(taskId: qa_task_id, addBlockedBy: [qa_blocked_by])
+    TaskUpdate(taskId: qa_task_id, owner: "qa")
+
+  # Track final task in this pipeline for next issue's dependency
+  previous_qa_task_id = qa_task_id IF qa exists ELSE (review_task_id IF reviewer exists ELSE impl_task_id)
+```
+
+Multiple chains: each chain creates its own independent dependency sequence. Chains are NOT blocked by each other — they run in parallel, each with their own developer teammate.
+
+**Developer assignment for relay chains:**
+- Single chain (explicit `--relay`): one developer, reused across all steps
+- Multiple chains (`--relay --until-done`): one developer PER chain, up to `maxDeveloperTeammates`
+  - If more chains than `maxDeveloperTeammates`, extra chains queue (blocked until a developer finishes a chain)
+
 ## 7. Blocking Monitoring Loop
 
 **CRITICAL: YOU MUST NOW ENTER A BLOCKING POLLING LOOP. Do NOT end your turn. Do NOT proceed to Section 8 until exit conditions are met. Your turn stays alive by calling tools (sleep + TaskList) in a loop.**
