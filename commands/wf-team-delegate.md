@@ -834,6 +834,97 @@ On exit, proceed to **Section 8 (Post-Pipeline Verification)**.
 
 If `TaskList()` shows identical statuses for 10+ consecutive polls (no task progress), a teammate may be stuck. Refer to **Error Handling: Teammate Unresponsive** below for recovery steps.
 
+## 7.5. Relay Handoff Generation
+
+**This section only applies when `IS_RELAY` is true.**
+
+When the monitoring loop (Section 7) detects that a relay step's full pipeline is complete (QA PASSED, or reviewer APPROVED with no QA, or developer done with no reviewer/QA, or skipped-on-failure), the orchestrator requests a handoff from the developer BEFORE unblocking the next step.
+
+### Handoff Request
+
+Send to the developer:
+
+```
+SendMessage(
+  type: "message",
+  recipient: "developer",
+  content: "Your pipeline for #{issue_number} is complete. Before the next agent takes over, generate a RELAY HANDOFF document.
+
+Write this file: {RELAY_DIR}/{chain_subdir}handoff-{step_index}-{issue_number}.md
+
+Use this EXACT template:
+
+# Relay Handoff: #{issue_number} — {issue_title}
+**Agent**: {your_agent_name}
+**Status**: COMPLETED | COMPLETED_WITH_ISSUES
+**Timestamp**: {current ISO timestamp}
+
+## Files Changed
+- `path/to/file` — created | modified | deleted (brief what/why)
+(list ALL files you created, modified, or deleted)
+
+## Commits
+- `hash` — commit message
+(list ALL commits you made)
+
+## Key Decisions
+- Decision 1 and why
+(list architectural or implementation choices you made and WHY)
+
+## Patterns Introduced
+- Pattern description at `path/to/file` — when to reuse
+(list any new patterns, utilities, or conventions you established)
+
+## Known Issues
+- ⚠️ Description of any unresolved issues
+(include review/QA failures that weren't fixed, known limitations, TODOs)
+(if Status is COMPLETED with no issues, write 'None')
+
+## Briefing for Next Agent
+Write 2-4 paragraphs explaining:
+- What you built and how it fits together
+- What the next agent should know before starting their task
+- Any gotchas, quirks, or non-obvious things you discovered
+- Suggestions for the next agent based on what you learned
+
+IMPORTANT: Write the file to disk using the Write tool. Confirm when done.",
+  summary: "Requesting relay handoff for #{issue_number}"
+)
+```
+
+### Wait for Handoff File
+
+After sending the handoff request, poll for the file:
+
+```
+WHILE handoff file does not exist at {RELAY_DIR}/{chain_subdir}handoff-{step_index}-{issue_number}.md:
+  Bash("sleep 15")
+  Check if file exists: Bash("test -f '{path}' && echo EXISTS || echo MISSING")
+  If 5 polls pass with no file (75 seconds), send a reminder:
+    SendMessage(recipient: "developer", content: "Reminder: please write the handoff file to {path}")
+  If 10 polls pass (150 seconds), skip handoff generation and continue with empty handoff:
+    Log: "Warning: Developer did not produce handoff for #{issue_number}. Continuing without handoff context."
+```
+
+### Handle On-Failure Skip
+
+If the pipeline for this step ended due to retry limit exceeded (not QA PASSED / reviewer APPROVED):
+
+- Still request the handoff (developer has context about what went wrong)
+- The developer should set `**Status**: COMPLETED_WITH_ISSUES`
+- The `Known Issues` section should capture what failed and why
+- Do NOT close the issue — leave it open with a comment:
+
+  **If platform is "github":**
+  ```
+  mcp__github__add_issue_comment(
+    owner: delegate.githubOwner,
+    repo: delegate.githubRepo,
+    issue_number: {number},
+    body: "⚠️ Relay pipeline: skipped after {retry_count} failed attempts at {stage}. Relay continued to next task. See handoff: {handoff_path}"
+  )
+  ```
+
 ## 8. Post-Pipeline Verification
 
 **This section runs ONCE after the monitoring loop (Section 7) exits.**
