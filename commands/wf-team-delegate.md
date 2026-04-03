@@ -1,7 +1,7 @@
 ---
 description: Execute sub-tasks using Agent Teams for persistent pipeline delegation
 allowed-tools: Read, Bash, Grep, Glob, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, TeamCreate, TeamDelete, SendMessage
-argument-hint: <issue key or number> [--until-done] [--list]
+argument-hint: <issue key or number> [--until-done] [--list] [--relay] [--on-failure=continue|stop]
 note: "Edit and Write are INTENTIONALLY excluded - orchestrator must delegate, not implement. Uses Agent Teams instead of stateless Task() subagents for context retention and direct inter-agent communication."
 ---
 
@@ -13,6 +13,8 @@ Execute sub-tasks using Claude Code's Agent Teams feature. Unlike `/wf-delegate`
 - Use `/wf-team-delegate` when tasks require review/QA feedback loops (teammates keep context)
 - Use `/wf-team-delegate --until-done` for multi-task pipelines (parallel developer teammates)
 - Use `/wf-delegate` as a stable fallback if Agent Teams misbehaves
+- Use `/wf-team-delegate --relay #101 #102 #103` for sequential tasks where each agent needs context from the previous
+- Use `/wf-team-delegate --relay --until-done` to auto-detect relay chains from dependency graph
 
 ## CRITICAL: ORCHESTRATOR BOUNDARIES
 
@@ -41,6 +43,8 @@ Your ONLY allowed actions:
 - `--list` - List available sub-tasks from tracked issues
 - `--until-done` - Autonomous mode: work through ALL sub-tasks using persistent teammates
 - `--force` - Override dependency checks
+- `--relay` - Sequential execution with context handoffs between agents. With explicit issue numbers, execution follows the given order. With `--until-done`, auto-detects order from dependency graph (topological sort). Independent chains run in parallel, dependency chains run as relays.
+- `--on-failure=continue|stop` - Relay mode only. `continue` (default): skip failed tasks and flag issues in handoff. `stop`: halt the entire relay on failure.
 
 ## 0. Load Configuration
 
@@ -130,6 +134,11 @@ mcp__github__search_issues(
 ```bash
 /wf-team-delegate 125 126
 ```
+
+**Run tasks as a relay (sequential with handoffs):**
+```bash
+/wf-team-delegate --relay 125 126 127
+```
 ```
 
 Exit after listing.
@@ -137,6 +146,91 @@ Exit after listing.
 ## 2. Fetch & Validate Issues
 
 Parse issue numbers from `$ARGUMENTS` (strip `#`, `--flags`, etc.).
+
+### Validate Relay Flags
+
+If `--relay` is present in `$ARGUMENTS`:
+- If NO explicit issue numbers AND `--until-done` is NOT present → error:
+  ```
+  Error: --relay requires either explicit issue numbers or --until-done flag.
+  Usage: /wf-team-delegate --relay #101 #102 #103
+         /wf-team-delegate --relay --until-done
+  ```
+- Parse `--on-failure` value. If not provided, default to `continue`. If value is not `continue` or `stop` → error:
+  ```
+  Error: --on-failure must be 'continue' or 'stop'. Got: '{value}'
+  ```
+- Store relay state:
+  - `IS_RELAY = true`
+  - `ON_FAILURE = "continue"` or `"stop"`
+  - `RELAY_ORDER = [list of issue numbers in argument order]` (empty if `--until-done`)
+
+### Resolve Relay Execution Order
+
+If `IS_RELAY` is true:
+
+**With explicit issue numbers (`RELAY_ORDER` is not empty):**
+- Use `RELAY_ORDER` as-is. All issues form a single relay chain. No parallelism.
+- Set `RELAY_CHAINS = [RELAY_ORDER]` (single chain)
+- Set `RELAY_DIR = /tmp/relay-{parent_issue_number}`
+- Set `CHAIN_SUBDIR = ""` (no subdirectory — files go directly in RELAY_DIR)
+
+**With `--until-done` (auto-detect from dependency graph):**
+
+1. Fetch all open sub-tasks (same as `--list` logic in Section 1)
+2. Build dependency graph from issue metadata:
+   - For each issue, extract "Depends on: #X, #Y" from the issue body
+   - Build adjacency list: `deps[issue] = [list of issues it depends on]`
+3. Topological sort to determine execution order
+4. Partition into relay chains:
+   ```
+   chains = []
+   visited = set()
+
+   For each issue with no dependents (root nodes), sorted by issue number:
+     chain = []
+     current = root
+     WHILE current is not None:
+       chain.append(current)
+       visited.add(current)
+       # Find the next issue that depends ONLY on current (and already-visited)
+       next = find issue where ALL deps are in visited AND current is a dep
+       current = next
+     chains.append(chain)
+
+   # Any remaining unvisited issues form their own single-item chains
+   For each unvisited issue:
+     chains.append([issue])
+   ```
+5. Set `RELAY_CHAINS = chains`
+6. Set `RELAY_DIR = /tmp/relay-{parent_issue_number}`
+7. Set `CHAIN_SUBDIR = "chain-{root_issue}/"` for each chain (substituting the chain's root issue number)
+
+**Create relay directory:**
+```bash
+mkdir -p {RELAY_DIR}
+# For each chain, create subdirectory
+# Single explicit chain: no subdirectory needed
+# Multiple auto-detected chains: mkdir -p {RELAY_DIR}/chain-{root_issue}/
+```
+
+Log the resolved order:
+```markdown
+## Relay Execution Order
+
+| Chain | Issues | Mode |
+|-------|--------|------|
+| Chain #101 | #101 → #102 → #103 | Relay (sequential + handoffs) |
+| Chain #104 | #104 → #105 | Relay (sequential + handoffs) |
+
+Chains run in PARALLEL. Issues within a chain run SEQUENTIALLY with handoffs.
+```
+
+If there are NO dependency chains (all issues independent):
+```markdown
+Note: No dependencies detected between tasks. --relay has no effect — all tasks will run in parallel (same as without --relay).
+```
+Set `IS_RELAY = false` and continue with normal parallel mode.
 
 ### Fetch Issue Details
 
@@ -306,6 +400,42 @@ Task(
   - Push and create the PR AFTER all review/QA feedback is addressed
   - If you need to fix reviewer/QA issues, commit and push again (the PR updates automatically)
 
+  {IF IS_RELAY AND step_index > 0:}
+  ## Relay Context
+
+  You are step {step_index + 1} of {total_steps} in a relay pipeline. Previous agents have worked on this codebase before you. Use their handoffs to understand what changed and avoid duplicating work or conflicting with existing patterns.
+
+  {IF step_index >= 3:}
+  ### Previous Handoffs (available on disk — read if you need deeper context)
+  {FOR i in range(1, step_index - 1):}
+  - `{RELAY_DIR}/{CHAIN_SUBDIR}handoff-{i}-{issue_number_at_i}.md` (step {i})
+  {END FOR}
+  {END IF}
+
+  ### Recent Handoffs
+
+  {IF step_index >= 2:}
+  #### Step {step_index - 1}: #{issue_at_step_minus_2}
+  ```
+  {full content of handoff file at step_index - 2}
+  ```
+
+  ---
+  {END IF}
+
+  #### Step {step_index}: #{issue_at_step_minus_1}
+  ```
+  {full content of handoff file at step_index - 1}
+  ```
+
+  ---
+
+  **Use the information above to:**
+  - Avoid duplicating patterns or utilities already created
+  - Build on conventions established by previous agents
+  - Be aware of known issues from previous steps
+  {END IF}
+
   **Your first task:**
   Implement issue #{number}: {title}
 
@@ -320,6 +450,11 @@ Task(
 
   Wait for task assignment via TaskList before starting work."
 )
+```
+
+To read the handoff file content for injection:
+```bash
+cat {RELAY_DIR}/{CHAIN_SUBDIR}handoff-{step}-{issue}.md 2>/dev/null || echo "Handoff not available"
 ```
 
 ### Spawn Reviewer Teammate (if exists)
@@ -477,6 +612,55 @@ TaskCreate(subject: "Implement #127: Integration tests")  → id=7, owner: "deve
 TaskCreate(subject: "Review #127")                        → id=8, owner: "reviewer", blockedBy: [7]
 TaskCreate(subject: "QA #127")                            → id=9, owner: "qa", blockedBy: [8]
 ```
+
+### Relay Mode Task Creation
+
+If `IS_RELAY` is true:
+
+For each relay chain in `RELAY_CHAINS`:
+
+```
+# Chain: #101 → #102 → #103
+# previous_qa_task_id tracks the last pipeline's final task
+
+previous_qa_task_id = None
+
+For step_index, issue in enumerate(chain):
+  # --- Implementation task ---
+  TaskCreate(subject: "Implement #{issue}: {title}", description: "Relay step {step_index + 1} of {len(chain)}...")
+  → impl_task_id
+
+  # Block on previous pipeline's final stage (if not first in chain)
+  IF previous_qa_task_id is not None:
+    TaskUpdate(taskId: impl_task_id, addBlockedBy: [previous_qa_task_id])
+
+  TaskUpdate(taskId: impl_task_id, owner: "developer")
+
+  # --- Review task (if reviewer exists) ---
+  IF reviewer_agent exists:
+    TaskCreate(subject: "Review #{issue}", description: "...")
+    → review_task_id
+    TaskUpdate(taskId: review_task_id, addBlockedBy: [impl_task_id])
+    TaskUpdate(taskId: review_task_id, owner: "reviewer")
+
+  # --- QA task (if QA exists) ---
+  IF qa_agent exists:
+    qa_blocked_by = review_task_id IF reviewer exists ELSE impl_task_id
+    TaskCreate(subject: "QA #{issue}", description: "...")
+    → qa_task_id
+    TaskUpdate(taskId: qa_task_id, addBlockedBy: [qa_blocked_by])
+    TaskUpdate(taskId: qa_task_id, owner: "qa")
+
+  # Track final task in this pipeline for next issue's dependency
+  previous_qa_task_id = qa_task_id IF qa exists ELSE (review_task_id IF reviewer exists ELSE impl_task_id)
+```
+
+Multiple chains: each chain creates its own independent dependency sequence. Chains are NOT blocked by each other — they run in parallel, each with their own developer teammate.
+
+**Developer assignment for relay chains:**
+- Single chain (explicit `--relay`): one developer, reused across all steps
+- Multiple chains (`--relay --until-done`): one developer PER chain, up to `maxDeveloperTeammates`
+  - If more chains than `maxDeveloperTeammates`, extra chains queue (blocked until a developer finishes a chain)
 
 ## 7. Blocking Monitoring Loop
 
@@ -657,6 +841,47 @@ Max 3 retries per stage. On exceeding:
 2. Report to user with full context
 3. In `--until-done` mode, skip this issue and continue with others
 
+### Relay Pipeline Progression
+
+**This logic runs ONLY when `IS_RELAY` is true.**
+
+When the monitoring loop detects a relay step's pipeline is fully complete (all stages passed OR skipped-on-failure):
+
+1. **Request handoff** (Section 7.5):
+   - Send handoff request to the developer
+   - Wait for handoff file to appear on disk
+   - Read the handoff content
+
+2. **Determine next step**:
+   - Look up the current chain and find the next issue in sequence
+   - If no next issue in this chain → this chain is complete
+
+3. **Inject context and unblock next step**:
+   - Read the last 2 handoff files from disk
+   - Build the relay context section (per Section 5 relay context template)
+   - Send the relay context to the next developer via SendMessage:
+     ```
+     SendMessage(
+       type: "message",
+       recipient: "developer{-N if multiple chains}",
+       content: "Your next task is now unblocked. Here is the relay context from previous agents:\n\n{relay_context_section}\n\nYour task: Implement #{next_issue}: {title}\n\n{issue_body}",
+       summary: "Relay: unblocking step {next_step} — #{next_issue}"
+     )
+     ```
+   - Mark the next implementation task as unblocked (the `blockedBy` dependency should auto-resolve when the previous QA task is marked complete)
+
+4. **Update progress table**:
+   - Add handoff status to the progress log:
+     ```markdown
+     ## Relay Progress
+
+     | Step | Issue | Pipeline | Handoff | Status |
+     |------|-------|----------|---------|--------|
+     | 1    | #101  | ✅ All passed | ✅ Generated | Complete |
+     | 2    | #102  | 🔄 In Progress | ⏳ Pending | Active |
+     | 3    | #103  | ⏳ Blocked | ⏳ Pending | Queued |
+     ```
+
 ### Progress Status Table
 
 On each loop iteration, log a table showing current state:
@@ -679,6 +904,16 @@ The loop exits when ANY of these is true:
 2. **Timeout**: 90-minute wallclock timeout exceeded — log remaining state and proceed to cleanup
 3. **All blocked**: Every remaining open issue has exceeded its retry limit — no further progress possible
 4. **No progress**: TaskList has shown identical statuses for 10+ consecutive iterations (~7.5 minutes) — teammates may be stuck
+5. **Relay failure (`--on-failure=stop`)**: If `IS_RELAY` and `ON_FAILURE == "stop"` and any relay step's pipeline failed after retry limit → EXIT loop immediately. Mark all remaining relay tasks as blocked. Report:
+   ```markdown
+   ## Relay Halted
+
+   Relay stopped at step {step_index} (#{issue_number}) due to --on-failure=stop.
+   Pipeline failure: {stage} failed after {retry_count} retries.
+
+   **Completed steps**: {list}
+   **Remaining steps**: {list} (not started)
+   ```
 
 ### Knowledge Extraction (Post-Pipeline)
 
@@ -699,6 +934,106 @@ On exit, proceed to **Section 8 (Post-Pipeline Verification)**.
 ### Stalled Teammates
 
 If `TaskList()` shows identical statuses for 10+ consecutive polls (no task progress), a teammate may be stuck. Refer to **Error Handling: Teammate Unresponsive** below for recovery steps.
+
+## 7.5. Relay Handoff Generation
+
+**This section only applies when `IS_RELAY` is true.**
+
+When the monitoring loop (Section 7) detects that a relay step's full pipeline is complete (QA PASSED, or reviewer APPROVED with no QA, or developer done with no reviewer/QA, or skipped-on-failure), the orchestrator requests a handoff from the developer BEFORE unblocking the next step.
+
+### Handoff Request
+
+Send to the developer:
+
+```
+SendMessage(
+  type: "message",
+  recipient: "developer",
+  content: "Your pipeline for #{issue_number} is complete. Before the next agent takes over, generate a RELAY HANDOFF document.
+
+Write this file: {RELAY_DIR}/{CHAIN_SUBDIR}handoff-{step_index + 1}-{issue_number}.md
+
+Use this EXACT template:
+
+# Relay Handoff: #{issue_number} — {issue_title}
+**Agent**: {your_agent_name}
+**Status**: COMPLETED | COMPLETED_WITH_ISSUES
+**Timestamp**: {current ISO timestamp}
+
+## Files Changed
+- `path/to/file` — created | modified | deleted (brief what/why)
+(list ALL files you created, modified, or deleted)
+
+## Commits
+- `hash` — commit message
+(list ALL commits you made)
+
+## Key Decisions
+- Decision 1 and why
+(list architectural or implementation choices you made and WHY)
+
+## Patterns Introduced
+- Pattern description at `path/to/file` — when to reuse
+(list any new patterns, utilities, or conventions you established)
+
+## Known Issues
+- ⚠️ Description of any unresolved issues
+(include review/QA failures that weren't fixed, known limitations, TODOs)
+(if Status is COMPLETED with no issues, write 'None')
+
+## Briefing for Next Agent
+Write 2-4 paragraphs explaining:
+- What you built and how it fits together
+- What the next agent should know before starting their task
+- Any gotchas, quirks, or non-obvious things you discovered
+- Suggestions for the next agent based on what you learned
+
+IMPORTANT: Write the file to disk using the Write tool. Confirm when done.",
+  summary: "Requesting relay handoff for #{issue_number}"
+)
+```
+
+### Wait for Handoff File
+
+After sending the handoff request, poll for the file:
+
+```
+WHILE handoff file does not exist at {RELAY_DIR}/{CHAIN_SUBDIR}handoff-{step_index + 1}-{issue_number}.md:
+  Bash("sleep 15")
+  Check if file exists: Bash("test -f '{path}' && echo EXISTS || echo MISSING")
+  If 5 polls pass with no file (75 seconds), send a reminder:
+    SendMessage(recipient: "developer", content: "Reminder: please write the handoff file to {path}")
+  If 10 polls pass (150 seconds), skip handoff generation and continue with empty handoff:
+    Log: "Warning: Developer did not produce handoff for #{issue_number}. Continuing without handoff context."
+```
+
+### Handle On-Failure Skip
+
+If the pipeline for this step ended due to retry limit exceeded (not QA PASSED / reviewer APPROVED):
+
+- Still request the handoff (developer has context about what went wrong)
+- The developer should set `**Status**: COMPLETED_WITH_ISSUES`
+- The `Known Issues` section should capture what failed and why
+- Do NOT close the issue — leave it open with a comment:
+
+  **If platform is "github":**
+  ```
+  mcp__github__add_issue_comment(
+    owner: delegate.githubOwner,
+    repo: delegate.githubRepo,
+    issue_number: {number},
+    body: "⚠️ Relay pipeline: skipped after {retry_count} failed attempts at {stage}. Relay continued to next task. See handoff: {handoff_path}"
+  )
+  ```
+
+  **If platform is "jira":**
+  ```
+  mcp__atlassian__addCommentToJiraIssue(
+    issueIdOrKey: {issue_key},
+    cloudId: {jiraCloudId},
+    body: "⚠️ Relay pipeline: skipped after {retry_count} failed attempts at {stage}. Relay continued to next task. See handoff: {handoff_path}"
+  )
+  ```
 
 ## 8. Post-Pipeline Verification
 
@@ -805,6 +1140,16 @@ Wait for shutdown confirmations, then clean up:
 TeamDelete()
 ```
 
+### Relay Cleanup (if IS_RELAY)
+
+Handoff files in `{RELAY_DIR}/` are intentionally NOT deleted after the pipeline. They serve as documentation of what each agent did and can be inspected by the user.
+
+Log:
+```markdown
+Relay handoff files preserved at: {RELAY_DIR}/
+To clean up manually: `rm -rf {RELAY_DIR}`
+```
+
 ## 10. Report Results
 
 ### Single Task Report
@@ -873,6 +1218,51 @@ TeamDelete()
 - Run full test suite
 ```
 
+### Relay Mode Report
+
+```markdown
+## Relay Pipeline Complete
+
+### Configuration
+**Mode**: Relay (sequential with handoffs)
+**Failure handling**: {ON_FAILURE}
+**Chains**: {number_of_chains}
+
+### Relay Chain{s}
+
+#### Chain #{root_issue}: {root_issue_title}
+| Step | Issue | Pipeline | Handoff | Status |
+|------|-------|----------|---------|--------|
+| 1 | #101 | ✅ Dev → Review → QA | ✅ Generated | Closed |
+| 2 | #102 | ✅ Dev → Review → QA | ✅ Generated | Closed |
+| 3 | #103 | ✅ Dev → Review → QA | — (final step) | Closed |
+
+{IF multiple chains:}
+#### Chain #{root_issue_2}: {title}
+| Step | Issue | Pipeline | Handoff | Status |
+|------|-------|----------|---------|--------|
+| 1 | #104 | ✅ Dev → Review → QA | ✅ Generated | Closed |
+| 2 | #105 | ⚠️ QA FAILED (skipped) | ✅ Generated | Open |
+{END IF}
+
+### Skipped Issues (--on-failure=continue)
+| # | Title | Failed Stage | Retries | Known Issues |
+|---|-------|-------------|---------|--------------|
+| #105 | Edge case handler | QA | 3 | Token validation edge case |
+
+### Handoff Files
+All handoff documents available at: `{RELAY_DIR}/`
+- `handoff-1-101.md` (step 1)
+- `handoff-2-102.md` (step 2)
+- `handoff-3-103.md` (step 3)
+
+### Context Chain Summary
+Total context passed through relay: {count} handoffs
+Average handoff size: ~{estimate} lines
+
+PR_URL: https://github.com/{owner}/{repo}/pull/{pr_number}
+```
+
 ## Error Handling
 
 ### Agent Teams Not Supported
@@ -938,3 +1328,6 @@ Same handling as `/wf-delegate` — fall back to jira-cli.sh for Jira, or report
 5. **Cost**: Persistent teammates use more tokens per session but fewer retry loops and no re-discovery overhead
 6. **File Conflicts**: If multiple developers work in parallel, wf-breakdown should have assigned different file sets. The lead warns if file overlap is detected in task descriptions
 7. **One Team Per Session**: Each invocation creates one team — this is by design
+8. **Relay Mode**: Use `--relay` when tasks build on each other — each agent gets a handoff document from the previous agent with files changed, key decisions, patterns introduced, and known issues
+9. **Relay Context Window**: Only the last 2 handoffs are injected into the agent's prompt. Older handoffs are available on disk if the agent needs them — keeps prompt size bounded for long relays
+10. **On-Failure**: Default is `continue` (skip and flag). Use `--on-failure=stop` when building on broken work would be wasteful (e.g., tightly coupled data layer → API → UI)
