@@ -1,7 +1,7 @@
 ---
 description: Execute sub-tasks using Agent Teams for persistent pipeline delegation
 allowed-tools: Read, Bash, Grep, Glob, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, TeamCreate, TeamDelete, SendMessage
-argument-hint: <issue key or number> [--until-done] [--list]
+argument-hint: <issue key or number> [--until-done] [--list] [--relay] [--on-failure=continue|stop]
 note: "Edit and Write are INTENTIONALLY excluded - orchestrator must delegate, not implement. Uses Agent Teams instead of stateless Task() subagents for context retention and direct inter-agent communication."
 ---
 
@@ -13,6 +13,8 @@ Execute sub-tasks using Claude Code's Agent Teams feature. Unlike `/wf-delegate`
 - Use `/wf-team-delegate` when tasks require review/QA feedback loops (teammates keep context)
 - Use `/wf-team-delegate --until-done` for multi-task pipelines (parallel developer teammates)
 - Use `/wf-delegate` as a stable fallback if Agent Teams misbehaves
+- Use `/wf-team-delegate --relay #101 #102 #103` for sequential tasks where each agent needs context from the previous
+- Use `/wf-team-delegate --relay --until-done` to auto-detect relay chains from dependency graph
 
 ## CRITICAL: ORCHESTRATOR BOUNDARIES
 
@@ -131,6 +133,11 @@ mcp__github__search_issues(
 **Run independent tasks in parallel:**
 ```bash
 /wf-team-delegate 125 126
+```
+
+**Run tasks as a relay (sequential with handoffs):**
+```bash
+/wf-team-delegate --relay 125 126 127
 ```
 ```
 
@@ -1122,6 +1129,16 @@ Wait for shutdown confirmations, then clean up:
 TeamDelete()
 ```
 
+### Relay Cleanup (if IS_RELAY)
+
+Handoff files in `{RELAY_DIR}/` are intentionally NOT deleted after the pipeline. They serve as documentation of what each agent did and can be inspected by the user.
+
+Log:
+```markdown
+Relay handoff files preserved at: {RELAY_DIR}/
+To clean up manually: `rm -rf {RELAY_DIR}`
+```
+
 ## 10. Report Results
 
 ### Single Task Report
@@ -1190,6 +1207,51 @@ TeamDelete()
 - Run full test suite
 ```
 
+### Relay Mode Report
+
+```markdown
+## Relay Pipeline Complete
+
+### Configuration
+**Mode**: Relay (sequential with handoffs)
+**Failure handling**: {ON_FAILURE}
+**Chains**: {number_of_chains}
+
+### Relay Chain{s}
+
+#### Chain #{root_issue}: {root_issue_title}
+| Step | Issue | Pipeline | Handoff | Status |
+|------|-------|----------|---------|--------|
+| 1 | #101 | ✅ Dev → Review → QA | ✅ Generated | Closed |
+| 2 | #102 | ✅ Dev → Review → QA | ✅ Generated | Closed |
+| 3 | #103 | ✅ Dev → Review → QA | — (final step) | Closed |
+
+{IF multiple chains:}
+#### Chain #{root_issue_2}: {title}
+| Step | Issue | Pipeline | Handoff | Status |
+|------|-------|----------|---------|--------|
+| 1 | #104 | ✅ Dev → Review → QA | ✅ Generated | Closed |
+| 2 | #105 | ⚠️ QA FAILED (skipped) | ✅ Generated | Open |
+{END IF}
+
+### Skipped Issues (--on-failure=continue)
+| # | Title | Failed Stage | Retries | Known Issues |
+|---|-------|-------------|---------|--------------|
+| #105 | Edge case handler | QA | 3 | Token validation edge case |
+
+### Handoff Files
+All handoff documents available at: `{RELAY_DIR}/`
+- `handoff-1-101.md` (step 1)
+- `handoff-2-102.md` (step 2)
+- `handoff-3-103.md` (step 3)
+
+### Context Chain Summary
+Total context passed through relay: {count} handoffs
+Average handoff size: ~{estimate} lines
+
+PR_URL: https://github.com/{owner}/{repo}/pull/{pr_number}
+```
+
 ## Error Handling
 
 ### Agent Teams Not Supported
@@ -1255,3 +1317,6 @@ Same handling as `/wf-delegate` — fall back to jira-cli.sh for Jira, or report
 5. **Cost**: Persistent teammates use more tokens per session but fewer retry loops and no re-discovery overhead
 6. **File Conflicts**: If multiple developers work in parallel, wf-breakdown should have assigned different file sets. The lead warns if file overlap is detected in task descriptions
 7. **One Team Per Session**: Each invocation creates one team — this is by design
+8. **Relay Mode**: Use `--relay` when tasks build on each other — each agent gets a handoff document from the previous agent with files changed, key decisions, patterns introduced, and known issues
+9. **Relay Context Window**: Only the last 2 handoffs are injected into the agent's prompt. Older handoffs are available on disk if the agent needs them — keeps prompt size bounded for long relays
+10. **On-Failure**: Default is `continue` (skip and flag). Use `--on-failure=stop` when building on broken work would be wasteful (e.g., tightly coupled data layer → API → UI)
