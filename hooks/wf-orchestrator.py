@@ -4,7 +4,7 @@ WF Orchestrator - Global Workflow Hook for Claude Code
 =======================================================
 Handles:
 1. SessionStart simulation (first PostToolUse detection)
-2. Context monitoring with /wf-end-session trigger at 75%
+2. Context monitoring: warning at 75%, /wf-end-session trigger at 90% (configurable)
 3. Stop hook with autonomy mode support (interactive checkpoint)
 4. Workflow routing (Jira vs GitHub)
 
@@ -29,8 +29,9 @@ from typing import Optional, Dict, Any, Tuple
 # =============================================================================
 
 CONTEXT_LIMIT = 200_000
-PRE_COMPACT_THRESHOLD = 75  # Trigger /wf-end-session (first alert)
-WARNING_THRESHOLD = 75      # Repeated warning threshold (same as above)
+# Default thresholds (can be overridden via env vars below)
+DEFAULT_WARNING_THRESHOLD = 75   # Friendly heads-up
+DEFAULT_CRITICAL_THRESHOLD = 90  # Trigger /wf-end-session
 STATE_DIR = Path(os.path.expanduser("~/.claude/hooks/.wf-state"))
 STATE_MAX_AGE_DAYS = 7      # Cleanup old state files
 PROGRESS_LINE_LIMIT = 450   # Warn if progress.md exceeds this
@@ -69,6 +70,7 @@ class WFOrchestrator:
         return {
             "first_run_handled": False,
             "pre_compact_ran": False,
+            "warning_shown": False,
             "workflow_detected": None,
             "session_start": datetime.now().isoformat()
         }
@@ -502,19 +504,38 @@ class WFOrchestrator:
     # Context Check
     # -------------------------------------------------------------------------
 
-    def handle_context_check(self) -> Optional[Dict]:
-        """Check context usage and trigger /wf-end-session if needed."""
-        # Skip context warnings in external loop mode (Ralph handles restarts)
+    def _resolve_threshold(self, env_var: str, default: int) -> int:
+        """Read an int threshold from env var, falling back to default if unset/invalid."""
+        raw = os.environ.get(env_var)
+        if raw is None:
+            return default
+        try:
+            value = int(raw)
+            if 1 <= value <= 100:
+                return value
+        except ValueError:
+            pass
+        return default
 
+    def handle_context_check(self) -> Optional[Dict]:
+        """Check context usage and emit tiered warning/critical messages."""
         # Skip if session-handoff.py handles context monitoring
         if os.environ.get("WF_DISABLE_CONTEXT_CHECK", "false") == "true":
             return None
+        # Skip context warnings in external loop mode (Ralph handles restarts)
         if os.environ.get("WF_EXTERNAL_LOOP", "false") == "true":
             return None
 
+        warning_threshold = self._resolve_threshold(
+            "WF_CONTEXT_WARNING_THRESHOLD", DEFAULT_WARNING_THRESHOLD
+        )
+        critical_threshold = self._resolve_threshold(
+            "WF_CONTEXT_CRITICAL_THRESHOLD", DEFAULT_CRITICAL_THRESHOLD
+        )
+
         tokens, pct = self._get_context_usage()
 
-        if pct >= PRE_COMPACT_THRESHOLD and not self.state["pre_compact_ran"]:
+        if pct >= critical_threshold and not self.state["pre_compact_ran"]:
             self.state["pre_compact_ran"] = True
             self._save_state()
 
@@ -537,14 +558,18 @@ class WFOrchestrator:
                     "additionalContext": full_context
                 }
             }
-        elif pct >= WARNING_THRESHOLD:
-            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST CALL SKILL /wf-end-session NOW"
+        elif pct >= warning_threshold and not self.state.get("warning_shown", False):
+            self.state["warning_shown"] = True
+            self._save_state()
+
+            msg = f"[WF] Context at {pct:.0f}% — consider wrapping up this task soon."
             full_context = (
-                f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
+                f"⚠️ Context usage: {pct:.0f}%\n"
                 f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
-                f"INVOKE THE SKILL: Use the Skill tool with skill='wf-end-session'\n"
-                f"DO NOT manually update progress.md - the skill handles everything.\n\n"
-                f"DO NOT continue working - invoke /wf-end-session skill first."
+                f"You're past the comfortable working zone. Consider:\n"
+                f"- Finishing the current task before starting a new one\n"
+                f"- Running /wf-end-session when you reach a natural stopping point\n\n"
+                f"Critical threshold is {critical_threshold}% — I'll remind you again then."
             )
             return {
                 "systemMessage": msg,
