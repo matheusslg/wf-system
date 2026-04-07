@@ -1,7 +1,7 @@
 # wf-system Plugin Migration — Design (v2.0)
 
 **Date:** 2026-04-07
-**Status:** DRAFT — sections 1-3.5 complete; sections 4-7 TBD (continue in next session)
+**Status:** COMPLETE — all sections (1-7) approved by user
 **Project:** matheusslg/wf-system
 **Target version:** 2.0.0
 **Author:** Brainstorming session between Matheus Cavallini and Claude (Opus 4.6)
@@ -10,18 +10,11 @@
 
 ## How to use this document
 
-This is the design spec for migrating wf-system from a `install.sh`-based distribution to the Claude Code Plugins Marketplace format. It is the output of a brainstorming session that ran out of context budget after Section 3.5.
+This is the design spec for migrating wf-system from a `install.sh`-based distribution to the Claude Code Plugins Marketplace format. It is the complete output of a brainstorming session covering Sections 1 through 7.
 
-**If you are a Claude Code session continuing this work:**
+**All sections are decided and approved.** The next step after this spec is the `writing-plans` skill to produce the implementation plan; ticket creation happens after the implementation plan exists. Use `gh issue create` directly against `matheusslg/wf-system` for tickets — the github MCP server is disconnected in the user's environment.
 
-1. Read this entire document before doing anything else.
-2. Sections 1-3.5 are **decided and approved** by the user. Do NOT re-litigate them — they were the product of 5 explicit Q&A rounds. The "Decision log" below has the load-bearing decisions.
-3. Sections 4-7 are **outlines only**. Your job is to flesh them out, present each as a section in the brainstorming flow, get user approval per section, then update this spec with the approved content.
-4. After Sections 4-7 are approved, run the spec self-review pass (placeholder scan, internal consistency, scope check, ambiguity check) and ask the user to review the updated spec.
-5. After spec approval, invoke the `writing-plans` skill to create the implementation plan.
-6. Ticket creation (one ticket per deferred item, against matheusslg/wf-system) happens AFTER spec is fully approved. Use `gh issue create` directly — the github MCP server is disconnected in the user's environment.
-
-**The original audit that motivated this work** is at `docs/2026-04-07-system-audit.md`. Read that first if you need context on *why* these decisions were made.
+**The original audit that motivated this work** is at `docs/2026-04-07-system-audit.md`. Read that for context on *why* these decisions were made.
 
 ---
 
@@ -78,20 +71,21 @@ Everything currently in wf-system that doesn't depend on the brain MCP or Figma 
 
 ### Marketplace structure
 
-A new `.claude-plugin/marketplace.json` lives at the root of `matheusslg/wf-system`. Users install via:
+A new `.claude-plugin/marketplace.json` lives at the root of `matheusslg/wf-system`. The marketplace `name` field is `wf-system` (kebab-case, no slashes — required by the marketplace schema). Users install via:
 
 ```bash
-/plugin install wf-core@matheusslg/wf-system
+/plugin marketplace add matheusslg/wf-system
+/plugin install wf-core@wf-system
 ```
 
-The marketplace name is `matheusslg/wf-system` (the repo path).
+The first command takes the github `owner/repo` shorthand to register the marketplace; the second uses the marketplace's internal `name` field to install plugins from it.
 
 ### Repository layout (after migration)
 
 ```
 matheusslg/wf-system/
 ├── .claude-plugin/
-│   └── marketplace.json          # registry: lists wf-core (v2.0) + future plugin slots
+│   └── marketplace.json          # registry: lists wf-core only in v2.0 (future plugins added when they ship)
 ├── plugins/
 │   └── wf-core/                  # The v2.0 plugin
 │       ├── .claude-plugin/
@@ -125,10 +119,10 @@ matheusslg/wf-system/
 - All version-tracking metadata files (`.wf-version`, `.wf-source`, `.wf-install-mode`, `.wf-last-check`)
 - Brain code at `scripts/wf-brain/` and `scripts/wf-brain.js` stays in repo but moves into `plugins/wf-brain/` in v2.1; orphaned at repo root for v2.0
 
-### Open questions for Section 1
+### Resolved questions (originally flagged in Section 1)
 
-1. **Inter-plugin dependencies:** when wf-brain ships in v2.1, does it `require` wf-core in the manifest, or is it standalone? The orchestrator hook's `_brain_search()` already gracefully no-ops if missing (line 322 of wf-orchestrator.py). My lean: optional dependency. **Verify the manifest format supports `requires` during implementation.**
-2. **`claude -p -r <session_id> "/context"` child process:** the orchestrator hook (lines 211-225) shells out to the `claude` binary. Should still work after plugin install (PATH unchanged) but flagged as a fragile interface that could break with Claude Code version updates.
+1. **Inter-plugin dependencies:** the plugin manifest schema has **no `requires` field** (resolved in §4.6). When wf-brain ships in v2.1, it will be standalone — the orchestrator hook's `_brain_search()` already gracefully no-ops when the brain isn't installed. Document the optional dependency in README only.
+2. **`claude -p -r <session_id> "/context"` child process:** the orchestrator hook (lines 211-225) shells out to the `claude` binary. Should still work after plugin install (PATH unchanged) but remains a fragile interface that could break with Claude Code version updates. **§7 Category 4 covers this in the parity tests.**
 
 ---
 
@@ -208,7 +202,7 @@ Net reduction: ~855 LOC. More importantly, **one source of truth** — the drift
 
 ### Failure mode flagged
 
-The skill becomes a single point of failure: if you break it, all three commands break simultaneously. Currently a bug in `wf-improve.md` only breaks improve. **Mitigation:** testing strategy in Section 7 (TBD) must validate the shared skill before shipping. The win is still net-positive; the failure mode just changes from "three independent ways to drift" to "one coordinated way to break".
+The skill becomes a single point of failure: if you break it, all three commands break simultaneously. Currently a bug in `wf-improve.md` only breaks improve. **Mitigation:** §7 Category 2 (F1 dedup correctness) explicitly validates all three modes against a real test project before any RC ships. The win is still net-positive; the failure mode just changes from "three independent ways to drift" to "one coordinated way to break".
 
 ---
 
@@ -270,11 +264,11 @@ The only change from `templates/settings-hooks.json` is the path: `~/.claude/hoo
 
 ### Hook merge / migration concern
 
-Plugin docs say plugin hooks merge with user hooks. If a user already has the wf-orchestrator Stop hook in `~/.claude/settings.json` (installed by the old install.sh), both will run after plugin install. **The migration helper script (Section 5 — TBD) must remove the old hook entries from `settings.json` before plugin install.**
+Plugin docs say plugin hooks merge with user hooks. If a user already has the wf-orchestrator Stop hook in `~/.claude/settings.json` (installed by the old install.sh), both will run after plugin install. **The migration helper script (§5) handles this via the jq surgery in §5.4 — old wf-orchestrator hook entries are removed before plugin install.**
 
-### Open question for Section 3
+### Forwarded to §7 (smoke testing)
 
-- **Plugin hooks event support:** the plugin format docs list `PreToolUse`, `PostToolUse`, `Stop`, `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreCompact`, `Notification`, `SubagentStop` as supported events. wf-orchestrator only uses `PostToolUse` and `Stop` — both confirmed supported. **Smoke-test this end-to-end before declaring v2.0 done.**
+- **Plugin hooks event support:** the plugin format docs list `PreToolUse`, `PostToolUse`, `Stop`, `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreCompact`, `Notification`, `SubagentStop` as supported events. wf-orchestrator only uses `PostToolUse` and `Stop` — both confirmed supported in docs. §7 Category 1 smoke-tests both end-to-end on the actual plugin install before v2.0 ships.
 
 ---
 
@@ -290,35 +284,13 @@ Reasoning:
 2. Use Agent Teams primitives that have only one obvious right implementation — no F1-style duplication problem
 3. Drift bugs found in F1 trio are NOT present in the team commands as far as we can see — they have internal consistency
 
-### 3.5.2 — Reserve marketplace slots for `wf-brain` and `wf-cockpit`
+### 3.5.2 — Future plugin announcement (README-only)
 
-Marketplace.json registers future plugins explicitly even though neither ships in v2.0:
+The original idea was to register `wf-brain` and `wf-cockpit` as `status: "planned"` slots in `marketplace.json`. **Section 4 research killed this idea** — the marketplace schema has no `status: "planned"` field, and every plugin entry needs a real `source` path. You can't reserve slots for plugins that don't exist yet.
 
-```json
-{
-  "plugins": [
-    {
-      "name": "wf-core",
-      "source": "./plugins/wf-core",
-      "status": "stable"
-    },
-    {
-      "name": "wf-brain",
-      "source": "./plugins/wf-brain",
-      "status": "planned",
-      "targetVersion": "2.1"
-    },
-    {
-      "name": "wf-cockpit",
-      "source": "./plugins/wf-cockpit",
-      "status": "planned",
-      "targetVersion": "2.3+"
-    }
-  ]
-}
-```
+**Replacement:** announce future plugins via README only. The README's "Coming soon" section (drafted in §4.5) lists `wf-brain` (v2.1), `wf-design` (v2.2), and `wf-cockpit` (v2.3+). They get added to `marketplace.json` AT THE TIME each one ships, not before.
 
-**NOTE:** the `status: "planned"` field is unverified — may need to be expressed differently (e.g., as README documentation + only adding the entry once the plugin is real). Firm this up when writing the actual marketplace.json in Section 4.
+This is the YAGNI answer and matches the marketplace's actual schema.
 
 ### 3.5.3 — wf-team-delegate gets a cockpit-ready event log (additive, off by default)
 
@@ -384,174 +356,752 @@ What brain provides that progress.md doesn't:
 
 ---
 
-## Section 4 — Plugin & Marketplace Manifests (TBD — outline only)
+## Section 4 — Plugin & Marketplace Manifests (APPROVED)
 
-**Status:** not yet designed. Continue here in next session.
+### 4.1 — `plugins/wf-core/.claude-plugin/plugin.json`
 
-This section needs to specify:
+```json
+{
+  "name": "wf-core",
+  "version": "2.0.0",
+  "description": "Workflow management for Claude Code: session orchestration, agent teams, GitHub/Jira integration, and a developer pipeline (implement / fix-bug / improve)",
+  "author": {
+    "name": "Matheus Cavallini",
+    "email": "matheus@gnarlysoft.io",
+    "url": "https://github.com/matheusslg"
+  },
+  "homepage": "https://github.com/matheusslg/wf-system",
+  "repository": "https://github.com/matheusslg/wf-system",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "automation",
+    "agents",
+    "agent-teams",
+    "orchestration",
+    "session-management",
+    "github",
+    "jira"
+  ]
+}
+```
 
-1. The full content of `plugins/wf-core/.claude-plugin/plugin.json`:
-   - `name`: `wf-core`
-   - `version`: `2.0.0`
-   - `description`: brief
-   - `author`: name + email + url (Matheus Cavallini, matheus@gnarlysoft.io, github.com/matheusslg)
-   - `repository`: `https://github.com/matheusslg/wf-system`
-   - `homepage`: TBD
-   - `license`: MIT
-   - `keywords`: TBD (sample: workflow, automation, agents, claude-code)
-   - `commands`: `./commands` (and possibly `./skills`, `./agents`, `./hooks/hooks.json`, `./.mcp.json` paths if not auto-discovered)
-   - **Open question:** does plugin format support a `requires` field for inter-plugin dependencies? Verify via context7 or by looking at the official plugin-dev plugin's manifest.
+**That's it.** No `commands`, `agents`, `skills`, `hooks`, or `mcpServers` fields — all auto-discovered from the standard layout (`commands/`, `agents/`, `skills/`, `hooks/hooks.json`, `.mcp.json`). Adding explicit paths would be noise.
 
-2. The full content of `.claude-plugin/marketplace.json`:
-   - The "planned" status convention from §3.5.2 needs verification
-   - May need to be a different shape — query context7 for the official marketplace.json schema
-   - Should include marketplace metadata: name, owner, description
+**Why no `.mcp.json` in v2.0:** wf-core has zero MCP dependencies. The brain MCP moves to `wf-brain` in v2.1. The github MCP server isn't used (the user's environment has it disconnected and the wf-dev-pipeline skill switches to `gh` CLI anyway).
 
-3. README rewrite:
-   - Replace install.sh instructions with `/plugin install wf-core@matheusslg/wf-system`
-   - Document the migration path for old install.sh users (point at the migration helper script)
+### 4.2 — `.claude-plugin/marketplace.json`
 
-**Decisions needed in Section 4:**
-- Final keyword list for discoverability
-- Whether `wf-brain` and `wf-cockpit` slots appear in marketplace.json from day one as "planned" or only when they ship
-- Whether plugin.json's `commands` field needs to explicitly list paths or auto-discovers
+```json
+{
+  "name": "wf-system",
+  "owner": {
+    "name": "Matheus Cavallini",
+    "email": "matheus@gnarlysoft.io"
+  },
+  "metadata": {
+    "description": "wf-system: workflow management plugins for Claude Code",
+    "version": "2.0.0"
+  },
+  "plugins": [
+    {
+      "name": "wf-core",
+      "source": "./plugins/wf-core",
+      "description": "Core workflow loop: session management, dev pipeline, agent teams, planning",
+      "category": "productivity",
+      "tags": ["workflow", "agents", "orchestration"]
+    }
+  ]
+}
+```
 
----
+**One plugin entry only.** Future plugins (`wf-brain` v2.1, `wf-design` v2.2, `wf-cockpit` v2.3+) get added when they ship. No phantom slots, no `status: "planned"` field (that field doesn't exist — see §3.5.2).
 
-## Section 5 — Migration Helper Script (TBD — outline only)
+### 4.3 — Install command for users
 
-**Status:** not yet designed. Continue here in next session.
+```bash
+# In Claude Code:
+/plugin marketplace add matheusslg/wf-system
+/plugin install wf-core@wf-system
+```
 
-A `scripts/migrate-to-plugin.sh` script that runs once for existing install.sh users.
+The `/plugin marketplace add` step takes a github `owner/repo` shorthand. After that, the marketplace is referenced by its kebab-case `name` (`wf-system`) in install commands.
 
-What it must do:
+### 4.4 — Add a LICENSE file (defect fix)
 
-1. Detect existing install.sh installation (look for `~/.claude/hooks/.wf-version` or `~/.claude/commands/wf-*.md`)
-2. Remove old wf-system files:
-   - `rm -rf ~/.claude/hooks/wf-orchestrator.py`
-   - `rm -f ~/.claude/hooks/.wf-version ~/.claude/hooks/.wf-source ~/.claude/hooks/.wf-install-mode ~/.claude/hooks/.wf-last-check ~/.claude/hooks/.wf-update-available`
-   - `rm -f ~/.claude/commands/wf-*.md` (only files that match the wf-system pattern; check carefully so we don't delete user customizations)
-   - `rm -rf ~/.claude/scripts/wf-brain ~/.claude/scripts/wf-brain.js ~/.claude/mcp-servers/wf-brain` (the old brain installation)
-3. **Surgically remove the wf-orchestrator hook entries from `~/.claude/settings.json`** (NOT delete the whole file — only the wf-system entries). This is the trickiest part. Use `jq` to filter out the wf-orchestrator Stop and PostToolUse hooks, write back.
-4. Print clear next steps: "Now run `/plugin install wf-core@matheusslg/wf-system` from Claude Code"
-5. Optionally back up the old config to `~/.claude/wf-system-backup-{timestamp}/` before deleting (safety net)
-6. Idempotent — running it twice should not cause errors
+The README claims MIT via badge but **no `LICENSE` file exists** in the repo. Fix as part of v2.0:
 
-**Decisions needed in Section 5:**
-- Should the script back up before deleting, or just delete?
-- How aggressive to be about detecting "this is an old wf-system install" vs "this is something else with a wf- prefix"?
-- Should the script be POSIX sh or bash-only?
-- Should it have a `--dry-run` mode?
+```
+LICENSE                    # Add MIT license text at repo root
+```
 
----
+Otherwise the plugin marketplace listing is technically misleading and OSS users can't legally redistribute.
 
-## Section 6 — Release Process (TBD — outline only)
+### 4.5 — README rewrite
 
-**Status:** not yet designed. Continue here in next session.
+Replace install.sh sections with:
 
-What this section needs to cover:
+```markdown
+## Install (v2.0+)
 
-1. **Branch strategy:**
-   - This spec is on `docs/plugin-migration-spec` branch
-   - Implementation work on `feature/plugin-migration-v2`?
-   - Final cutover via PR to `main`
-2. **Versioning:**
-   - Bump VERSION file to `2.0.0`
-   - Tag as `v2.0.0`
-   - Last install.sh release should be tagged `v1.10.x` (whatever the current tip is) with a note "final install.sh release"
-3. **CHANGELOG.md entry:**
-   - Major heading for v2.0.0
-   - "BREAKING CHANGES" section listing the install.sh removal
-   - "Added", "Changed", "Removed", "Fixed" sections
-   - Migration instructions (or link to them)
-4. **Release announcement:**
-   - GitHub release notes
-   - README update
-   - Anywhere else wf-system is referenced
-5. **Smoke test before tagging:**
-   - The testing strategy from Section 7 must pass
-   - Manual end-to-end test: install plugin in a fresh Claude Code, run the daily loop
-6. **Rollback plan:**
-   - If v2.0 has critical issues post-release, what's the rollback story?
-   - Old install.sh tag remains accessible — users can git checkout v1.10.x and run install.sh
+Inside Claude Code:
 
-**Decisions needed in Section 6:**
-- Pre-release / RC versions before v2.0.0?
-- Should the migration helper be tested against multiple historical install.sh versions?
+    /plugin marketplace add matheusslg/wf-system
+    /plugin install wf-core@wf-system
 
----
+That's it. The plugin auto-loads commands, agents, skills, hooks, and the orchestrator script.
 
-## Section 7 — Testing & Validation (TBD — outline only)
+## Migrating from v1.x (install.sh users)
 
-**Status:** not yet designed. **This is the most decision-heavy of the remaining sections** — handle with care in the next session.
+If you previously installed wf-system via `install.sh`, run the one-shot migration helper before installing the plugin:
 
-What this section needs to cover:
+    curl -fsSL https://raw.githubusercontent.com/matheusslg/wf-system/main/scripts/migrate-to-plugin.sh | bash
 
-1. **Plugin format validation:**
-   - Does `${CLAUDE_PLUGIN_ROOT}` resolve correctly inside Python script invocations?
-   - Does `hooks/hooks.json` actually fire the hook on PostToolUse and Stop events?
-   - Does the `.mcp.json` MCP server path work the same as a standalone install? (Not v2.0 since wf-brain is deferred, but for v2.1 readiness)
-2. **F1 dedup validation:**
-   - The shared skill is a single point of failure (Section 2's flagged risk). How do we test it without breaking things?
-   - Test all three modes (`feature`, `bug`, `improve`) end-to-end against a real test project
-   - Verify Branch Safety check fires for ALL three modes (was missing in fix-bug/improve)
-   - Verify GitHub issue updates fire for ALL three modes (was missing in improve)
-3. **Migration helper validation:**
-   - Test against a fresh install.sh installation
-   - Test against a partially-broken install.sh installation
-   - Test the `~/.claude/settings.json` jq surgery doesn't break user-customized hooks
-4. **Hook behavior parity:**
-   - Compare plugin-installed hook behavior against current install.sh hook behavior
-   - Context monitoring still triggers
-   - WIP detection still works
-   - Stop sound (gated to macOS) still plays
-5. **Smoke test in fresh Claude Code:**
-   - Empty project
-   - `/plugin install wf-core@matheusslg/wf-system`
-   - `/wf-init`
-   - `/wf-start-session`
-   - `/wf-implement "Add hello world endpoint"`
-   - `/wf-commit`
-   - `/wf-end-session`
-   - All should work end-to-end without errors
+This removes the old `~/.claude/hooks/wf-orchestrator.py`, surgically prunes wf-system entries from `~/.claude/settings.json`, and clears `.wf-version` / `.wf-source` metadata. Then install the plugin as above.
 
-**Decisions needed in Section 7:**
-- What's the minimum bar for "v2.0 is shippable"? Pass all 5 above? Subset?
-- Manual smoke test, or scripted? wf-system has no automated test suite (per the audit's standards.md note "Test commands manually by running them in a test project") — should v2.0 introduce one?
-- Where do test projects live? Disposable? Tracked in repo?
-- Beta testers, or just user self-testing?
+(Migration helper specified in §5.)
+
+## Coming soon
+
+- `wf-brain` (v2.1) — RAG knowledge layer with hybrid search
+- `wf-design` (v2.2) — Figma + pixelmatch verification
+- `wf-cockpit` (v2.3+) — Web UI for agent team observability
+```
+
+Other README sections (Features, Commands, Architecture) stay structurally the same — only install/migration content changes.
+
+### 4.6 — Resolved questions
+
+| Question | Resolution |
+|---|---|
+| Plugin format supports `requires` for inter-plugin deps? | **No.** Not in schema. Brain hook already gracefully no-ops. Document optional dependency in README only. |
+| `commands` field auto-discovers or needs explicit paths? | **Auto-discovers** when omitted. Only specify paths to override defaults. |
+| Marketplace.json `status: "planned"` convention | **Doesn't exist.** Added plugins only when they ship. README "Coming soon" section instead. |
+| Plugin manifest schema source of truth | `code.claude.com/docs/en/plugins-reference` and `code.claude.com/docs/en/plugin-marketplaces` |
+| `wf-core` vs alternative plugin names | **Stick with `wf-core`** — short, clear, paired with `wf-system` marketplace name |
+| `metadata.pluginRoot` shortcut in marketplace.json | **Don't use it for v2.0** — only one plugin, no benefit. Add when v2.1 makes it pay off. |
+| `version` in plugin.json + VERSION file = two sources of truth | **`scripts/bump-version.sh` updates all three (VERSION, plugin.json, marketplace.json) atomically.** See §6.2. |
+
+### 4.7 — Things flagged forward to §7
+
+1. The `strict` field on plugin entries — docs show `"strict": false` but don't explain it. Leaving it out (default behavior). §7 testing: if anything we care about depends on it, address in v2.0.1.
 
 ---
 
-## Risks & open questions
+## Section 5 — Migration Helper Script (APPROVED)
+
+### 5.1 — Goals and non-goals
+
+**Goals**
+1. Reverse a previous `install.sh` run cleanly so the v2.0 plugin install starts from a known state.
+2. Always make a backup before deleting anything (no `--force` style irreversibility).
+3. Be safe to run on a machine that never had wf-system installed (no-op cleanly).
+4. Be safe to run twice (idempotent).
+5. Make rollback obvious if something goes wrong.
+
+**Non-goals**
+1. Auto-discovering every project that ever ran `install.sh --project`. Users handle one project at a time via `--project <path>`, or the script prints instructions.
+2. Migrating user data inside `workflow.json` files inside user projects. Plugin format reads `workflow.json` exactly as before (orchestrator hook unchanged), so no data migration is needed.
+3. Migrating the brain database. v2.0 doesn't ship the brain at all (deferred to v2.1); the brain SQLite DB stays untouched and waits for v2.1.
+
+### 5.2 — Backup before any destructive action
+
+Before doing anything else, the script creates:
+
+```
+~/.claude/wf-system-backup-<UTC-timestamp>/
+├── settings.json              # full original copy
+├── hooks/                     # entire ~/.claude/hooks/ directory
+│   ├── wf-orchestrator.py
+│   ├── .wf-version
+│   ├── .wf-source
+│   ├── .wf-install-mode
+│   ├── .wf-last-check
+│   ├── .wf-update-available
+│   └── .wf-state/
+├── scripts/
+│   ├── wf-brain.js            # if exists
+│   └── wf-brain/              # if exists
+├── mcp-servers/
+│   └── wf-brain/              # if exists
+└── commands/
+    └── wf-*.md                # only the wf-* files, not user customizations
+```
+
+The backup uses `cp -r` (resolves symlinks → real files). If user installed in symlink mode, the backup is fully self-contained — restoring later doesn't require the original git checkout to still exist.
+
+The backup path is **printed as the very last line of stdout** so users can find it after the script finishes.
+
+`--no-backup` flag skips this for users who really want to (CI scenarios). Default is backup on.
+
+### 5.3 — What gets removed (global install case)
+
+| Path | Reason |
+|---|---|
+| `~/.claude/commands/wf-*.md` | Plugin's `commands/` directory provides these now |
+| `~/.claude/hooks/wf-orchestrator.py` | Moves into plugin under `${CLAUDE_PLUGIN_ROOT}/scripts/` |
+| `~/.claude/hooks/.wf-version` | Marketplace handles versioning |
+| `~/.claude/hooks/.wf-source` | No longer needed (plugin self-locates) |
+| `~/.claude/hooks/.wf-install-mode` | install.sh distinction is gone |
+| `~/.claude/hooks/.wf-last-check` | `/plugin update` replaces this |
+| `~/.claude/hooks/.wf-update-available` | Same |
+| `~/.claude/hooks/.wf-state/` | Will move to `~/.wf-state/` per §3 |
+| `~/.claude/scripts/wf-brain.js` | Moves to `wf-brain` plugin in v2.1 |
+| `~/.claude/scripts/wf-brain/` | Same |
+| `~/.claude/mcp-servers/wf-brain/` | Same |
+
+**Detection guard:** the script aborts with a clear error if **none** of the above paths exist AND `~/.claude/hooks/.wf-version` is not present. If wf-system was never installed, refuse to delete anything.
+
+**Pattern safety on commands:** the script enumerates `wf-*.md` in `~/.claude/commands/` and removes only files matching the documented wf-system command list (hard-coded ~30-entry allowlist of v1.x command names). This protects users who happened to name a custom command `wf-anything.md`.
+
+**Symlink-aware deletion:** `rm -f` works the same on symlinks and regular files (removes the symlink itself, not the target). No special handling needed.
+
+### 5.4 — `~/.claude/settings.json` jq surgery
+
+**Detection signature:** any hook entry whose `command` field contains the substring `wf-orchestrator`. No other hook in the wild uses that filename — safe enough.
+
+**The jq filter:**
+
+```jq
+.hooks |= (
+  if . == null then null
+  else
+    with_entries(
+      .value |= (
+        map(.hooks |= map(select(.command | test("wf-orchestrator") | not)))
+        | map(select(.hooks | length > 0))
+      )
+    )
+  end
+)
+```
+
+This walks each hook event (Stop, PostToolUse, etc.), drops individual hook commands matching `wf-orchestrator`, and removes empty matcher groups so we don't leave dangling `[]`. If `.hooks` becomes empty after pruning, leave the empty object rather than deleting the key (less surprising).
+
+**Atomicity:** write to `settings.json.tmp`, then `mv` over the original. Any failure leaves the original intact.
+
+**jq dependency:** check `command -v jq` at script start. Hard-fail with install instructions if missing:
+
+```
+ERROR: jq is required for safe settings.json migration.
+Install it first:
+  macOS:  brew install jq
+  Debian: apt install jq
+  Fedora: dnf install jq
+Then re-run this script.
+```
+
+**Why bash + jq instead of Python:** the whole script is ~120 LOC and bash matches install.sh convention. The jq dependency hits maybe 5% of users; one extra step for them is cheaper than maintaining a Python shim that has to handle the same JSON safety concerns from scratch.
+
+### 5.5 — Project-local install case
+
+install.sh's `--project` mode only installs `<project>/.claude/commands/wf-*.md`. No hook, no settings, no brain. The migration is trivial.
+
+The script handles this with a `--project <path>` flag:
+
+```bash
+./migrate-to-plugin.sh                       # global install only (default)
+./migrate-to-plugin.sh --project ~/my-app    # only the project install at this path
+./migrate-to-plugin.sh --project ~/my-app --include-global   # both
+```
+
+Default (no `--project` flag) is "global only" because it's the most common case AND the most dangerous to get wrong. Users with project installs run the script once per project.
+
+If the user has a project install they don't migrate, **the v2.0 plugin install still works** — the project's local `wf-*.md` files just become orphaned dead weight that get loaded redundantly.
+
+### 5.6 — Flags and UX
+
+```
+Usage: migrate-to-plugin.sh [OPTIONS]
+
+Options:
+  --dry-run             Print what would be done without making any changes
+  --no-backup           Skip backup (NOT recommended)
+  --project PATH        Migrate a project-local install at PATH
+  --include-global      Used with --project: also migrate global install
+  -h, --help            Show this help
+
+Examples:
+  migrate-to-plugin.sh                      # migrate global install
+  migrate-to-plugin.sh --dry-run            # preview changes
+  migrate-to-plugin.sh --project ~/my-app   # migrate one project install
+```
+
+**Output format:** colorless (no ANSI), structured as numbered phases:
+
+```
+[1/5] Detecting wf-system installation...
+      Found global install (v1.11.1, mode: symlink)
+[2/5] Creating backup at ~/.claude/wf-system-backup-2026-04-07T15-23-01Z/...
+      Backed up 14 files (38 KB)
+[3/5] Removing wf-system files from ~/.claude/...
+      Removed 30 commands, 1 hook, 5 metadata files, 3 brain components
+[4/5] Pruning wf-system hooks from ~/.claude/settings.json...
+      Removed 2 hook entries (Stop, PostToolUse)
+[5/5] Migration complete.
+
+Backup: ~/.claude/wf-system-backup-2026-04-07T15-23-01Z/
+
+Next steps:
+  1. Open Claude Code
+  2. Run: /plugin marketplace add matheusslg/wf-system
+  3. Run: /plugin install wf-core@wf-system
+```
+
+### 5.7 — Failure handling and rollback
+
+If any step fails AFTER the backup is created, the script:
+1. Prints `ERROR: <step> failed: <reason>`
+2. Prints the backup path prominently
+3. Prints the exact restore command:
+   ```bash
+   cp -a ~/.claude/wf-system-backup-<ts>/* ~/.claude/
+   ```
+4. Exits non-zero
+
+**No automatic rollback.** Manual restore is intentional — if something failed mid-migration, we don't know what state things are in, and an automated rollback could make it worse.
+
+### 5.8 — Resolved decisions
+
+| Question | Resolution |
+|---|---|
+| Backup vs delete | **Backup by default, `--no-backup` flag for opt-out.** |
+| Detection aggressiveness | **Conservative.** Refuse to delete anything unless `~/.claude/hooks/.wf-version` exists OR specific wf-system files are present. Hard-coded ~30-entry `wf-*.md` allowlist instead of glob deletion. |
+| POSIX sh vs bash | **Bash 3.2+** (matches install.sh, available on macOS and Linux out of the box). |
+| Dry-run mode | **Yes, `--dry-run` flag.** Worth ~20 LOC for trust-building. |
+
+### 5.9 — Things flagged forward
+
+1. **Distribution:** the script lives at `scripts/migrate-to-plugin.sh` in the repo. README points users to `curl -fsSL https://.../scripts/migrate-to-plugin.sh | bash`. §6 must decide whether to also include it as a github release asset.
+2. **Testability:** §7 covers the `HOME=$tmpdir` test fixture approach for testing without mutating the real `~/.claude/`.
+3. **Version compatibility:** if a user is on an old wf-system version (e.g., 1.0.0), the script must `[[ -e ]]` check before each removal so missing files (like brain components, which only existed from v1.9.0+) don't error. §7 validates this against multiple historical fixtures.
+
+---
+
+## Section 6 — Release Process (APPROVED)
+
+### 6.1 — Branch strategy
+
+| Branch | Purpose | Lifetime |
+|---|---|---|
+| `main` | Stable v1.x line until v2.0.0 lands; v2.x line after | Permanent |
+| `docs/plugin-migration-spec` | Where this spec lives + future spec edits | Until merged into main during the cutover |
+| `feature/plugin-migration-v2` | All implementation work for v2.0 | Until merged into main during the cutover |
+
+**Long-lived `feature/plugin-migration-v2` branch over many small PRs.** Single-maintainer project with no other significant in-flight work on `main`. Coordinating the migration as one atomic event is simpler than rebasing many small PRs through a partial-state main. Rebase against main weekly.
+
+**The cutover PR** merges both branches into main as a single merge commit (preserving the granular history of the feature branch). The PR includes:
+- Spec link
+- CHANGELOG entry
+- The migrate-to-plugin.sh helper
+- The full plugin restructure
+- LICENSE file
+- README rewrite
+
+**One `main` push, no incremental v2 commits to main.** If v2 work landed on main before v2.0.0 ships, `git log` becomes confusing for users on v1.x doing `/wf-update`.
+
+### 6.2 — Versioning and tags
+
+**Version bumps:**
+
+| File | v1.11.1 → ? |
+|---|---|
+| `VERSION` | `2.0.0` |
+| `plugins/wf-core/.claude-plugin/plugin.json` `version` | `2.0.0` |
+| `.claude-plugin/marketplace.json` `metadata.version` | `2.0.0` |
+
+**Lockstep bump via `scripts/bump-version.sh <new-version>`** — ~15-line bash script that does a `sed` replace on all three files. Called manually from the release process. Single source of truth at the release-process level even though three files hold the version.
+
+**Tags:**
+
+| Tag | Points at | Purpose |
+|---|---|---|
+| `v1.11.1-final-installer` | The tip of `main` BEFORE the v2.0 merge | Rollback target. Users on v1.x who hit issues can `git checkout v1.11.1-final-installer && ./install.sh`. |
+| `v2.0.0-rc.1` | First RC commit on `feature/plugin-migration-v2` | Dogfood install. |
+| `v2.0.0-rc.N` | Later RCs as needed | Each fix iteration. |
+| `v2.0.0` | The merge commit after RC dogfooding completes | Final release. |
+
+The `v1.11.1-final-installer` tag is **created BEFORE** the cutover merge so it lives on a clean v1.x commit.
+
+### 6.3 — Pre-release / RC strategy
+
+**Mandatory: at least one RC before v2.0.0.** The hard cutover has too many moving pieces to ship straight to a stable tag with zero bake time.
+
+**RC process:**
+
+1. **Cut `v2.0.0-rc.1`** from `feature/plugin-migration-v2` once the implementation passes the §7 smoke test in a clean environment.
+2. **Dogfood for at least 3 days.** matheusslg installs it locally via the marketplace flow and uses it for daily work on `wf-system` itself (eat your own dog food — bug-fixing wf-system v2.0 *with* wf-system v2.0 is the highest-fidelity test).
+3. **Issues found → fix on the branch → cut `v2.0.0-rc.N+1`**.
+4. **Cut `v2.0.0`** after at least 24 hours of clean dogfooding on the latest RC with no new issues found.
+
+**Why not a longer beta period:** wf-system has effectively one user (matheusslg) plus an unknown small number of OSS users. A 2-week public beta would mostly be silence. 3-5 days of intense single-user dogfooding catches most real issues — anything that survives that is a long-tail bug a beta period wouldn't find either.
+
+**RC marketplace registration:** RCs are NOT added to `marketplace.json` on `main`. They live only on the feature branch. To install an RC, the user adds the marketplace from the feature branch ref:
+
+```bash
+/plugin marketplace add matheusslg/wf-system@feature/plugin-migration-v2
+/plugin install wf-core@wf-system
+```
+
+**§7 must verify** that `/plugin marketplace add` accepts a branch ref. If it doesn't, the dogfood path needs a different shape (local-path install, or tag-based marketplace add).
+
+### 6.4 — CHANGELOG.md entry
+
+```markdown
+## [2.0.0] - <date>
+
+### ⚠ BREAKING CHANGES
+
+- **install.sh removed.** wf-system is now distributed as a Claude Code plugin via
+  the official Plugins Marketplace. Users on v1.x must run the one-shot migration
+  helper before installing v2.0:
+
+      curl -fsSL https://raw.githubusercontent.com/matheusslg/wf-system/main/scripts/migrate-to-plugin.sh | bash
+
+  Then in Claude Code:
+
+      /plugin marketplace add matheusslg/wf-system
+      /plugin install wf-core@wf-system
+
+  Users who need to stay on v1.x can pin to the `v1.11.1-final-installer` tag.
+
+### Added
+
+- Claude Code plugin format support via `plugins/wf-core/.claude-plugin/plugin.json`
+- Marketplace registration via `.claude-plugin/marketplace.json`
+- Shared `wf-dev-pipeline` skill consolidating `/wf-implement`, `/wf-fix-bug`,
+  `/wf-improve` (~855 LOC removed; one source of truth)
+- `scripts/migrate-to-plugin.sh` one-shot migration helper for v1.x users
+- LICENSE file (MIT) — previously the README claimed MIT but no LICENSE existed
+- Cockpit-ready event log seam in `/wf-team-delegate` (off by default; reads
+  `cockpit.eventLog` from `workflow.json`)
+
+### Changed
+
+- Orchestrator hook bundled with plugin via `${CLAUDE_PLUGIN_ROOT}` (no more
+  `~/.claude/hooks/wf-orchestrator.py`)
+- README rewritten to lead with plugin install instructions
+- Hook state directory moved from `~/.claude/hooks/.wf-state/` to `~/.wf-state/`
+  (survives plugin reinstalls)
+- macOS sound playback in orchestrator gated behind `sys.platform == "darwin"`
+  (was silently failing on Linux/Windows)
+
+### Removed
+
+- `install.sh` (replaced by plugin marketplace install)
+- `templates/settings-hooks.json` (plugin format auto-loads `hooks/hooks.json`)
+- Version check subsystem in orchestrator hook (~50 LOC) — `/plugin update`
+  replaces this
+- Install-mode tracking files (`.wf-version`, `.wf-source`, `.wf-install-mode`,
+  `.wf-last-check`, `.wf-update-available`)
+
+### Fixed
+
+- **F1 drift bug**: Branch Safety check was missing in `/wf-fix-bug` and
+  `/wf-improve`. Now applied to all three modes via the shared skill.
+- **F1 drift bug**: GitHub issue update was missing in `/wf-improve`. Now applied
+  to all three modes.
+- **F1 drift bug**: error handlers (`Cannot Determine Agent`, `Agent Failed`) were
+  only in `/wf-fix-bug`. Now consolidated and applied to all three.
+- F9 audit finding: stale `/wf-init-project` references in install.sh removed
+  (command was renamed in v1.1.0)
+```
+
+**Migration instructions stay inline in CHANGELOG, no separate `MIGRATION.md`.** KISS — add a separate file only if v3.x or another big cutover demands it.
+
+### 6.5 — Release announcement plan
+
+| Surface | Action |
+|---|---|
+| `matheusslg/wf-system` README | Already covered in §4.5 |
+| `matheusslg/wf-system` GitHub release notes | Auto-derived from CHANGELOG entry + 2-paragraph intro |
+| `matheusslg/wf-system` repo description | Update tagline to mention "Claude Code plugin" |
+| Buy Me a Coffee profile | No change needed |
+| Social/professional channels | At user's discretion — not our problem |
+
+**The v2.0.0 GitHub release notes structure:**
+
+```
+# wf-system v2.0.0 — Plugin Migration
+
+Two-paragraph intro: what changed, why, and the headline benefits
+(opt-in plugin model, marketplace updates, shared dev pipeline).
+
+## What's new
+[Pull from CHANGELOG Added/Changed sections]
+
+## Migration
+[Link to migrate-to-plugin.sh + 1-paragraph summary]
+
+## Breaking changes
+[Pull from CHANGELOG BREAKING CHANGES section]
+
+## Acknowledgements
+N/A for v2.0 — single-maintainer release.
+```
+
+Manual `gh release create` from the cutover commit. No automated announcement.
+
+### 6.6 — Smoke test gate (pointer to §7)
+
+The release process gates v2.0.0 on §7's smoke test passing in a clean Claude Code environment. **No `v2.0.0` tag is cut until §7's smoke test passes on the most recent RC.**
+
+### 6.7 — Rollback plan
+
+**Two rollback layers:**
+
+**Layer 1 — User rollback (post-v2.0 release).** If a user installs v2.0 and hits issues:
+
+1. Restore from the migration helper's backup:
+   ```bash
+   cp -a ~/.claude/wf-system-backup-<ts>/* ~/.claude/
+   ```
+2. Uninstall the v2.0 plugin: `/plugin uninstall wf-core@wf-system`
+3. They're back to their pre-migration v1.x state.
+
+If the user did NOT use the migration helper backup (e.g., ran with `--no-backup`), they can clone the repo at the `v1.11.1-final-installer` tag and re-run `install.sh`.
+
+**Layer 2 — Maintainer rollback (post-v2.0 release).** If v2.0 has a critical issue affecting many users:
+
+1. Cut `v2.0.1` with a fix as quickly as possible (preferred).
+2. If `v2.0.1` isn't possible quickly: cut `v1.11.2` from `v1.11.1-final-installer` with the critical fix and tell users to install from that tag via `install.sh`. The `install.sh` is gone from `main` but lives in git history at `v1.11.1-final-installer`.
+
+**Documentation:** the rollback procedure for both layers is committed at `docs/v2.0-rollback.md` (~30 lines) and linked from the GitHub release notes.
+
+### 6.8 — Resolved decisions
+
+| Question | Resolution |
+|---|---|
+| Pre-release / RC versions before v2.0.0? | **Yes, at least one RC.** Mandatory ~3-day dogfood period before final tag. |
+| Migration helper tested against multiple historical install.sh versions? | **Smoke-test latest (v1.11.1) in detail; spot-check v1.5.0 and v1.0.0 by simulating their installed state.** §7 details. |
+| Long-lived branch vs many small PRs | **Long-lived `feature/plugin-migration-v2` branch.** |
+| Inline migration in CHANGELOG vs separate MIGRATION.md | **Inline in CHANGELOG.** KISS. |
+
+### 6.9 — Things flagged forward to §7
+
+1. **`/plugin marketplace add` from a branch ref:** assumed to work for RC dogfood. §7 verifies. If it doesn't, RC distribution needs a different shape.
+
+---
+
+## Section 7 — Testing & Validation (APPROVED)
+
+### 7.1 — Philosophy: manual smoke + targeted bash tests for the helper
+
+wf-system has no test suite by design — `standards.md` documents "Test commands manually in a test project" as the convention. v2.0 should not change that convention. Building a full automated test harness for Claude Code commands is scope creep, and the runtime is Claude Code itself, which doesn't have a clean fixture model.
+
+**The v2.0 testing strategy:**
+- **Manual smoke tests** for everything that runs *inside* Claude Code (commands, agents, hooks firing, marketplace install).
+- **Automated bash tests** ONLY for the migration helper, because it's pure bash mutating files — testable in isolation by overriding `$HOME`.
+- **No tests for the commands themselves.** Matches existing convention; revisit in v2.x if scale demands it.
+
+This is a deliberate undershoot of "industry best practice" in favor of matching the project's actual scale and maintainer bandwidth.
+
+### 7.2 — Five test categories (all must pass for v2.0.0)
+
+| # | Category | Type | Depth |
+|---|---|---|---|
+| 1 | Plugin format validation | Manual | High |
+| 2 | F1 dedup correctness | Manual | High |
+| 3 | Migration helper safety | Automated bash tests + manual dry-run review | Medium |
+| 4 | Orchestrator hook behavior parity | Manual | Medium |
+| 5 | End-to-end smoke test in fresh Claude Code | Manual | High |
+
+**All five must pass against the latest RC** before cutting `v2.0.0`. No partial-pass shipping.
+
+### 7.3 — Category 1: Plugin format validation
+
+**Goal:** confirm the plugin format actually works the way the docs claim, *for our specific shape* of plugin (Python hook script + auto-discovered commands + auto-discovered skills).
+
+| Test | How | Pass criterion |
+|---|---|---|
+| `${CLAUDE_PLUGIN_ROOT}` resolves to the correct path inside the Python hook | Add a one-line debug print at the top of `wf-orchestrator.py`: `print(f"ROOT={os.environ.get('CLAUDE_PLUGIN_ROOT', 'MISSING')}", file=sys.stderr)`. Install the plugin. Trigger any hook event. | The path printed matches the actual plugin directory (NOT `MISSING`). Remove the debug line before tagging. |
+| `hooks/hooks.json` PostToolUse hook fires | Trigger any tool use in Claude Code with the plugin installed. Watch for the orchestrator's behavior (e.g., context monitoring counter increments). | Hook visibly runs. |
+| `hooks/hooks.json` Stop hook fires | End a session in Claude Code. | Stop sound plays on macOS; orchestrator logs the session end. |
+| `commands/` auto-discovers all 30 wf commands | After plugin install, type `/wf-` in Claude Code and check the autocomplete list. | All ~30 commands present. |
+| `skills/wf-dev-pipeline/SKILL.md` is readable from a command | Run `/wf-implement "test feature"`. The shim should successfully Read the skill file via `${CLAUDE_PLUGIN_ROOT}/skills/wf-dev-pipeline/SKILL.md`. | Command runs without "file not found" error. |
+| Marketplace registration from a branch (for RC dogfood) | `/plugin marketplace add matheusslg/wf-system@feature/plugin-migration-v2` | Marketplace resolves and lists `wf-core`. **If this fails, document the workaround in §6.3.** |
+
+**The `${CLAUDE_PLUGIN_ROOT}` debug print is NON-OPTIONAL.** This is the riskiest unknown — if Claude Code doesn't propagate that env var to child processes spawned by hooks, the entire plugin breaks. Verify on day one of implementation before writing anything else.
+
+### 7.4 — Category 2: F1 dedup correctness
+
+**Goal:** confirm the shared skill behaves identically across all three modes (`feature`, `bug`, `improve`), with the drift bugs actually fixed.
+
+| Test | How | Pass criterion |
+|---|---|---|
+| Branch Safety enforced for all three modes | Create a test project. Check out `main`. Run `/wf-implement "x"`, `/wf-fix-bug "y"`, `/wf-improve "z"` in turn. | All three abort with the branch safety error and offer to create a feature branch. |
+| GitHub issue update fires for all three modes | Run each command against a real test issue (`gh issue create` first). | All three add a closing comment to the issue with the right title (`Feature Implemented` / `Bug Fixed` / `Improvement Complete`). |
+| Mode-specific verbs and prefixes | Check the progress.md entries and the suggested commit messages from each command. | Verbs/prefixes match the table in §2 (feature/Implement/feat:, bug/Fix/fix:, improve/Improve/improve:). |
+| Loop-back on CHANGES_REQUESTED | Force a reviewer agent to return CHANGES_REQUESTED. | Skill loops back to the developer agent for fixes, then re-runs review. |
+| Loop-back on QA FAILED | Force a QA agent to return FAILED. | Same loop-back behavior. |
+
+**This category is the highest-risk one** because the shared skill is the new single point of failure (flagged in §2). Test rigorously.
+
+### 7.5 — Category 3: Migration helper safety (automated bash tests)
+
+**Goal:** confirm the migration helper handles the realistic v1.x install states without surprises, and that idempotency + dry-run work.
+
+**Automated test fixtures live at `tests/migration/`** in the repo:
+
+```
+tests/migration/
+├── run-tests.sh                # entry point
+├── fixtures/
+│   ├── v1.0.0-fresh-install/   # snapshot of what install.sh produces on v1.0.0
+│   ├── v1.5.0-fresh-install/
+│   ├── v1.11.1-fresh-install/
+│   └── never-installed/        # empty .claude/ dir
+└── assertions.sh                # shared assertion helpers
+```
+
+Each fixture is a directory tree mirroring `~/.claude/` after a hypothetical `install.sh` run from that version. Hand-written placeholder files matching what install.sh would produce. These fixtures are checked into the repo since they're tiny (~5 KB each) and stable.
+
+**Test cases:**
+
+| Test | How |
+|---|---|
+| Migrate v1.11.1 fresh install | `tmpdir=$(mktemp -d); cp -r tests/migration/fixtures/v1.11.1-fresh-install/* $tmpdir/.claude/; HOME=$tmpdir bash scripts/migrate-to-plugin.sh --no-backup; assert all v1.x files removed; assert settings.json no longer contains wf-orchestrator references` |
+| Migrate v1.5.0 fresh install | Same shape, different fixture. Specifically asserts no error on missing brain files (brain wasn't installed until v1.9.0). |
+| Migrate v1.0.0 fresh install | Same shape. |
+| Migrate never-installed system | Empty `.claude/`. Assert script exits cleanly with "no wf-system installation detected" message and zero filesystem changes. |
+| Idempotency | Run migration twice on the same fixture. Assert second run is a no-op. |
+| Dry-run does not mutate | `bash scripts/migrate-to-plugin.sh --dry-run`; assert ALL fixture files still present afterward. |
+| Settings.json surgery preserves user hooks | Fixture with a `settings.json` containing both wf-orchestrator hooks AND a user-defined hook for some other tool. Assert the user hook survives migration. |
+
+**`run-tests.sh` runs all of these, prints pass/fail per test, exits non-zero on any failure.** Called manually as part of the release process.
+
+**Manual dry-run review (in addition to automated tests):**
+
+Run `bash scripts/migrate-to-plugin.sh --dry-run` against the maintainer's actual `~/.claude/` and eyeball the output. Automated tests catch correctness; manual review catches "the output is confusing" or "the next-steps message is unclear" UX bugs.
+
+### 7.6 — Category 4: Orchestrator hook behavior parity
+
+**Goal:** confirm the orchestrator hook does the same things post-migration as it did pre-migration. We're not adding behaviors (those are §1-3 changes); we're verifying nothing regressed.
+
+| Test | How | Pass criterion |
+|---|---|---|
+| Context monitoring still triggers at 75% / 90% | Run a long Claude Code session until context approaches 75%. | Soft warning fires; at 90% the critical warning fires. |
+| WIP detection still works | Create a git WIP state in a project workflow. End a session. | Stop hook detects WIP and behaves the same as pre-migration. |
+| Brain search no-op when brain not installed | Default v2.0 state (no brain). Trigger any command. | `_brain_search()` no-ops silently; no error. |
+| Stop sound on macOS | End a session on macOS. | Sound plays. |
+| Stop sound silenced on Linux | (If user has Linux, otherwise skip) End a session. | NO error; sound silently skipped. |
+| Hook state directory at new location | Trigger any hook event. Check that `~/.wf-state/` is created (not `~/.claude/hooks/.wf-state/`). | New location used. |
+| Workflow.json discovery still walks 3 parent dirs | Run a command from a deeply nested subdirectory of a wf project. | Hook finds workflow.json. |
+
+**No comparison harness** — these are eyeball checks against expected behavior. wf-system never had hook regression tests pre-v2.0; we're not introducing them now.
+
+### 7.7 — Category 5: End-to-end smoke test in fresh Claude Code
+
+**Goal:** the user-facing acceptance test. From zero state to a complete daily workflow loop.
+
+**Test script (manual, run once per RC):**
+
+```
+1. Open a fresh Claude Code (no wf-system installed)
+2. /plugin marketplace add matheusslg/wf-system
+   → Marketplace registers
+3. /plugin install wf-core@wf-system
+   → Installation completes; restart prompt appears
+4. Restart Claude Code
+5. cd ~/wf-system-test-project && claude
+6. /wf-init
+   → Creates .claude/workflow.json
+7. /wf-start-session
+   → Logs session start; orchestrator hook fires
+8. /wf-implement "Add a hello-world endpoint"
+   → Branch safety check (creates feature branch)
+   → Spawns developer agent
+   → Spawns reviewer agent
+   → Spawns QA agent
+   → Updates progress.md
+9. /wf-commit
+   → Creates a feat: commit
+10. /wf-end-session
+    → Closes session; Stop hook fires; sound plays (macOS)
+11. /plugin uninstall wf-core@wf-system
+    → Cleanly uninstalls
+12. rm -rf ~/wf-system-test-project
+```
+
+**Pass criterion:** every step completes without errors. Expected output at each step is documented in a `tests/smoke/v2.0-smoke-test.md` file (a manual checklist).
+
+**Test project location:** `~/wf-system-test-project/` (gitignored, throwaway, recreated on each smoke test). NOT checked into the repo.
+
+**Hello-world endpoint complexity:** intentionally trivial. The point isn't to test the dev pipeline's robustness — it's to test that the install → run → commit → uninstall loop works end-to-end. A trivial feature catches "does the loop run at all?" without confusing test failures with implementation bugs.
+
+### 7.8 — Test artifact location summary
+
+| Artifact | Path | Tracked in git? |
+|---|---|---|
+| Migration helper bash test runner | `tests/migration/run-tests.sh` | Yes |
+| Migration helper fixtures (v1.0.0, v1.5.0, v1.11.1, never-installed) | `tests/migration/fixtures/*/` | Yes |
+| Migration helper assertion helpers | `tests/migration/assertions.sh` | Yes |
+| Manual smoke test checklist | `tests/smoke/v2.0-smoke-test.md` | Yes |
+| Smoke test project | `~/wf-system-test-project/` | No (throwaway) |
+
+Total new files: ~10. Total LOC: ~300 (mostly fixture files, which are tiny).
+
+### 7.9 — Shippability bar for v2.0.0
+
+| Gate | Required to ship? |
+|---|---|
+| Category 1 (Plugin format) | **Yes** — any failure blocks |
+| Category 2 (F1 dedup) | **Yes** — any failure blocks |
+| Category 3 (Migration helper, automated tests) | **Yes** — `tests/migration/run-tests.sh` exits 0 |
+| Category 4 (Hook parity) | **Yes** — any failure blocks |
+| Category 5 (End-to-end smoke) | **Yes** — every step must pass |
+
+**No partial pass.** All five categories. The cost of a buggy v2.0 (angry users, rollback churn, reputation hit) is high; the cost of one extra day of manual testing is low.
+
+### 7.10 — Resolved decisions
+
+| Question | Resolution |
+|---|---|
+| Minimum bar for shippability | **All 5 categories must pass.** No partial-ship. |
+| Manual or scripted | **Both, scoped per category.** Automated for the migration helper (testable in isolation); manual for everything that runs inside Claude Code. |
+| Where test projects live | **Migration fixtures: tracked at `tests/migration/fixtures/`. Smoke test project: throwaway at `~/wf-system-test-project/`.** |
+| Beta testers vs self-test | **Self-test only.** RC dogfood by maintainer for 3-5 days catches the realistic failure modes. No formal beta program. |
+
+### 7.11 — Out of scope for v2.0
+
+1. **No CI integration.** wf-system has no CI today; v2.0 doesn't introduce one. Tests run manually as part of the release process.
+2. **No regression test harness for the commands themselves.** The migration helper is the only thing getting automated tests because it's the only thing that's testable in isolation.
+3. **No visual / UX testing of the cockpit event log seam.** It's off by default, ships unused. v2.3+ adds the cockpit and tests it then.
+4. **No tests for the brain (`wf-brain`).** Deferred to v2.1.
+5. **No load / performance tests.** wf-system has no performance budget today.
+
+### 7.12 — Things flagged
+
+1. **The fixture-creation step is actual work.** Hand-writing v1.0.0/v1.5.0/v1.11.1 fixture trees requires reading the install.sh history. Implementation will need to spend ~1 hour producing these. Flagged but not a design risk.
+2. **`tests/migration/fixtures/v1.0.0-fresh-install/` accuracy depends on what install.sh actually produced in v1.0.0.** Trusting the v1.0.0 git history rather than testing against an actual v1.0.0 install. If a discrepancy is found later, fixture gets updated.
+
+---
+
+## Risks & mitigations
 
 | Risk | Mitigation |
 |---|---|
-| Plugin hooks event support is limited and Stop/PostToolUse don't actually work | Verified in docs; smoke test before declaring v2.0 done |
-| `${CLAUDE_PLUGIN_ROOT}` doesn't propagate to Python script invocations | Smoke test by adding `print(os.environ.get("CLAUDE_PLUGIN_ROOT"))` in the hook on first invocation |
-| Migration script breaks user-customized `~/.claude/settings.json` | jq surgery + dry-run mode + backup before deletion |
-| The shared skill becomes a single point of failure for /wf-implement /wf-fix-bug /wf-improve | Section 7 testing strategy must validate all three modes |
-| Marketplace.json schema differs from what Section 3.5.2 assumes | Verify schema in Section 4 implementation; adjust if needed |
-| v2.0 ships without ever validating end-to-end on a clean install | Section 7 smoke test is mandatory |
-| Brain integration in orchestrator hook breaks in M1 (because brain isn't installed) | Already gracefully no-ops at line 322; no action needed for v2.0 |
+| Plugin hooks event support is limited and Stop/PostToolUse don't actually work | Verified in docs; §7 Category 1 smoke-tests both events on a real install before v2.0 ships |
+| `${CLAUDE_PLUGIN_ROOT}` doesn't propagate to Python script invocations | §7 Category 1 mandates the debug-print verification on day one of implementation, BEFORE writing anything else |
+| Migration script breaks user-customized `~/.claude/settings.json` | §5.4 jq surgery + §5.6 dry-run mode + §5.2 backup-by-default; §7 Category 3 has a dedicated test fixture for this case |
+| The shared skill becomes a single point of failure for /wf-implement /wf-fix-bug /wf-improve | §7 Category 2 explicitly validates all three modes against a real test project |
+| Marketplace.json schema turns out different from what §4.2 assumes | §4 was grounded in context7 fetch of the official schema; re-verify in §7 Category 1 marketplace registration test |
+| v2.0 ships without ever validating end-to-end on a clean install | §7 Category 5 (end-to-end smoke test) is a mandatory shippability gate |
+| Brain integration in orchestrator hook breaks in M1 (because brain isn't installed) | Already gracefully no-ops at line 322; §7 Category 4 verifies this with the "brain search no-op" test |
+| `/plugin marketplace add @branch-ref` may not work for RC dogfood | §7 Category 1 verifies; if it fails, §6.3 needs an alternative RC distribution strategy |
 | "Drop progress.md" is acted on prematurely without resolving the concerns above | Recorded in deferred list with explicit "concerns to address first" note |
 
 ---
 
 ## What was NOT decided in this brainstorming session
 
-Listed for the next session's awareness:
+Items that intentionally remain out of scope for v2.0 (each has a specified deferral target):
 
-1. The actual JSON content of `plugin.json` and `marketplace.json` (Section 4)
-2. The migration helper script content (Section 5)
-3. Branch / version / CHANGELOG strategy (Section 6)
-4. Testing strategy and shippability bar (Section 7)
-5. Whether to introduce automated tests as part of v2.0 or defer
-6. The wf-brain plugin's exact boundary (deferred to v2.1 brainstorming)
-7. The wf-design plugin's exact boundary (deferred to v2.2 brainstorming)
-8. The wf-cockpit's data-source feasibility (deferred to Project A brainstorming)
-9. Whether the `commands` field in plugin.json auto-discovers or needs explicit paths
-10. Whether `requires` field exists for inter-plugin dependencies
+1. The wf-brain plugin's exact boundary — deferred to v2.1 brainstorming
+2. The wf-design plugin's exact boundary — deferred to v2.2 brainstorming
+3. The wf-cockpit's data-source feasibility — deferred to Project A brainstorming (the cockpit-ready event log seam is in place from §3.5.3)
+4. The wf-delegate vs wf-team-delegate duplication audit — deferred to v2.x post-v2.0
+5. The wf-brain mandatory + progress.md retirement question — deferred to v3.x with explicit concerns documented in the deferred items list
 
 ---
 
@@ -570,26 +1120,12 @@ The user is matheusslg / Matheus Cavallini, working on multiple professional pro
 
 ---
 
-## For the next Claude Code session continuing this work
+## Next steps after this spec
 
-**Your immediate next steps:**
+1. **User reviews the spec** as a whole (asked for explicitly after this commit).
+2. **Invoke the `writing-plans` skill** to produce a detailed implementation plan from this spec.
+3. **Ticket creation** (one ticket per item in the deferred list, against `matheusslg/wf-system`) happens AFTER the implementation plan exists. Use `gh issue create` directly — the github MCP server is disconnected in the user's environment.
+4. **Implementation work** happens on the `feature/plugin-migration-v2` branch (NOT this spec branch) per §6.1.
+5. **Cutover PR** merges both `docs/plugin-migration-spec` and `feature/plugin-migration-v2` into `main` as a single merge commit.
 
-1. Read this entire spec start to finish before doing anything.
-2. Read the audit at `docs/2026-04-07-system-audit.md` for context.
-3. Resume the brainstorming flow at Section 4 (Plugin & Marketplace Manifests).
-4. Use the `superpowers:brainstorming` skill if not already loaded.
-5. Present each remaining section (4, 5, 6, 7) one at a time, asking for user approval after each — same pattern as Sections 1-3.5 in this conversation.
-6. When approval lands for all sections, run the spec self-review pass (placeholder scan, internal consistency, scope check, ambiguity check). Update this spec inline.
-7. Ask the user to review the updated spec.
-8. After spec approval, invoke the `writing-plans` skill to create the implementation plan.
-9. Ticket creation (one ticket per item in the deferred list) happens AFTER the implementation plan exists. Use `gh issue create` against `matheusslg/wf-system` directly (the github MCP server is disconnected in this user's environment per a system reminder). Each ticket should reference back to the spec section it came from.
-
-**What you should NOT do:**
-
-1. Re-litigate decisions from Sections 1-3.5. They're settled. If you genuinely think one is wrong, raise it as a flag — don't silently change it.
-2. Spawn multiple parallel agents to "speed up" the remaining sections. Each section needs human approval; parallel work creates merge conflicts.
-3. Start implementation. The brainstorming flow ends with `writing-plans`, not with code changes.
-4. Create GitHub tickets before spec approval.
-5. Push to remote or merge to main. The user must explicitly authorize these.
-
-**Branch context:** this spec was written on the `docs/plugin-migration-spec` branch. Continue work on the same branch unless the user says otherwise.
+**Branch context:** this spec lives on `docs/plugin-migration-spec`. The cutover PR will bring both this branch and the implementation branch into `main` together.
