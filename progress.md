@@ -4,8 +4,47 @@
 > **Keep this file under 400 lines** - archive old sessions to `.claude/session-archive/`
 
 ## Current Status
-**Phase**: wf-brain Implementation (3/10 tasks done)
-**Last Updated**: 2026-03-12
+**Phase**: Plugin Migration v2.0 — Spec complete (awaiting user review)
+**Last Updated**: 2026-04-07
+
+---
+
+### Session 18 (2026-04-07)
+**Focus**: wf-system plugin migration brainstorming — full design spec
+**Completed**:
+- [x] Researched Claude Code Plugins Marketplace format via context7 (resolved 4 open questions about manifest schema)
+- [x] Brainstormed and approved 7-section design spec for v2.0 plugin migration:
+  - §1 Plugin architecture & boundaries (wf-core only in v2.0)
+  - §2 F1 dedup mechanism (shared `wf-dev-pipeline` skill + 3 thin shims, ~855 LOC removed, 3 drift bugs fixed)
+  - §3 Orchestrator hook bundling via `${CLAUDE_PLUGIN_ROOT}` (~100 LOC removed)
+  - §3.5 wf-team-* commands stay almost unchanged + cockpit-ready event log seam
+  - §4 Plugin & marketplace manifests (full JSON content for both files)
+  - §5 Migration helper script (`scripts/migrate-to-plugin.sh`, bash + jq, backup-by-default)
+  - §6 Release process (RC strategy, tags, CHANGELOG draft, rollback plan)
+  - §7 Testing & validation (5 categories, all gating v2.0.0)
+- [x] Two self-review passes; fixed contradictions and stale forward-references
+- [x] Spec committed to `docs/superpowers/specs/2026-04-07-wf-system-plugin-migration-design.md`
+**In Progress**:
+- [ ] User review of the completed spec
+- [ ] After approval: invoke writing-plans skill to produce implementation plan
+**Commits (wf-system, branch: docs/plugin-migration-spec)**:
+- `42a8d50` - docs: add plugin migration design spec (v2.0, draft sections 1-3.5)
+- `5ee28ef` - docs: complete plugin migration spec with sections 4-7
+**Blockers**: None
+**Decisions**:
+- M1 release scope: v2.0 ships `wf-core` plugin only. wf-brain → v2.1, wf-design → v2.2, wf-cockpit → v2.3+
+- Hard cutover from install.sh (no parallel install paths); migration helper script as the safety net
+- F1 dedup is required for v2.0 (forces clean plugin boundary + fixes 3 drift bugs in /wf-fix-bug and /wf-improve)
+- wf-brain implementation (paused since 2026-03-12, 3/10 tasks) gets resumed under the v2.1 plugin scope
+- All 5 §7 testing categories must pass to ship v2.0.0 (no partial-pass)
+- RC dogfood mandatory (≥3 days on `v2.0.0-rc.1` before final tag)
+- Marketplace name is `wf-system` (kebab-case); `matheusslg/wf-system` is only the github repo path
+- LICENSE file added to repo as part of v2.0 (README claimed MIT but no LICENSE existed — defect fix)
+**Next**:
+1. User reviews the spec at `docs/superpowers/specs/2026-04-07-wf-system-plugin-migration-design.md`
+2. Invoke writing-plans skill to produce v2.0 implementation plan
+3. Create `gh issue` tickets against `matheusslg/wf-system` for deferred items (one per row in the deferred items list)
+4. Begin implementation on a new `feature/plugin-migration-v2` branch
 
 ---
 
@@ -370,13 +409,15 @@
 > Keep only the last 5 sessions in this file for AI readability.
 
 ## In Progress
-- None
+- Plugin migration v2.0 spec — written and committed on `docs/plugin-migration-spec`, awaiting user review
 
 ## Next Session Should
-- [ ] Improve Ralph logging visibility (stream Claude output in real-time)
-- [ ] Test Ralph with a more complex ticket requiring `/wf-breakdown`
-- [ ] Test `/wf-delegate --parallel` with real parallel tasks
-- [ ] Consider adding Jira comment with PR link (currently only logs)
+- [ ] User reviews the v2.0 plugin migration spec
+- [ ] Invoke writing-plans skill on the approved spec
+- [ ] Create `gh issue` tickets for items in the deferred list (wf-brain v2.1, wf-design v2.2, wf-cockpit v2.3+, wf-delegate vs wf-team-delegate audit, wf-brain mandatory + progress.md retirement v3.x)
+- [ ] Begin implementation on `feature/plugin-migration-v2` branch
+- [ ] (carry-over) Improve Ralph logging visibility (stream Claude output in real-time)
+- [ ] (carry-over) Test `/wf-delegate --parallel` with real parallel tasks
 
 ## Decisions Made
 - Tech stack: Shell (Bash), Python, Markdown, Git/GitHub
