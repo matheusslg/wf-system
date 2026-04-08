@@ -70,4 +70,30 @@ test_migrate_v1_11_1_project() {
 
 run_test "migrate v1.11.1 project" test_migrate_v1_11_1_project
 
+test_dry_run_no_mutation() {
+  local tmp
+  tmp=$(mktemp -d)
+  trap "rm -rf $tmp" RETURN
+
+  cp -a "$FIXTURES/v1.11.1-fresh-install/.claude" "$tmp/"
+
+  local before_count
+  before_count=$(find "$tmp/.claude" -type f | wc -l)
+
+  HOME="$tmp" bash "$HELPER" --dry-run --yes >/dev/null 2>&1
+
+  local after_count
+  after_count=$(find "$tmp/.claude" -type f | wc -l)
+
+  if [[ "$before_count" -eq "$after_count" ]]; then
+    echo "  pass: dry-run mutated no files ($before_count → $after_count)"
+    _TESTS_PASSED=$((_TESTS_PASSED + 1))
+  else
+    echo "  FAIL: dry-run mutated files ($before_count → $after_count)"
+    _TESTS_FAILED=$((_TESTS_FAILED + 1))
+  fi
+}
+
+run_test "dry-run no mutation" test_dry_run_no_mutation
+
 print_summary
