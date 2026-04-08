@@ -4,6 +4,18 @@
 
 set -eu
 
+if ! command -v jq >/dev/null 2>&1; then
+  cat <<EOF >&2
+ERROR: jq is required for safe settings.json migration.
+Install it first:
+  macOS:  brew install jq
+  Debian: apt install jq
+  Fedora: dnf install jq
+Then re-run this script.
+EOF
+  exit 3
+fi
+
 DRY_RUN=0
 DO_BACKUP=1
 PROJECT_PATH=""
@@ -160,10 +172,43 @@ done
 echo "      Removed $CMD_COUNT commands, $HOOK_COUNT hook artifacts, $BRAIN_COUNT brain components"
 
 # ------------------------------------------------------------------
-# Phase 3: prune settings.json (stubbed in Task 21 — implemented next)
+# Phase 3: prune wf-orchestrator entries from settings.json
 # ------------------------------------------------------------------
 echo "[4/5] Pruning wf-system hooks from $CLAUDE_DIR/settings.json..."
-# ... implemented in Task 21
+
+SETTINGS="$CLAUDE_DIR/settings.json"
+
+if [[ ! -f "$SETTINGS" ]]; then
+  echo "      (no settings.json — nothing to prune)"
+else
+  PRUNED=0
+  if grep -q "wf-orchestrator" "$SETTINGS"; then
+    PRUNED=1
+  fi
+
+  if [[ $PRUNED -eq 1 ]] && [[ $DRY_RUN -eq 0 ]]; then
+    TMP="${SETTINGS}.tmp"
+    jq '
+      .hooks |= (
+        if . == null then null
+        else
+          with_entries(
+            .value |= (
+              map(.hooks |= map(select(.command | test("wf-orchestrator") | not)))
+              | map(select(.hooks | length > 0))
+            )
+          )
+        end
+      )
+    ' "$SETTINGS" > "$TMP"
+    mv "$TMP" "$SETTINGS"
+    echo "      Pruned wf-orchestrator hook entries"
+  elif [[ $PRUNED -eq 1 ]]; then
+    echo "      [dry-run] would prune wf-orchestrator hook entries"
+  else
+    echo "      (no wf-orchestrator hook entries found)"
+  fi
+fi
 
 echo "[5/5] Migration complete."
 if [[ -n "$BACKUP_DIR" ]]; then
