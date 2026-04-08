@@ -50,4 +50,24 @@ test_migrate_v1_11_1_global() {
 
 run_test "migrate v1.11.1 global" test_migrate_v1_11_1_global
 
+test_migrate_v1_11_1_project() {
+  local tmp
+  tmp=$(mktemp -d)
+  trap "rm -rf $tmp" RETURN
+
+  cp -a "$FIXTURES/v1.11.1-project-install/project" "$tmp/proj"
+
+  HOME="$tmp" bash "$HELPER" --no-backup --yes --project "$tmp/proj" >/dev/null 2>&1 || {
+    echo "  FAIL: migrate-to-plugin.sh --project exited non-zero"
+    _TESTS_FAILED=$((_TESTS_FAILED + 1))
+    return 1
+  }
+
+  assert_file_absent "$tmp/proj/.claude/commands/wf-implement.md"
+  assert_file_absent "$tmp/proj/.claude/commands/wf-fix-bug.md"
+  assert_file_absent "$tmp/proj/.claude/commands/wf-commit.md"
+}
+
+run_test "migrate v1.11.1 project" test_migrate_v1_11_1_project
+
 print_summary

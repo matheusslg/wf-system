@@ -68,6 +68,38 @@ detect_install() {
   return 1
 }
 
+# ------------------------------------------------------------------
+# Project-local install path
+# ------------------------------------------------------------------
+if [[ -n "$PROJECT_PATH" ]]; then
+  PROJ_CLAUDE="$PROJECT_PATH/.claude"
+  if [[ ! -d "$PROJ_CLAUDE/commands" ]]; then
+    echo "No wf-system commands found at $PROJ_CLAUDE/commands — nothing to do"
+  else
+    echo "[project] Removing wf-* commands from $PROJ_CLAUDE/commands..."
+    COUNT=0
+    for cmd in wf-ai-qa wf-brain-review wf-breakdown wf-commit wf-create-agent \
+               wf-create-prd wf-create-ticket wf-debug wf-delegate wf-design-setup \
+               wf-e2e wf-end-session wf-fix-bug wf-generate wf-implement wf-improve \
+               wf-init wf-investigate wf-match-figma wf-overview wf-parse-prd \
+               wf-pick-issue wf-pr-comments wf-pre-prod-review wf-qa-plan wf-refactor \
+               wf-review wf-start-session wf-team-delegate wf-team-review wf-test \
+               wf-ticket-status wf-update; do
+      target="$PROJ_CLAUDE/commands/$cmd.md"
+      if [[ -e "$target" ]]; then
+        [[ $DRY_RUN -eq 0 ]] && rm -f "$target"
+        COUNT=$((COUNT + 1))
+      fi
+    done
+    echo "[project] Removed $COUNT wf-* commands"
+  fi
+
+  if [[ $INCLUDE_GLOBAL -eq 0 ]]; then
+    echo "[project] Done. Run with --include-global to also migrate ~/.claude"
+    exit 0
+  fi
+fi
+
 if [[ -z "$PROJECT_PATH" ]] || [[ $INCLUDE_GLOBAL -eq 1 ]]; then
   if ! detect_install; then
     echo "[1/5] No wf-system global installation detected."
