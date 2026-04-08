@@ -96,4 +96,24 @@ test_dry_run_no_mutation() {
 
 run_test "dry-run no mutation" test_dry_run_no_mutation
 
+test_idempotent() {
+  local tmp
+  tmp=$(mktemp -d)
+  trap "rm -rf $tmp" RETURN
+
+  cp -a "$FIXTURES/v1.11.1-fresh-install/.claude" "$tmp/"
+
+  HOME="$tmp" bash "$HELPER" --no-backup --yes >/dev/null 2>&1
+  # Second run
+  if HOME="$tmp" bash "$HELPER" --no-backup --yes >/dev/null 2>&1; then
+    echo "  pass: second run exits 0 (idempotent)"
+    _TESTS_PASSED=$((_TESTS_PASSED + 1))
+  else
+    echo "  FAIL: second run exited non-zero (not idempotent)"
+    _TESTS_FAILED=$((_TESTS_FAILED + 1))
+  fi
+}
+
+run_test "idempotency" test_idempotent
+
 print_summary
