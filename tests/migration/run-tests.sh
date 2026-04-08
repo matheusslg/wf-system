@@ -116,4 +116,19 @@ test_idempotent() {
 
 run_test "idempotency" test_idempotent
 
+test_user_hook_preserved() {
+  local tmp
+  tmp=$(mktemp -d)
+  trap "rm -rf $tmp" RETURN
+
+  cp -a "$FIXTURES/v1.11.1-user-hook/.claude" "$tmp/"
+
+  HOME="$tmp" bash "$HELPER" --no-backup --yes >/dev/null 2>&1
+
+  assert_settings_no_wf_hook "$tmp/.claude/settings.json"
+  assert_settings_contains "$tmp/.claude/settings.json" "user-defined hook"
+}
+
+run_test "user hook preserved" test_user_hook_preserved
+
 print_summary
