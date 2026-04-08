@@ -102,10 +102,62 @@ else
 fi
 
 # ------------------------------------------------------------------
-# Phase 2: remove wf-system files (stubbed in Task 20 — implemented next)
+# Phase 2: remove wf-system files (global install case)
 # ------------------------------------------------------------------
 echo "[3/5] Removing wf-system files from $CLAUDE_DIR..."
-# ... implemented in Task 20
+
+WF_COMMANDS=(
+  wf-ai-qa wf-brain-review wf-breakdown wf-commit wf-create-agent
+  wf-create-prd wf-create-ticket wf-debug wf-delegate wf-design-setup
+  wf-e2e wf-end-session wf-fix-bug wf-generate wf-implement wf-improve
+  wf-init wf-investigate wf-match-figma wf-overview wf-parse-prd
+  wf-pick-issue wf-pr-comments wf-pre-prod-review wf-qa-plan wf-refactor
+  wf-review wf-start-session wf-team-delegate wf-team-review wf-test
+  wf-ticket-status wf-update
+)
+
+CMD_COUNT=0
+for cmd in "${WF_COMMANDS[@]}"; do
+  target="$CLAUDE_DIR/commands/$cmd.md"
+  if [[ -e "$target" ]]; then
+    if [[ $DRY_RUN -eq 0 ]]; then
+      rm -f "$target"
+    fi
+    CMD_COUNT=$((CMD_COUNT + 1))
+  fi
+done
+
+HOOK_COUNT=0
+for path in \
+  "$CLAUDE_DIR/hooks/wf-orchestrator.py" \
+  "$CLAUDE_DIR/hooks/.wf-version" \
+  "$CLAUDE_DIR/hooks/.wf-source" \
+  "$CLAUDE_DIR/hooks/.wf-install-mode" \
+  "$CLAUDE_DIR/hooks/.wf-last-check" \
+  "$CLAUDE_DIR/hooks/.wf-update-available"; do
+  if [[ -e "$path" ]]; then
+    [[ $DRY_RUN -eq 0 ]] && rm -f "$path"
+    HOOK_COUNT=$((HOOK_COUNT + 1))
+  fi
+done
+
+if [[ -d "$CLAUDE_DIR/hooks/.wf-state" ]]; then
+  [[ $DRY_RUN -eq 0 ]] && rm -rf "$CLAUDE_DIR/hooks/.wf-state"
+  HOOK_COUNT=$((HOOK_COUNT + 1))
+fi
+
+BRAIN_COUNT=0
+for path in \
+  "$CLAUDE_DIR/scripts/wf-brain.js" \
+  "$CLAUDE_DIR/scripts/wf-brain" \
+  "$CLAUDE_DIR/mcp-servers/wf-brain"; do
+  if [[ -e "$path" ]]; then
+    [[ $DRY_RUN -eq 0 ]] && rm -rf "$path"
+    BRAIN_COUNT=$((BRAIN_COUNT + 1))
+  fi
+done
+
+echo "      Removed $CMD_COUNT commands, $HOOK_COUNT hook artifacts, $BRAIN_COUNT brain components"
 
 # ------------------------------------------------------------------
 # Phase 3: prune settings.json (stubbed in Task 21 — implemented next)
