@@ -170,4 +170,33 @@ test_migrate_v1_0_0_minimal() {
 run_test "migrate v1.5.0 (no brain)" test_migrate_v1_5_0_no_brain
 run_test "migrate v1.0.0 (minimal)" test_migrate_v1_0_0_minimal
 
+test_never_installed_noop() {
+  local tmp
+  tmp=$(mktemp -d)
+  trap "rm -rf $tmp" RETURN
+
+  cp -a "$FIXTURES/never-installed/.claude" "$tmp/"
+  local before
+  before=$(find "$tmp/.claude" -type f | wc -l)
+
+  HOME="$tmp" bash "$HELPER" --no-backup --yes >/dev/null 2>&1 || {
+    echo "  FAIL: helper exited non-zero on never-installed fixture"
+    _TESTS_FAILED=$((_TESTS_FAILED + 1))
+    return 1
+  }
+
+  local after
+  after=$(find "$tmp/.claude" -type f | wc -l)
+
+  if [[ "$before" -eq "$after" ]]; then
+    echo "  pass: never-installed fixture untouched"
+    _TESTS_PASSED=$((_TESTS_PASSED + 1))
+  else
+    echo "  FAIL: helper mutated a never-installed fixture"
+    _TESTS_FAILED=$((_TESTS_FAILED + 1))
+  fi
+}
+
+run_test "never-installed no-op" test_never_installed_noop
+
 print_summary
