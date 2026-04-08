@@ -4,8 +4,43 @@
 > **Keep this file under 400 lines** - archive old sessions to `.claude/session-archive/`
 
 ## Current Status
-**Phase**: Plugin Migration v2.0 — Spec complete (awaiting user review)
-**Last Updated**: 2026-04-07
+**Phase**: Plugin Migration v2.0 — Implementation plan complete, Task 1 (CLAUDE_PLUGIN_ROOT probe) scaffolded, awaiting user to run probe in a second Claude Code session
+**Last Updated**: 2026-04-08
+
+---
+
+### Session 19 (2026-04-08)
+**Focus**: wf-system plugin migration — spec approval, implementation plan, execution kickoff
+**Completed**:
+- [x] Committed system audit (`3ee792c`) that the spec references, fixing the broken inline link
+- [x] Wrote complete implementation plan at `docs/superpowers/plans/2026-04-08-wf-system-plugin-migration-v2.md` (2,990 lines, 35 tasks across 6 phases)
+  - Phase A: pre-flight + scaffolding (Tasks 1-4)
+  - Phase B: plugin content migration (Tasks 5-10)
+  - Phase C: F1 dedup — wf-dev-pipeline skill + 3 shims + cockpit event-log seam (Tasks 11-15)
+  - Phase D: migration helper with strict TDD (Tasks 16-27, 12 tasks with 5 fixtures)
+  - Phase E: cleanup + docs + release infrastructure (Tasks 28-33)
+  - Phase F: RC + v2.0.0 release + cutover PR (Tasks 34-35)
+- [x] Self-reviewed the plan inline (spec coverage table mapping every §1-§7 section to a task; placeholder scan clean; naming consistency verified; KISS sanity check passed)
+- [x] Started execution via `superpowers:subagent-driven-development` skill
+- [x] Registered all 35 tasks in TaskCreate for tracking
+- [x] **Task 1 scaffolded**: Created `~/wf-plugin-probe/` throwaway plugin + marketplace (4 files: plugin.json, hooks.json, probe.py, marketplace.json). All JSON validated. Probe is written so it logs to both stderr AND `/tmp/wf-plugin-probe.log` for post-session inspection.
+**In Progress**:
+- [ ] **Task 1 (day-one blocker)**: user needs to open a second Claude Code session, run `/plugin marketplace add ~/wf-plugin-probe-marketplace` + `/plugin install wf-plugin-probe@wf-plugin-probe`, trigger any tool use, and report the contents of `/tmp/wf-plugin-probe.log`. If it says `CLAUDE_PLUGIN_ROOT=<path>`, the plan is viable. If it says `MISSING`, the whole v2.0 plan is blocked.
+- [ ] Tasks 2-35 are pending, all tracked in TaskList
+**Commits (wf-system, branch: docs/plugin-migration-spec)**:
+- `3ee792c` - docs: add system audit informing plugin migration spec
+- `6f82faa` - docs(v2): add plugin migration implementation plan
+**Blockers**: Task 1 verification (human-in-the-loop, pending user action in a fresh Claude Code session)
+**Decisions**:
+- Execution strategy: subagent-driven (fresh subagent per task, two-stage review after each) — chosen over inline executing-plans because 35 tasks would chew through a single-session context
+- Honoring spec §6.1 branch strategy: long-lived `feature/plugin-migration-v2` branch created in Task 2, NOT a git worktree (even though subagent-driven-development skill suggests worktrees)
+- Probe plugin lives OUTSIDE the repo (`~/wf-plugin-probe/`, fully throwaway) to isolate the env-var verification from any wf-system bugs
+- Probe logs to `/tmp/wf-plugin-probe.log` as well as stderr so verification can happen in a separate Claude Code session without losing the output
+**Next**:
+1. User runs the probe in a second Claude Code session and reports the log contents
+2. If PASS: proceed with Task 2 (create `feature/plugin-migration-v2` branch, tag `v1.11.1-final-installer` from origin/main, scaffold plugin directory tree)
+3. Tasks 3-35 follow per the plan, mostly dispatched to implementation subagents with per-task spec-review + code-quality-review gates
+4. Human-in-the-loop at Task 10 (plugin install smoke test), Task 34 (RC smoke test gate), Task 35 (dogfood + release)
 
 ---
 
@@ -409,13 +444,15 @@
 > Keep only the last 5 sessions in this file for AI readability.
 
 ## In Progress
-- Plugin migration v2.0 spec — written and committed on `docs/plugin-migration-spec`, awaiting user review
+- Plugin migration v2.0 implementation — spec approved, 35-task plan written, Task 1 (CLAUDE_PLUGIN_ROOT probe) scaffolded at `~/wf-plugin-probe/` and awaiting user verification in a second Claude Code session
+- Subagent-driven execution mode active — Tasks 2-35 pending dispatch once Task 1 returns PASS
 
 ## Next Session Should
-- [ ] User reviews the v2.0 plugin migration spec
-- [ ] Invoke writing-plans skill on the approved spec
-- [ ] Create `gh issue` tickets for items in the deferred list (wf-brain v2.1, wf-design v2.2, wf-cockpit v2.3+, wf-delegate vs wf-team-delegate audit, wf-brain mandatory + progress.md retirement v3.x)
-- [ ] Begin implementation on `feature/plugin-migration-v2` branch
+- [ ] Read `/tmp/wf-plugin-probe.log` first — if it shows `CLAUDE_PLUGIN_ROOT=/Users/cavallini/wf-plugin-probe` the plan is viable; if `MISSING` the whole plan is blocked and needs escalation
+- [ ] If PASS: uninstall probe plugin (`/plugin uninstall wf-plugin-probe@wf-plugin-probe` + `/plugin marketplace remove wf-plugin-probe`), then `rm -rf ~/wf-plugin-probe ~/wf-plugin-probe-marketplace`
+- [ ] Start Task 2 per the plan: tag `v1.11.1-final-installer` from `origin/main`, create `feature/plugin-migration-v2`, scaffold plugin dirs
+- [ ] Continue subagent-driven execution through Tasks 3-35 (implementation plan at `docs/superpowers/plans/2026-04-08-wf-system-plugin-migration-v2.md`)
+- [ ] (carry-over) Create `gh issue` tickets for deferred items (wf-brain v2.1, wf-design v2.2, wf-cockpit v2.3+, wf-delegate vs wf-team-delegate audit, wf-brain mandatory + progress.md retirement v3.x) — happens after implementation plan landed, which it now has
 - [ ] (carry-over) Improve Ralph logging visibility (stream Claude output in real-time)
 - [ ] (carry-over) Test `/wf-delegate --parallel` with real parallel tasks
 
