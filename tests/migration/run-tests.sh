@@ -131,4 +131,43 @@ test_user_hook_preserved() {
 
 run_test "user hook preserved" test_user_hook_preserved
 
+test_migrate_v1_5_0_no_brain() {
+  local tmp
+  tmp=$(mktemp -d)
+  trap "rm -rf $tmp" RETURN
+
+  cp -a "$FIXTURES/v1.5.0-fresh-install/.claude" "$tmp/"
+
+  HOME="$tmp" bash "$HELPER" --no-backup --yes >/dev/null 2>&1 || {
+    echo "  FAIL: migrate-to-plugin.sh exited non-zero on v1.5.0 fixture"
+    _TESTS_FAILED=$((_TESTS_FAILED + 1))
+    return 1
+  }
+
+  assert_file_absent "$tmp/.claude/hooks/wf-orchestrator.py"
+  assert_file_absent "$tmp/.claude/hooks/.wf-version"
+  assert_settings_no_wf_hook "$tmp/.claude/settings.json"
+}
+
+test_migrate_v1_0_0_minimal() {
+  local tmp
+  tmp=$(mktemp -d)
+  trap "rm -rf $tmp" RETURN
+
+  cp -a "$FIXTURES/v1.0.0-fresh-install/.claude" "$tmp/"
+
+  HOME="$tmp" bash "$HELPER" --no-backup --yes >/dev/null 2>&1 || {
+    echo "  FAIL: migrate-to-plugin.sh exited non-zero on v1.0.0 fixture"
+    _TESTS_FAILED=$((_TESTS_FAILED + 1))
+    return 1
+  }
+
+  assert_file_absent "$tmp/.claude/hooks/wf-orchestrator.py"
+  assert_file_absent "$tmp/.claude/commands/wf-init.md"
+  assert_settings_no_wf_hook "$tmp/.claude/settings.json"
+}
+
+run_test "migrate v1.5.0 (no brain)" test_migrate_v1_5_0_no_brain
+run_test "migrate v1.0.0 (minimal)" test_migrate_v1_0_0_minimal
+
 print_summary
