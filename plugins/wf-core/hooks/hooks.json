@@ -1,0 +1,29 @@
+{
+  "description": "wf-system orchestrator: context monitoring, brain injection (when wf-brain is installed), session lifecycle",
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/wf-orchestrator.py --mode=stop",
+            "timeout": 60000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/wf-orchestrator.py",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
