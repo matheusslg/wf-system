@@ -1027,6 +1027,21 @@ node ~/.claude/scripts/wf-brain.js store --category <category> --tags "<tags>" -
 
 On exit, proceed to **Section 8 (Post-Pipeline Verification)**.
 
+### Optional: Cockpit event log (off by default)
+
+If `workflow.json` contains `cockpit.eventLog` (a file path), append a
+JSON-line event each time the loop observes a task status change:
+
+```json
+{"ts": "<ISO 8601 UTC>", "team": "<team name>", "event": "task_status_change", "task_id": "<id>", "from": "<prev status>", "to": "<new status>", "owner": "<owner name>"}
+```
+
+Use `jq` or an equivalent JSON emitter. Append to the path with `>>`. If the
+path is not set, skip this write entirely (the feature is off by default).
+
+This seam feeds the future `wf-cockpit` plugin — it adds zero runtime cost
+when `cockpit.eventLog` is unset.
+
 ### Stalled Teammates
 
 If `TaskList()` shows identical statuses for 10+ consecutive polls (no task progress), a teammate may be stuck. Refer to **Error Handling: Teammate Unresponsive** below for recovery steps.
