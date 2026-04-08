@@ -4,8 +4,57 @@
 > **Keep this file under 400 lines** - archive old sessions to `.claude/session-archive/`
 
 ## Current Status
-**Phase**: Plugin Migration v2.0 — Phases A+B+C complete on `feature/plugin-migration-v2`. Task 10 (install smoke test) deferred to Task 34. Ready to start Phase D (migration helper, strict TDD) in next session.
+**Phase**: Plugin Migration v2.0 — Phases A+B+C+D complete on `feature/plugin-migration-v2`. Migration helper fully TDD'd with 5 fixtures + 8 test cases (all passing). **Task 28 blocked on symlink dependency** — awaiting user decision to defer to Phase F alongside Task 34 smoke test. Ready to execute Phase E Tasks 29-33 (docs-only) next.
 **Last Updated**: 2026-04-08
+
+---
+
+### Session 21 (2026-04-08)
+**Focus**: wf-system plugin migration — execute Phase D (Tasks 16-27, strict TDD migration helper)
+**Completed**:
+- [x] **Task 16** — scaffolded `tests/migration/` harness: `assertions.sh` (PASS/FAIL helpers + `print_summary`), `run-tests.sh` runner, `scripts/migrate-to-plugin.sh` stub exiting 99. Code review caught blocking bug: `set -eu` aborts the runner on first failing assertion before the summary prints. Fixed to `set -u` only with rationale comment; updated plan text to match. Verified with synthetic pass/fail mix.
+- [x] **Task 17** — built `tests/migration/fixtures/v1.11.1-fresh-install/` (43 files): `.claude/hooks/wf-orchestrator.py` + 5 metadata files + `.wf-state/placeholder.json`, `settings.json` with Stop + PostToolUse hook entries, 33 command stubs, 3 brain component stubs. Hit root `.gitignore` blocking `.wf-state/`; added scoped exception `!tests/migration/fixtures/**/.wf-state/` (and `/**`) so future fixture tasks don't repeat the workaround.
+- [x] **Task 18** — TDD red: wrote `test_migrate_v1_11_1_global` asserting 12 file-absence checks + settings.json scrub. Ran and verified intentional RED state (stub exits 99, assertions fail).
+- [x] **Task 19** — migration helper backbone: arg parser (`--dry-run`, `--no-backup`, `--project`, `--include-global`, `--yes`, `-h`/`--help`), install-mode detection (global vs project), confirmation prompt, backup creation via `tar czf`. Byte-for-byte copy from plan's Task 19 code block.
+- [x] **Task 20** — file removal phase: deletes `.claude/hooks/wf-orchestrator.py`, all 5 `.wf-*` metadata files, `.wf-state/` dir, `scripts/wf-brain.js`, `scripts/wf-brain/`, `mcp-servers/wf-brain/`, 3 command files (`wf-implement`, `wf-fix-bug`, `wf-improve`). Respects `--dry-run` (prints paths without touching). 11/12 test assertions now pass (settings.json check still fails — expected).
+- [x] **Task 21** — settings.json jq surgery: `with_entries(.value |= (map(.hooks |= map(select(.command | test("wf-orchestrator") | not))) | map(select(.hooks | length > 0))))` — prunes only wf-orchestrator matchers, leaves user-defined hooks intact, removes now-empty matcher arrays. Added jq dependency check. Test is now GREEN: 12/12 assertions pass on the v1.11.1 fresh-install fixture.
+- [x] **Task 22** — `--project <path>` mode: takes a project dir instead of `$HOME/.claude`, only removes wf-implement/wf-fix-bug/wf-improve/wf-commit/wf-start-session command files (no hook surgery because projects don't own the global hook). Built `v1.11.1-project-install/` fixture (5 command stubs) + test `test_migrate_v1_11_1_project`.
+- [x] **Task 23** — `--dry-run` verification test: counts files before/after running with `--dry-run`, asserts count is identical. GREEN.
+- [x] **Task 24** — idempotency test: runs helper twice on same fixture, asserts second run exits 0. GREEN.
+- [x] **Task 25** — user-hook-preservation test: built `v1.11.1-user-hook/` fixture where PostToolUse has BOTH a user-defined `Bash` matcher (`echo 'user-defined hook'`) AND a catch-all wf-orchestrator matcher. Test asserts wf-orchestrator is pruned AND the user's `echo` command survives. GREEN — confirms jq filter precision.
+- [x] **Task 26** — v1.5.0 and v1.0.0 regression fixtures: `v1.5.0-fresh-install/` (36 files, `copy` install mode, no brain components since v1.9.0 predates brain, Stop hook only) and `v1.0.0-fresh-install/` (minimal 8 files, 5 commands, no state dir). Plan deviation: added `.wf-state/placeholder.json` to v1.5.0 fixture (plan step created empty dir, which git doesn't track). Added tests `test_migrate_v1_5_0_no_brain` and `test_migrate_v1_0_0_minimal`. Both GREEN.
+- [x] **Task 27** — never-installed no-op fixture + test: `never-installed/` with just `.claude/.gitkeep`. Test counts files before/after, asserts unchanged. GREEN — confirms helper is safe on systems that never had wf-system.
+- [x] **Test suite status**: 0/0 at Session 20 end → **26/26 passing** at Session 21 end. 8 distinct test cases across 5 fixtures. Runner exit code 0 on clean suite, 1 on any failure, summary always prints.
+**In Progress**:
+- [ ] Nothing actively in progress — clean stopping point at Task 28 decision gate
+**Blockers**:
+- **Task 28 (delete legacy files from wf-system root)**: running `git rm hooks/wf-orchestrator.py` would delete the file currently symlinked by `~/.claude/hooks/wf-orchestrator.py` (v1.9.1+ symlink mode), which would break the active session's PostToolUse hooks mid-flight. Task 28's plan precondition was Task 10's plugin smoke test, but Task 10 was itself deferred to Task 34 in Session 20. So the precondition is currently unmet. **Awaiting user decision**: defer Task 28 to Phase F alongside Task 34 (clean resolution, user's real plugin smoke test will switch off the legacy symlink first) OR manually unwind the symlink now (user action required, riskier mid-session).
+**Commits (wf-system, branch: feature/plugin-migration-v2, 14 commits this session)**:
+- `a3164bc` test(v2): scaffold migration helper test harness and stub
+- `e3e99d6` fix(v2): drop -e from migration test runner so summary always prints
+- `5351b85` test(v2): add v1.11.1 fresh-install fixture for migration helper
+- `bf73aac` chore(v2): un-ignore .wf-state/ inside migration test fixtures
+- `fb4f33c` test(v2): add failing test for v1.11.1 global migration (red)
+- `45ae1c9` feat(v2): migration helper backbone (detection, args, backup)
+- `c793a3e` feat(v2): migration helper removes wf-system files from $HOME/.claude
+- `f6a093d` feat(v2): migration helper prunes wf-orchestrator from settings.json
+- `d690e8b` feat(v2): migration helper --project mode
+- `3bee0f6` test(v2): verify --dry-run does not mutate filesystem
+- `e57c6bd` test(v2): verify migration helper is idempotent
+- `8b2af15` test(v2): verify migration helper preserves user-defined hooks
+- `1c0541f` test(v2): add v1.5.0 and v1.0.0 migration fixtures
+- `c77e08c` test(v2): verify migration helper no-ops on never-installed system
+- Total wf-system branch delta vs `c7d1bf3`: 25 commits (11 Phase A-C + 14 Phase D). Nothing pushed to remote (RC push at Task 34).
+**Decisions**:
+- **Used strict subagent dispatch for Phase D** (as planned at end of Session 20). Per-task dispatch + two-stage review genuinely paid off — the Task 16 code review caught the `set -eu` bug before it shipped, and TDD red-then-green discipline stayed sharp across 12 tasks.
+- **Pragmatic review policy**: full two-stage review for Task 16 (first real scaffold with logic to critique), spec-only inline review for pure-data fixture tasks (17, 22, 25, 26, 27 — nothing to code-quality-review in JSON stubs), byte-for-byte diff check for plan-copied code (19, 20, 21). Saved ~8 subagent dispatches without losing rigor.
+- **Bundled task pairs**: Tasks 23+24 (dry-run + idempotency) and 26+27 (v1.5.0+v1.0.0 fixtures + never-installed) dispatched as single subagent calls with separate commits. Cut dispatch overhead without breaking commit granularity.
+- **Plan deviation — v1.5.0 fixture**: added `.wf-state/placeholder.json` to match v1.11.1 fixture pattern (plan's step created an empty `.wf-state/` dir, which git doesn't track — would silently drop from the fixture). Documented in commit message.
+- **Task 28 deferral proposed, not executed**: flagged the symlink blocker to user before touching it. Destructive git operation + active session = verify first, act second.
+**Next**:
+1. **Resolve Task 28**: user decision on defer vs manual unwind. Recommendation stands — defer to Phase F.
+2. **Phase E Tasks 29-33** (docs-only, no runtime risk): rewrite README, CHANGELOG v2.0.0 entry, `docs/v2.0-rollback.md`, `scripts/bump-version.sh` + bump VERSION to 2.0.0, smoke test checklist. Safe to execute without Task 28 settled.
+3. **Phase F Tasks 34-35** (RC + release): full smoke suite → `v2.0.0-rc.1` → dogfood ≥3 days → `v2.0.0` → cutover PR. First remote push.
 
 ---
 
@@ -157,348 +206,26 @@
 
 ---
 
-### Session 16 (2026-01-15)
-**Focus**: Ralph sub-task handling completion + testing
-**Completed**:
-- [x] Finished Ralph sub-task handling in `ralph-sxrx.sh`
-  - Added conditional Claude prompt (sub-task vs standalone)
-  - Sub-tasks: checkout existing branch, push to existing PR, no create-infra
-  - Standalone: create new branch, new PR, add create-infra label
-  - Fall back to standalone if parent has no existing PRs
-- [x] Tested Ralph with SXRX-1060/1061 sub-tasks
-  - Sub-task detection working correctly
-  - Found existing PRs for parent SXRX-421
-  - Claude made changes but tests failing (MFA function name mismatch)
-**In Progress**:
-- [ ] MFA test failures - 31 tests failing due to function name changes
-  - `setupMfaTotp`, `verifyMfaTotp` in service but tests expect old names
-  - Uncommitted changes in sxrx-app on feature/SXRX-421 branch
-- [ ] User requested `/ralph-fix` comment feature for Jira
-  - Allow posting `/ralph-fix <issue>` in Jira comments for Ralph to process
-**Commits (sxrx-agentic)**:
-- `7f97215` - feat(ralph): handle sub-tasks by reusing parent PRs
-**Blockers**: OAuth token keeps expiring during Ralph runs
-**Next**:
-1. Fix MFA test failures (function name alignment)
-2. Implement `/ralph-fix` Jira comment feature
-
----
-
-### Session 15 (2026-01-15)
-**Focus**: /wf-pr-comments command + Ralph sub-task handling
-**Completed**:
-- [x] Created `/wf-pr-comments` command for handling PR review comments
-- [x] Created Jira sub-tasks for email MFA (SXRX-1060, SXRX-1061)
-**Commits (wf-system)**:
-- `f488cfe` - feat(commands): add /wf-pr-comments
-- `7747466` - fix(wf-pr-comments): implement fixes by default
-- `7bad9df` - feat(wf-pr-comments): delegate fixes to sub-agents
-
----
-
-### Session 14 (2026-01-14)
-**Focus**: Ralph error detection + SXRX-1050 test + Jira comment fixes
-**Completed**:
-- [x] Fixed Ralph to detect Claude auth errors before marking tickets complete
-  - Added `check_claude_errors()` function (detects OAuth expiry, API errors, rate limits)
-  - Prevents false-positive completions when Claude fails
-- [x] Tested Ralph with SXRX-1050 - caught OAuth expiration issue
-- [x] Reverted SXRX-1050 to "To Do" (was falsely marked complete)
-- [x] Updated SXRX-421 Jira comments with both PR links (api #266, app #410)
-- [x] Updated SXRX-421 "How to QA" comment with proper MFA test steps
-- [x] Researched Cognito email MFA - requires Essentials/Plus tier (paid)
-  - SXRX uses Lite tier = TOTP was correct choice for "no cost" requirement
-**Commits (sxrx-agentic)**:
-- `0526fd0` - fix(ralph): collect and post ALL PR URLs in Jira completion comment
-- `8911ae3` - fix(ralph): detect Claude errors before marking ticket complete
-**Decisions**:
-- TOTP MFA is correct for SXRX (Cognito Lite tier doesn't support email MFA)
-- Ralph should explain tradeoffs in comments when deviating from AC
-**Next**: Run Ralph on SXRX-1050 after OAuth refresh
-
----
-
-### Session 13 (2026-01-14)
-**Focus**: SXRX-421 cleanup - close duplicate PRs/issues + Fix Ralph multi-PR comment
-**Completed**:
-- [x] Closed GitHub issue #32 (MFA Settings Page sub-task)
-- [x] Closed 4 duplicate PRs created by Ralph
-- [x] Fixed Ralph to post ALL PR URLs in Jira completion comment
-**Commits (sxrx-agentic)**:
-- `0526fd0` - fix(ralph): collect and post ALL PR URLs in Jira completion comment
-**Next**: Test Ralph with another ticket
-
----
-
-### Session 12 (2026-01-14)
-**Focus**: Fix migration failure + Ralph improvements
-**Completed**:
-- [x] Diagnosed ephemeral env migration failure (PR #266) - RDS DNS unreachable from GitHub runners
-- [x] Created sxrx-iac PR #45 to use self-hosted runners for Terraform
-- [x] Fixed Jira links to be clickable (proper ADF link marks)
-- [x] Fixed "How to QA" empty summary issue with fallback logic
-- [x] Updated Ralph prompt: ONE branch/PR per repo, close all issues when done
-**In Progress**:
-- [ ] Merge sxrx-iac PR #45 to enable ephemeral env creation
-**Blockers**: PR #45 needs approval before ephemeral envs work
-**Decisions**:
-- Terraform jobs need self-hosted runners with VPC access for postgresql provider
-- Ralph should enforce: one feature branch, one PR per repo, close all sub-issues
-**Commits (sxrx-iac)**:
-- `671d662` - fix(terraform): use self-hosted runners for VPC access
-**Next**: Merge PR #45, re-run Terraform for sxrx-421, verify migration passes
-
----
-
-### Session 11 (2026-01-14)
-**Focus**: Ralph improvements + SXRX-421 MFA implementation
-**Completed**:
-- [x] Fixed ephemeral env URL format: `app-sxrx-XXX` instead of `sxrx-XXX`
-- [x] Enhanced Jira completion comment to include PR link
-- [x] Added "How to QA" comment with rich ADF formatting
-- [x] Added `VERBOSE=true` for detailed Claude output
-- [x] Added `CHROME=true` (default) for browser automation
-- [x] **Ralph completed SXRX-421 (MFA) autonomously!**
-  - 6/6 sub-tasks completed (#28-#33)
-  - PRs: sxrx-api #266, sxrx-app #410
-  - 91 MFA tests added, all 1897 app tests pass
-  - ~53 min total runtime
-- [x] Monitored API calls during execution (Anthropic + Google)
-**In Progress**:
-- [ ] Adding `STREAM=true` mode for real-time output (partial)
-**Commits (sxrx-agentic)**:
-- `077b160` - feat(ralph): improve Jira comments with PR link and How to QA section
-- `c5c4a58` - feat(ralph): add VERBOSE mode to see detailed Claude activity
-- `98d15a8` - feat(ralph): enable Chrome browser automation by default
-**Deferred**: Visual verification for authenticated pages
-
----
-
-### Session 10 (2026-01-14)
-**Focus**: Fix PR #408 build failure - missing AWS secrets for ephemeral environments
-**Completed**:
-- [x] Diagnosed build failure: missing keys in `sxrx-frontend-app-secrets-ephemeral-envs`
-- [x] Added 5 missing secrets via AWS CLI:
-  - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` = 131728710440
-  - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` = sxrx-dev.appspot.com
-  - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` = sxrx-dev.firebaseapp.com
-  - `NEXT_PUBLIC_SEALD_APP_ID`, `NEXT_PUBLIC_SEALD_API_URL`, `NEXT_PUBLIC_SEALD_KEY_STORAGE_URL`
-- [x] Re-ran failed workflow - build now passes
-- [x] Ephemeral environment deployed to https://sxrx-995.sxrxprotocols.com
-**Result**: PR #408 ready for review (all checks green)
-
----
-
-### Session 9 (2026-01-14)
-**Focus**: Ralph debugging - fixing permission issues and completing SXRX-995
-**Completed**:
-- [x] Diagnosed why SXRX-995 wasn't implemented (Claude couldn't access Jira)
-- [x] Added `get_ticket_content()` function to fetch ticket from Jira before invoking Claude
-- [x] Fixed false-positive completion (tests passed on main without implementation)
-- [x] Added `--dangerously-skip-permissions` flag for non-interactive Claude execution
-- [x] **Successfully completed full Ralph cycle on SXRX-995**:
-  - Feature branch `feature/SXRX-995` created
-  - OTP highlight fix implemented
-  - PR #408 created with `create-infra` label
-  - All 1839 tests passed
-  - Ticket transitioned to "Code Review"
-  - Label removed automatically
-**Commits (sxrx-agentic)**:
-- `b6efb52` - fix(ralph): fetch ticket content before invoking Claude
-- `8b012f6` - fix(ralph): add --dangerously-skip-permissions flag for non-interactive use
-**Result**:
-- PR: https://github.com/gnarlysoft-ai/sxrx-app/pull/408
-- Commit: `97901bc9` - fix(frontend): prevent multiple OTP boxes from appearing highlighted on mobile
-
----
-
-### Session 8 (2026-01-14)
-**Focus**: Ralph integration - full implementation and testing
-**Completed**:
-- [x] Fixed Jira API - migrated to new v3 POST endpoint
-- [x] Added auto-transition to "Code Review" after PR creation
-- [x] Refactored to use `create-infra` PR label (existing workflow)
-  - Removed manual sxrx-iac commits
-  - Removed 5-minute Terraform wait
-  - Claude adds `create-infra` label to PRs for auto-provisioning
-- [x] Tested dry-run successfully with SXRX-995
-- [x] Started real test with SXRX-995 (OTP highlight bug)
-**Commits (sxrx-agentic)**:
-- `e7a3fa4` - fix(ralph): use new Jira v3 search API endpoint
-- `585307b` - feat(ralph): auto-transition tickets to Code Review after PR
-- `4204cf1` - refactor(ralph): use create-infra PR label for ephemeral envs
-**Status**: Completed in Session 9
-
----
-
-### Session 7 (2026-01-14)
-**Focus**: Hook fix + new command + Ralph integration research
-**Completed**:
-- [x] Fixed orchestrator hook to explicitly instruct Claude to invoke skill (not manually update progress.md)
-- [x] Created `/wf-investigate` command for proactive codebase exploration
-  - Quick mode: answer specific questions with file:line refs
-  - Deep mode (`--deep`): full architectural analysis report
-- [x] Researched Ralph autonomous coding loop integration
-  - Identified blockers: context management conflict, task source mismatch, pipeline incompatibility
-  - Proposed solutions: `WF_EXTERNAL_LOOP` and `WF_UNATTENDED` env vars
-- [x] Analyzed SXRX ephemeral environment infrastructure (Terraform workspaces)
-  - Confirmed SXRX-1054 ticket is implementable (~12 hours effort)
-**Commits**:
-- `0f4aa0f` - fix(hooks): explicitly tell Claude to invoke skill, not manually update progress
-- `8d44079` - feat(commands): add /wf-investigate for proactive codebase exploration
-
----
-
-### Session 6 (2026-01-13)
-**Focus**: Pipeline enforcement + bug fixes + token analysis
-**Completed**:
-- [x] Enforced pipeline execution (Developer→Reviewer→QA) in `/wf-delegate`
-  - Added Section 11.1: MANDATORY PIPELINE GATE
-  - Added retry limits (max 3) for review/QA loops
-  - Strengthened Section 13 with ⛔ warnings
-  - Added Section 14 validation before closing
-  - Updated autonomous mode with explicit pipeline steps
-- [x] Made context warning more forceful at 75%+ in orchestrator hook
-- [x] Fixed legacy config keys: `techLead` → `breakdown`, removed `ticketing`
-- [x] Fixed YAML parsing crash in 7 commands (bracket syntax in argument-hint)
-  - wf-test, wf-commit, wf-init, wf-parse-prd, wf-pick-issue, wf-review, wf-generate
-- [x] Identified token hogs: wf-delegate (~10K), wf-generate (~7.5K), wf-breakdown (~4.6K)
-**Commits**:
-- `d2c1abd` - fix(delegate): enforce pipeline execution in autonomous mode
-- `83fc3f4` - fix(hooks): make context warning more forceful at 75%+
-- `bcf70fb` - fix(hooks): update legacy config key names in orchestrator
-- `3e87b91` - fix(commands): quote argument-hint values to prevent YAML parsing error
-**Next Session**:
-- Consider splitting large commands to reduce token consumption
-- Test pipeline enforcement with real `/wf-delegate --until-done` run
-
----
-
-### Session 5 (2026-01-12)
-**Focus**: Enhanced sub-task documentation + parallel execution + opus model
-**Completed**:
-- [x] Added screenshot documentation for sub-tasks in `/wf-delegate`
-  - Section 9: Screenshot instructions for developer tasks
-  - Section 11.5: Screenshot collection and upload to repo
-  - Section 12: Enhanced completion comment with collapsible screenshot gallery
-  - Pipeline sections: Reviewer, QA, Fix tasks all have screenshot docs
-- [x] Added `--parallel` flag to `/wf-delegate` for concurrent task execution
-  - Execute multiple independent tasks simultaneously
-  - Based on `/wf-breakdown` output (parallel-eligible tasks)
-  - Conflict detection for same-file modifications
-  - Batch screenshot collection from all parallel tasks
-- [x] Updated all agent templates to use `model: opus` instead of `sonnet`
-  - ui-developer.md, backend-developer.md, fullstack-developer.md, generic-developer.md
-  - reviewer.md already had opus
-**Commits**:
-- `96c5f0f` - feat(delegate): add screenshot documentation for sub-tasks
-- `0582e13` - feat(delegate): add parallel execution mode for concurrent tasks
-- `f434816` - feat(agents): use opus model for all sub-agents
-**Synced to global**: wf-delegate.md, wf-generate.md
-
----
-
-### Session 4 (2026-01-09)
-**Focus**: Task tool custom agent testing + template integration + skill assignment
-**Completed**:
-- [x] Tested custom agent invocation via Task tool - DOES NOT WORK
-- [x] Updated `/wf-generate` to use role-based templates from `templates/agents/`
-- [x] Updated `/wf-delegate` with workaround for Task tool limitation
-- [x] Documented Task tool limitations in `docs/CONFIGURATION.md`
-- [x] Added Playwright MCP to README recommended servers
-- [x] Added Section 9 to `/wf-generate`: circle back and update agents with generated skills
-- [x] Validated via claude-code-guide: custom agents CAN use skills IF Task tool supported them
-**Key Finding - Task Tool Limitation**:
-- Task tool `subagent_type` ONLY accepts built-in agents: general-purpose, Explore, Plan, Bash, claude-code-guide, statusline-setup
-- Custom agents from `.claude/agents/` CANNOT be invoked via Task tool
-- Error: "Agent type 'X' not found. Available agents: ..."
-- BUT: docs say custom agents with `skills` field CAN access skills - chain breaks at Task tool
-**Workaround Implemented**:
-- Read custom agent file content
-- Include full agent prompt in Task prompt to `general-purpose`
-- This preserves agent personality while using available infrastructure
-**Commits**:
-- `564f26d` - fix(commands): work around Task tool custom agent limitation
-- `8c9cf0f` - docs(readme): add Playwright MCP to recommended servers
-- `1df9b66` - feat(wf-generate): add step to update agents with generated skills
-**Synced to global**: wf-generate.md, wf-delegate.md
-
----
-
-### Session 3 (2026-01-09)
-**Focus**: Context monitoring fix + visual-verify skill + agent templates
-**Completed**:
-- [x] Fixed context monitoring bug - was summing ALL historical tokens (6000%+), now uses latest input_tokens (correct ~50%)
-- [x] Created `visual-verify` skill for UI verification against Figma designs
-- [x] Added fallback chain: Chrome → Playwright MCP → MCP_DOCKER
-- [x] Created agent templates: ui-developer, backend-developer, fullstack-developer, reviewer, generic-developer
-- [x] Researched Claude Code docs on skills + subagents
-- [x] Verified: Custom agents CAN access skills via `skills` field, but built-in agents (Explore, Plan) cannot
-- [x] CORRECTED: Task tool does NOT accept custom agent names (tested in Session 4)
-**Commits**:
-- `72dcb71` - fix(hooks): correct context monitoring to use latest API call tokens
-- `8a3b8eb` - feat(skills): add visual-verify skill for UI verification
-- `2e13789` - docs(skills): add Playwright MCP reference to visual-verify
-- `4a81125` - feat(skills): add name field and improve skill discovery
-- `1decead` - feat(templates): add agent templates for stack-based generation
-**Key Findings**:
-- Skills load at session startup only (new skills need restart)
-- Subagents don't inherit skills automatically - need explicit `skills` field
-- Built-in agents (Explore, Plan, general-purpose) have NO skill access
-- Custom agents ARE NOT SUPPORTED by Task tool (corrected from initial assumption)
-
----
-
-### Session 2 (2026-01-09)
-**Focus**: Workflow initialization and hook visibility fix
-**Completed**:
-- [x] Ran `/wf-init` - initialized workflow for wf-system repo
-- [x] Ran `/wf-generate` - created agents and skills based on tech stack
-- [x] Ran `/wf-start-session` - verified environment
-- [x] Pushed commits to GitHub
-- [x] Fixed hook visibility issue - hooks now use `systemMessage` for visible user feedback
-**Commits**:
-- `6d6ef6d` - chore: initialize claude workflow system
-- `8b4d385` - feat: generate agents and skills for wf-system
-- `8a1bb12` - fix(hooks): add systemMessage for visible user feedback
-**Next**: Test hooks in new session, create issues for planned work
-
----
-
-### Session 1 (2026-01-08)
-**Focus**: Project initialization and agent generation
-**Completed**:
-- Created workflow configuration (.claude/workflow.json)
-- Set up progress tracking (progress.md)
-- Updated standards.md with project-specific conventions
-- Generated 3 agents:
-  - `wf-system-commands` - For command development
-  - `wf-system-hooks` - For Python hooks and installer
-  - `wf-system-reviewer` - For code review (read-only)
-- Generated 5 skills:
-  - `gh-pr` - Create GitHub PRs
-  - `gh-issues` - List/manage GitHub issues
-  - `py-check` - Check Python syntax
-  - `cmd-list` - List all commands
-  - `sync-commands` - Sync commands to global install
-
----
-
 ## Session Archive
 
 > When this file exceeds 500 lines, move older sessions to `.claude/session-archive/sessions-{N}-{M}.md`
 > Keep only the last 5 sessions in this file for AI readability.
 
+- **Sessions 1-16** (2026-01-08 → 2026-01-15): see `.claude/session-archive/sessions-1-16.md` — project init, agent/skill generation, wf-brain Phase 0-2, Ralph sub-task handling.
+
 ## In Progress
-- Plugin migration v2.0 implementation — spec approved, 35-task plan written, Task 1 (CLAUDE_PLUGIN_ROOT probe) scaffolded at `~/wf-plugin-probe/` and awaiting user verification in a second Claude Code session
-- Subagent-driven execution mode active — Tasks 2-35 pending dispatch once Task 1 returns PASS
+- Plugin migration v2.0 — Phases A+B+C+D complete on `feature/plugin-migration-v2` (25 commits, nothing pushed). Migration helper fully TDD'd with 5 fixtures + 8/8 passing test cases. Task 28 blocked on symlink dependency — awaiting decision. Phase E Tasks 29-33 (docs-only) safe to execute.
 
 ## Next Session Should
-- [ ] Read `/tmp/wf-plugin-probe.log` first — if it shows `CLAUDE_PLUGIN_ROOT=/Users/cavallini/wf-plugin-probe` the plan is viable; if `MISSING` the whole plan is blocked and needs escalation
-- [ ] If PASS: uninstall probe plugin (`/plugin uninstall wf-plugin-probe@wf-plugin-probe` + `/plugin marketplace remove wf-plugin-probe`), then `rm -rf ~/wf-plugin-probe ~/wf-plugin-probe-marketplace`
-- [ ] Start Task 2 per the plan: tag `v1.11.1-final-installer` from `origin/main`, create `feature/plugin-migration-v2`, scaffold plugin dirs
-- [ ] Continue subagent-driven execution through Tasks 3-35 (implementation plan at `docs/superpowers/plans/2026-04-08-wf-system-plugin-migration-v2.md`)
-- [ ] (carry-over) Create `gh issue` tickets for deferred items (wf-brain v2.1, wf-design v2.2, wf-cockpit v2.3+, wf-delegate vs wf-team-delegate audit, wf-brain mandatory + progress.md retirement v3.x) — happens after implementation plan landed, which it now has
+- [ ] **First: decide Task 28** — defer to Phase F alongside Task 34 smoke test (recommended, clean) OR manually unwind `~/.claude/hooks/wf-orchestrator.py` symlink first (riskier mid-session). See Session 21 "Blockers" for context.
+- [ ] Execute Phase E Tasks 29-33 via subagent dispatch (docs-only, no runtime dependencies on Task 28):
+  - Task 29: rewrite `README.md` for plugin-format install
+  - Task 30: add CHANGELOG v2.0.0 entry
+  - Task 31: write `docs/v2.0-rollback.md`
+  - Task 32: create `scripts/bump-version.sh` and bump `VERSION` to 2.0.0
+  - Task 33: write smoke test checklist
+- [ ] Then Phase F Tasks 34-35: full smoke suite → cut `v2.0.0-rc.1` → first remote push → dogfood ≥3 days → `v2.0.0` final + cutover PR
+- [ ] (carry-over) Create `gh issue` tickets for deferred items (wf-brain v2.1, wf-design v2.2, wf-cockpit v2.3+, wf-delegate vs wf-team-delegate audit, wf-brain mandatory + progress.md retirement v3.x) — after v2.0.0 lands
 - [ ] (carry-over) Improve Ralph logging visibility (stream Claude output in real-time)
 - [ ] (carry-over) Test `/wf-delegate --parallel` with real parallel tasks
 
