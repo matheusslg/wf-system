@@ -1,0 +1,23 @@
+{
+  "name": "wf-core",
+  "version": "2.0.0",
+  "description": "Workflow management for Claude Code: session orchestration, agent teams, GitHub/Jira integration, and a developer pipeline (implement / fix-bug / improve)",
+  "author": {
+    "name": "Matheus Cavallini",
+    "email": "matheus@gnarlysoft.io",
+    "url": "https://github.com/matheusslg"
+  },
+  "homepage": "https://github.com/matheusslg/wf-system",
+  "repository": "https://github.com/matheusslg/wf-system",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "automation",
+    "agents",
+    "agent-teams",
+    "orchestration",
+    "session-management",
+    "github",
+    "jira"
+  ]
+}
