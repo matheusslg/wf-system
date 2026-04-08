@@ -2,7 +2,7 @@
 # Entry point: runs all migration helper tests.
 # Usage: tests/migration/run-tests.sh
 
-set -eu
+set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 FIXTURES="$REPO_ROOT/tests/migration/fixtures"

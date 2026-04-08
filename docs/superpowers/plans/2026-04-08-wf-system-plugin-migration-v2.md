@@ -1224,7 +1224,10 @@ print_summary() {
 # Entry point: runs all migration helper tests.
 # Usage: tests/migration/run-tests.sh
 
-set -eu
+# NOTE: we intentionally use `set -u` without `-e`. A failing assertion
+# returns 1 from the test function, and with `-e` that would abort the
+# entire runner before `print_summary` prints the PASS/FAIL counts.
+set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 FIXTURES="$REPO_ROOT/tests/migration/fixtures"
