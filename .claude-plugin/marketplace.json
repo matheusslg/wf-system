@@ -14,7 +14,11 @@
       "source": "./plugins/wf-core",
       "description": "Core workflow loop: session management, dev pipeline, agent teams, planning",
       "category": "productivity",
-      "tags": ["workflow", "agents", "orchestration"]
+      "tags": [
+        "workflow",
+        "agents",
+        "orchestration"
+      ]
     }
   ]
 }
