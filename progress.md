@@ -4,8 +4,42 @@
 > **Keep this file under 400 lines** - archive old sessions to `.claude/session-archive/`
 
 ## Current Status
-**Phase**: Plugin Migration v2.0 — Phases A+B+C+D complete on `feature/plugin-migration-v2`. Migration helper fully TDD'd with 5 fixtures + 8 test cases (all passing). **Task 28 blocked on symlink dependency** — awaiting user decision to defer to Phase F alongside Task 34 smoke test. Ready to execute Phase E Tasks 29-33 (docs-only) next.
-**Last Updated**: 2026-04-08
+**Phase**: Plugin Migration v2.0 — **All phases complete. `v2.0.0-rc.1` tagged and pushed.** Dogfood period started 2026-04-14, runs through at least 2026-04-17. Plugin installed locally, hooks firing. Remaining smoke test items verified during dogfood.
+**Last Updated**: 2026-04-14
+
+---
+
+### Session 22 (2026-04-14)
+**Focus**: wf-system plugin migration — Phase E (docs) + Phase F start (Task 28 + RC cut)
+**Completed**:
+- [x] **Phase E Tasks 29-33** — all 5 docs tasks dispatched via subagents:
+  - Task 29 (`6094fa0`): README rewritten — plugin install flow, removed install.sh/uninstall.sh/wf-update/wf-design-setup references
+  - Task 30 (`ac6704d`): CHANGELOG v2.0.0 entry — breaking changes, added/changed/removed/fixed sections, `<release-date>` placeholder
+  - Task 31 (`1cb0edf`): `docs/v2.0-rollback.md` — user rollback (backup restore, v1.x reinstall) + maintainer rollback (v2.0.1 fix, v1.x patch)
+  - Task 32 (`87c3734`): `scripts/bump-version.sh` — lockstep bumper for VERSION + plugin.json + marketplace.json. Ran it: VERSION 1.11.1 → 2.0.0
+  - Task 33 (`301a371`): `tests/smoke/v2.0-smoke-test.md` — 5-category manual checklist
+- [x] **Task 28 unblocked** — replaced `~/.claude/hooks/wf-orchestrator.py` symlink with standalone copy, then ran migration helper (`--no-backup --yes`) to prune v1.x hook entries from `settings.json`
+- [x] **Task 28** (`0d432fc`): deleted `install.sh`, `uninstall.sh`, `templates/settings-hooks.json`, `hooks/`, `commands/`, `templates/agents/`. 42 files, ~14.8K lines removed. `templates/` retains `progress.md.example` + `workflow.json.example` for `/wf-init`.
+- [x] **Plugin installed** — `/plugin marketplace add ~/wf-system` + `/plugin install wf-core@wf-system`. Commands visible in autocomplete (screenshot verified). PostToolUse hook firing (`~/.wf-state/` created).
+- [x] **Task 34** — partial smoke test (Cat 1: 4/6, Cat 3: 2/2, Cat 4: 1/8). RC cut:
+  - `v2.0.0-rc.1` tagged at `28462b5`
+  - Branch + tag + `v1.11.1-final-installer` all pushed to remote (first remote push of entire migration)
+**Commits (7 this session)**:
+- `6094fa0` docs(v2): rewrite README to lead with plugin install flow
+- `ac6704d` docs(v2): add v2.0.0 CHANGELOG entry
+- `1cb0edf` docs(v2): add rollback guide (user + maintainer paths)
+- `87c3734` chore(v2): add bump-version.sh and bump to 2.0.0
+- `301a371` test(v2): add manual smoke test checklist
+- `0d432fc` chore(v2): remove install.sh and legacy directories
+- `28462b5` test(v2): smoke test partial pass for v2.0.0-rc.1
+**Blockers**: None
+**Decisions**:
+- Cut RC with partial smoke test (7/16 items checked) — remaining items verified during 3-day dogfood period. The RC IS the dogfood vehicle.
+- Pushed `v1.11.1-final-installer` tag alongside RC for rollback safety.
+**Next**:
+1. **Dogfood v2.0.0-rc.1** for 3+ days (through at least 2026-04-17). Use `/wf-start-session`, `/wf-end-session`, `/wf-implement`, `/wf-fix-bug`, `/wf-improve` in real daily work. Log issues to `~/wf-system-rc-issues.md`.
+2. Complete remaining smoke test items (Categories 2, 4, 5) during dogfood.
+3. After 3 clean days: fill `<release-date>` in CHANGELOG, tag `v2.0.0`, open cutover PR to `main`.
 
 ---
 
@@ -214,18 +248,13 @@
 - **Sessions 1-16** (2026-01-08 → 2026-01-15): see `.claude/session-archive/sessions-1-16.md` — project init, agent/skill generation, wf-brain Phase 0-2, Ralph sub-task handling.
 
 ## In Progress
-- Plugin migration v2.0 — Phases A+B+C+D complete on `feature/plugin-migration-v2` (25 commits, nothing pushed). Migration helper fully TDD'd with 5 fixtures + 8/8 passing test cases. Task 28 blocked on symlink dependency — awaiting decision. Phase E Tasks 29-33 (docs-only) safe to execute.
+- `v2.0.0-rc.1` dogfood period (started 2026-04-14, target: 2026-04-17+). Plugin installed locally, hooks firing. Verifying remaining smoke test items during daily use.
 
 ## Next Session Should
-- [ ] **First: decide Task 28** — defer to Phase F alongside Task 34 smoke test (recommended, clean) OR manually unwind `~/.claude/hooks/wf-orchestrator.py` symlink first (riskier mid-session). See Session 21 "Blockers" for context.
-- [ ] Execute Phase E Tasks 29-33 via subagent dispatch (docs-only, no runtime dependencies on Task 28):
-  - Task 29: rewrite `README.md` for plugin-format install
-  - Task 30: add CHANGELOG v2.0.0 entry
-  - Task 31: write `docs/v2.0-rollback.md`
-  - Task 32: create `scripts/bump-version.sh` and bump `VERSION` to 2.0.0
-  - Task 33: write smoke test checklist
-- [ ] Then Phase F Tasks 34-35: full smoke suite → cut `v2.0.0-rc.1` → first remote push → dogfood ≥3 days → `v2.0.0` final + cutover PR
-- [ ] (carry-over) Create `gh issue` tickets for deferred items (wf-brain v2.1, wf-design v2.2, wf-cockpit v2.3+, wf-delegate vs wf-team-delegate audit, wf-brain mandatory + progress.md retirement v3.x) — after v2.0.0 lands
+- [ ] Continue dogfooding — use `/wf-start-session`, `/wf-implement`, `/wf-fix-bug`, `/wf-end-session` in real work
+- [ ] Complete remaining smoke test items (Categories 2, 4, 5) in `tests/smoke/v2.0-smoke-test.md`
+- [ ] If 3+ clean days: fill `<release-date>` in CHANGELOG, tag `v2.0.0`, open cutover PR to `main`
+- [ ] (carry-over) Create `gh issue` tickets for deferred items (wf-brain v2.1, wf-design v2.2, wf-cockpit v2.3+)
 - [ ] (carry-over) Improve Ralph logging visibility (stream Claude output in real-time)
 - [ ] (carry-over) Test `/wf-delegate --parallel` with real parallel tasks
 
@@ -241,5 +270,5 @@
 
 ## Notes
 - This is the wf-system repository - the workflow management tool itself
-- Commands are in commands/*.md, hooks in hooks/*.py
-- Hook installed at ~/.claude/hooks/wf-orchestrator.py
+- As of v2.0: commands/agents/skills/hooks live in `plugins/wf-core/`
+- Orchestrator hook bundled with plugin via `${CLAUDE_PLUGIN_ROOT}`, state at `~/.wf-state/`
