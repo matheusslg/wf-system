@@ -1,11 +1,12 @@
 <p align="center">
-  <h1 align="center">WF System</h1>
-  <p align="center">
-    <strong>A workflow management system for Claude Code</strong>
-  </p>
-  <p align="center">
-    Session management, progress tracking, and seamless GitHub/Jira integration
-  </p>
+  <img src="docs/assets/logo.svg" alt="WF System" width="120" />
+</p>
+
+<h1 align="center">WF System</h1>
+
+<p align="center">
+  <strong>End-to-end dev workflow for Claude Code</strong><br/>
+  Structured sessions · Multi-agent teams · Autonomous task delegation
 </p>
 
 <p align="center">
@@ -16,377 +17,154 @@
     <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License">
   </a>
   <a href="https://claude.com/claude-code">
-    <img src="https://img.shields.io/badge/Claude%20Code-compatible-purple?style=flat-square" alt="Claude Code Compatible">
+    <img src="https://img.shields.io/badge/Claude%20Code-plugin-purple?style=flat-square" alt="Claude Code Plugin">
   </a>
 </p>
 
 ---
 
-## Features
+## What it does
 
-| Feature | Description |
-|---------|-------------|
-| **Session Management** | Start and end sessions with automatic progress tracking |
-| **Context Monitoring** | Auto-triggers session end at 75% context usage |
-| **Ticket Breakdown** | Break down tickets into sub-tasks with agent delegation |
-| **Autonomous Mode** | `--until-done` flag processes all sub-tasks without intervention |
-| **Multi-Agent Pipeline** | Developer → Reviewer → QA workflow enforcement |
-| **Agent Teams** | Persistent teammates with parallel developers and direct DMs |
-| **Adversarial Review** | Cross-examination between independent review agents |
-| **Pre-Production Audit** | Multi-dimensional independent review before merge |
-| **QA Plan Generation** | Structured test plans posted as ticket comments |
-| **PR Comment Handling** | Evaluate, fix, and respond to PR review comments |
-| **Custom Agent Creation** | Create specialized agents with custom expertise and skills |
-| **Browser E2E Testing** | Ad-hoc and suite-based browser testing with screenshots |
-| **Multi-Platform** | Works with both GitHub Issues and Jira |
+WF System turns Claude Code into a managed development environment. Every session is tracked, every task flows through a developer → reviewer → QA pipeline, and context monitoring ensures nothing is lost when a session ends.
+
+- **Session lifecycle** — `/wf-start-session` loads previous context; `/wf-end-session` saves progress, commits, and archives. Context monitoring auto-triggers wrap-up before you hit the limit.
+- **Agent teams** — Spin up parallel developer teammates with a shared reviewer and QA. Teammates retain context across retries and communicate via direct messages.
+- **Dev pipeline** — `/wf-implement`, `/wf-fix-bug`, and `/wf-improve` each run a full agent chain: branch safety → implementation → code review → QA → commit.
+- **Autonomous delegation** — Break tickets into sub-tasks and delegate with `--until-done` to process them without intervention.
+- **GitHub & Jira** — Pick issues, create tickets, post QA plans, handle PR comments — all from slash commands.
 
 ---
 
-## Install (v2.0+)
+## Install
 
 Inside Claude Code:
 
     /plugin marketplace add matheusslg/wf-system
     /plugin install wf-core@wf-system
 
-That's it. The plugin auto-loads commands, agents, skills, hooks, and the orchestrator script.
+Restart when prompted. Then in any project:
 
-Restart Claude Code when prompted, then run `/wf-init` in any project to scaffold a workflow.
-
-## Migrating from v1.x (install.sh users)
-
-If you previously installed wf-system via `install.sh`, run the one-shot migration helper before installing the plugin:
-
-    curl -fsSL https://raw.githubusercontent.com/matheusslg/wf-system/main/scripts/migrate-to-plugin.sh | bash
-
-This removes the old `~/.claude/hooks/wf-orchestrator.py`, surgically prunes wf-system entries from `~/.claude/settings.json`, and clears `.wf-version` / `.wf-source` metadata. Then install the plugin as above.
-
-The migration helper creates a timestamped backup at `~/.claude/wf-system-backup-<UTC>/` before making any changes. See `docs/v2.0-rollback.md` for rollback instructions.
-
-## Coming soon
-
-- `wf-brain` (v2.1) — RAG knowledge layer with hybrid search
-- `wf-design` (v2.2) — Figma + pixelmatch verification
-- `wf-cockpit` (v2.3+) — Web UI for agent team observability
+    /wf-init
 
 ---
 
-## Quick Start
-
-### Choose Your Workflow
-
-<table>
-<tr>
-<td width="50%">
-
-#### Starting Fresh (PRD-First)
-
-Best for new projects where you want to define requirements first.
+## Daily workflow
 
 ```
-/wf-init
-    ↓
-/wf-create-prd
-    ↓
-/wf-parse-prd
-    ↓
-/wf-generate
-    ↓
-/wf-start-session
-```
-
-</td>
-<td width="50%">
-
-#### Existing Codebase
-
-Best for projects that already have code and structure.
-
-```
-/wf-init
-    ↓
-/wf-generate
-    ↓
-/wf-start-session
-```
-
-</td>
-</tr>
-</table>
-
-### Daily Development Loop
-
-Once set up, your daily workflow looks like this:
-
-```
-/wf-start-session → /wf-pick-issue → [work] → /wf-commit → /wf-end-session
+/wf-start-session → /wf-pick-issue → /wf-implement → /wf-commit → /wf-end-session
 ```
 
 ---
 
 ## Commands
 
-### Project Setup
+### Setup
 
 | Command | Description |
 |---------|-------------|
-| `/wf-init` | Bootstrap minimal workflow structure (checks for required MCPs) |
-| `/wf-generate` | Generate agents and skills based on detected tech stack |
-| `/wf-create-agent` | Create a custom agent with specified expertise |
+| `/wf-init` | Bootstrap workflow structure |
+| `/wf-generate` | Generate agents and skills for your stack |
+| `/wf-create-agent` | Create a custom agent |
 
-### PRD & Planning
-
-| Command | Description |
-|---------|-------------|
-| `/wf-create-prd` | Create a PRD from scratch with guided questions |
-| `/wf-parse-prd` | Parse existing PRD and create GitHub Issues |
-| `/wf-breakdown` | Break ticket into atomic sub-tasks with agent assignments |
-
-### Session Management
+### Session
 
 | Command | Description |
 |---------|-------------|
-| `/wf-start-session` | Start session - loads progress, verifies environment, shows MCP status |
-| `/wf-end-session` | End session - saves progress, commits changes, archives session |
-| `/wf-overview` | Quick status overview of current work state |
+| `/wf-start-session` | Load progress, verify environment |
+| `/wf-end-session` | Save progress, commit, archive |
+| `/wf-overview` | Quick status of current work |
 
 ### Development
 
 | Command | Description |
 |---------|-------------|
-| `/wf-pick-issue` | Select next issue to work on based on priority |
-| `/wf-implement` | Build a new feature from description |
+| `/wf-pick-issue` | Select next issue by priority |
+| `/wf-implement` | Build a feature (agent pipeline) |
 | `/wf-fix-bug` | Debug and fix an issue |
-| `/wf-test` | Run tests and fix any failures |
-| `/wf-refactor` | Restructure code without changing behavior |
-| `/wf-improve` | Enhance existing code or feature quality |
-| `/wf-debug` | Deep investigation for complex issues |
-| `/wf-investigate` | Explore codebase to understand how things work |
+| `/wf-improve` | Enhance existing code |
+| `/wf-test` | Run tests and fix failures |
+| `/wf-refactor` | Restructure without behavior change |
+| `/wf-debug` | Deep investigation |
+| `/wf-investigate` | Explore how things work |
 
-### Ticket Management
+### Tickets & Delegation
 
 | Command | Description |
 |---------|-------------|
-| `/wf-delegate` | Execute sub-task with agent (`--until-done` for autonomous mode) |
-| `/wf-team-delegate` | Team-based pipeline delegation with persistent teammates |
-| `/wf-ticket-status` | Check implementation progress for a tracked ticket |
-| `/wf-create-ticket` | Create GitHub/Jira ticket from user story |
+| `/wf-delegate` | Execute sub-task with agent |
+| `/wf-team-delegate` | Team pipeline with persistent teammates |
+| `/wf-breakdown` | Break ticket into sub-tasks |
+| `/wf-create-ticket` | Create GitHub/Jira ticket |
+| `/wf-ticket-status` | Check implementation progress |
 
 ### Code Quality
 
 | Command | Description |
 |---------|-------------|
-| `/wf-review` | Review recent code changes or a specific PR |
-| `/wf-pre-prod-review` | Multi-agent pre-production audit (independent reviewers) |
-| `/wf-team-review` | Adversarial review with cross-examination between reviewers |
-| `/wf-pr-comments` | Evaluate, fix, and respond to PR review comments |
-| `/wf-qa-plan` | Generate structured QA test plan from a ticket |
-| `/wf-e2e` | Run browser-based E2E tests or interactive scenarios |
-| `/wf-commit` | Create a well-formatted conventional commit |
+| `/wf-review` | Review changes or a PR |
+| `/wf-pre-prod-review` | Multi-agent pre-production audit |
+| `/wf-team-review` | Adversarial cross-examination review |
+| `/wf-pr-comments` | Handle PR review comments |
+| `/wf-qa-plan` | Generate structured QA plan |
+| `/wf-e2e` | Browser-based E2E testing |
+| `/wf-commit` | Conventional commit |
 
-> See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed documentation.
+### Planning
+
+| Command | Description |
+|---------|-------------|
+| `/wf-create-prd` | Create a PRD from scratch |
+| `/wf-parse-prd` | Parse PRD into GitHub Issues |
 
 ---
 
 ## Configuration
 
-WF System creates `.claude/workflow.json` in your project root:
+`/wf-init` creates `.claude/workflow.json`:
 
 ```json
 {
   "project": "my-project",
-  "description": "Short project description",
-
-  "github": {
-    "owner": "your-username",
-    "repo": "your-repo"
-  },
-
-  "breakdown": {
-    "enabled": true,
-    "defaultAssignee": "your-username",
-    "labelPrefix": "task/",
-    "agents": {
-      "frontend": { "label": "frontend", "description": "React/Next.js UI work" },
-      "backend": { "label": "backend", "description": "API and database work" },
-      "infra": { "label": "infra", "description": "Infrastructure and DevOps" }
-    }
-  },
-
-  "autonomy": {
-    "enabled": false,
-    "maxTasks": 5
-  },
-
-  "teams": {
-    "enabled": true,
-    "maxDeveloperTeammates": 3
-  },
-
+  "github": { "owner": "you", "repo": "your-repo" },
   "progressFile": "progress.md",
   "standardsFile": "standards.md"
 }
 ```
 
-> See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options (breakdown, autonomy, teams, etc).
 
 ---
 
-## How It Works
+## Migrating from v1.x
 
-### Session Lifecycle
+If you used `install.sh` before v2.0, run the migration helper first:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        SESSION START                             │
-│  /wf-start-session                                              │
-│  ├── Check MCP availability (GitHub, Figma)                     │
-│  ├── Load progress.md (previous session state)                  │
-│  ├── Verify environment (git, dependencies)                     │
-│  └── Show open issues summary                                   │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                         DEVELOPMENT                              │
-│  /wf-pick-issue → /wf-implement or /wf-fix-bug → /wf-commit     │
-│                                                                  │
-│  Context Monitoring:                                             │
-│  • 75% usage → Auto-triggers /wf-end-session                    │
-│  • 85% usage → Shows warning message                            │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                         SESSION END                              │
-│  /wf-end-session                                                │
-│  ├── Save progress to progress.md                               │
-│  ├── Commit pending changes                                     │
-│  ├── Archive session if file exceeds 500 lines                  │
-│  └── Verify clean git state                                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+    curl -fsSL https://raw.githubusercontent.com/matheusslg/wf-system/main/scripts/migrate-to-plugin.sh | bash
 
-### Multi-Agent Pipeline
-
-When using `/wf-delegate`, work automatically flows through the pipeline:
-
-```
-Developer (frontend/backend)
-         ↓
-    [Implementation]
-         ↓
-      Reviewer  ← (if reviewer agent exists)
-         ↓
-     [Code Review]
-         ↓
-        QA       ← (if QA agent exists)
-         ↓
-    [Testing & Validation]
-         ↓
-       Close
-```
-
-### Agent Teams Pipeline
-
-When using `/wf-team-delegate`, persistent teammates replace stateless subagents. Teammates retain context across retries and communicate directly:
-
-```
-Team Lead (orchestrator)
-    ├── Developer-1  ─┐
-    ├── Developer-2  ─┤ (parallel, persistent teammates)
-    ├── Developer-3  ─┘
-    ├── Reviewer       ← cross-reviews via direct DMs
-    └── QA             ← retests with full context
-
-  ┌──────────────────────────────────────────┐
-  │  Developer completes → Reviewer reviews  │
-  │  Reviewer requests changes → Developer   │
-  │  fixes (keeps full context, no re-read)  │
-  │  Reviewer approves → QA validates        │
-  │  QA passes → Issue closed                │
-  └──────────────────────────────────────────┘
-```
+This cleans up the old hook, prunes settings.json, and creates a backup. Then install the plugin as above. See [docs/v2.0-rollback.md](docs/v2.0-rollback.md) if you need to roll back.
 
 ---
 
-## Requirements
+## Roadmap
 
-### Core Requirements
-
-| Requirement | Purpose |
-|-------------|---------|
-| [Claude Code CLI](https://claude.ai/code) | Required - The AI-powered CLI |
-| Python 3.x | Required - For orchestrator hook |
-| `jq` | Required by migration helper |
-| `gh` CLI | Optional - For GitHub operations |
-
-### MCP Servers (Recommended)
-
-WF System works best with these MCP servers installed:
-
-| MCP Server | Required For | Status |
-|------------|--------------|--------|
-| **[GitHub MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/github)** | Issue management, PRs, ticket tracking | Recommended |
-| **[Figma MCP](https://github.com/figma/figma-mcp-server)** | Design context, tokens, screenshots | Optional |
-| **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** | Visual verification, UI screenshots | Optional |
-| **[agent-browser](https://github.com/vercel-labs/agent-browser)** | Browser automation CLI for E2E testing and UI verification | `npm i -g agent-browser` |
-| **[Atlassian MCP](https://github.com/atlassian/atlassian-mcp-server)** | Jira issue management (for Jira-based projects) | Optional |
-| **[Context7](https://github.com/upstash/context7)** | Library documentation lookup | Optional |
-
-> `/wf-init` will check for these and guide installation if missing.
-
-**Without MCPs:**
-- **No GitHub MCP**: Manual issue management (copy/paste)
-- **No Figma MCP**: Design features deferred to wf-design (v2.2)
-
----
-
-## Project Structure
-
-After running `/wf-init` and `/wf-generate`:
-
-```
-your-project/
-├── .claude/
-│   ├── workflow.json          # Workflow configuration
-│   ├── agents/                # Agent definitions
-│   │   ├── frontend.md
-│   │   ├── backend.md
-│   │   └── ...
-│   ├── skills/                # Agent skills
-│   │   └── {skill-name}/
-│   │       └── SKILL.md
-│   └── session-archive/       # Archived sessions
-├── progress.md                # Session progress tracking
-├── standards.md               # Code standards
-└── PRD.md                     # Product requirements (if using PRD-first)
-```
+- **wf-brain** (v2.1) — RAG knowledge layer with hybrid search
+- **wf-design** (v2.2) — Figma + pixelmatch verification
+- **wf-cockpit** (v2.3+) — Web UI for agent team observability
 
 ---
 
 ## Uninstall
 
-In Claude Code:
-
     /plugin uninstall wf-core@wf-system
 
 ---
 
-## Support
-
-If you find WF System helpful, consider supporting its development:
-
-<a href="https://buymeacoffee.com/matheusslg">
-  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" />
-</a>
-
----
-
-## License
-
-MIT
-
----
+<p align="center">
+  <a href="https://buymeacoffee.com/matheusslg">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" />
+  </a>
+</p>
 
 <p align="center">
-  Made with Claude Code
+  MIT · Made with Claude Code
 </p>
