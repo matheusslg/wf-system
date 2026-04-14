@@ -1,0 +1,24 @@
+{
+  "name": "wf-system",
+  "owner": {
+    "name": "Matheus Cavallini",
+    "email": "matheus@gnarlysoft.io"
+  },
+  "metadata": {
+    "description": "wf-system: workflow management plugins for Claude Code",
+    "version": "2.0.0"
+  },
+  "plugins": [
+    {
+      "name": "wf-core",
+      "source": "./plugins/wf-core",
+      "description": "Core workflow loop: session management, dev pipeline, agent teams, planning",
+      "category": "productivity",
+      "tags": [
+        "workflow",
+        "agents",
+        "orchestration"
+      ]
+    }
+  ]
+}

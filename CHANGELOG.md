@@ -6,6 +6,67 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.0.0] - 2026-04-14
+
+### ⚠ BREAKING CHANGES
+
+- **install.sh removed.** wf-system is now distributed as a Claude Code plugin via
+  the official Plugins Marketplace. Users on v1.x must run the one-shot migration
+  helper before installing v2.0:
+
+      curl -fsSL https://raw.githubusercontent.com/matheusslg/wf-system/main/scripts/migrate-to-plugin.sh | bash
+
+  Then in Claude Code:
+
+      /plugin marketplace add matheusslg/wf-system
+      /plugin install wf-core@wf-system
+
+  Users who need to stay on v1.x can pin to the `v1.11.1-final-installer` tag.
+
+### Added
+
+- Claude Code plugin format support via `plugins/wf-core/.claude-plugin/plugin.json`
+- Marketplace registration via `.claude-plugin/marketplace.json`
+- Shared `wf-dev-pipeline` skill consolidating `/wf-implement`, `/wf-fix-bug`,
+  `/wf-improve` (~855 LOC removed; one source of truth)
+- `scripts/migrate-to-plugin.sh` one-shot migration helper for v1.x users
+- `scripts/bump-version.sh` lockstep version bumper
+- LICENSE file (MIT) — previously the README claimed MIT but no LICENSE existed
+- Cockpit-ready event log seam in `/wf-team-delegate` (off by default; reads
+  `cockpit.eventLog` from `workflow.json`)
+- Automated test harness for the migration helper (`tests/migration/run-tests.sh`)
+  with fixtures for v1.0.0, v1.5.0, v1.11.1, and never-installed states
+
+### Changed
+
+- Orchestrator hook bundled with plugin via `${CLAUDE_PLUGIN_ROOT}` (no more
+  `~/.claude/hooks/wf-orchestrator.py`)
+- README rewritten to lead with plugin install instructions
+- Hook state directory moved from `~/.claude/hooks/.wf-state/` to `~/.wf-state/`
+  (survives plugin reinstalls)
+- macOS sound playback in orchestrator gated behind `sys.platform == "darwin"`
+  (was silently failing on Linux/Windows)
+
+### Removed
+
+- `install.sh` (replaced by plugin marketplace install)
+- `uninstall.sh` (replaced by `/plugin uninstall`)
+- `templates/settings-hooks.json` (plugin format auto-loads `hooks/hooks.json`)
+- Version check subsystem in orchestrator hook (~50 LOC) — `/plugin update`
+  replaces this
+- Install-mode tracking files (`.wf-version`, `.wf-source`, `.wf-install-mode`,
+  `.wf-last-check`, `.wf-update-available`)
+
+### Fixed
+
+- **F1 drift bug**: Branch Safety check was missing in `/wf-fix-bug` and
+  `/wf-improve`. Now applied to all three modes via the shared skill.
+- **F1 drift bug**: GitHub issue update was missing in `/wf-improve`. Now applied
+  to all three modes.
+- **F1 drift bug**: error handlers (`Cannot Determine Agent`, `Agent Failed`) were
+  only in `/wf-fix-bug`. Now consolidated and applied to all three.
+
+
 ## [1.11.1] - 2026-04-07
 
 ### Fixed

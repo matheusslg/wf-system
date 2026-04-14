@@ -1,0 +1,1 @@
+# stub: wf-end-session
