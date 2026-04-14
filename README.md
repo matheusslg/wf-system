@@ -37,28 +37,37 @@
 | **QA Plan Generation** | Structured test plans posted as ticket comments |
 | **PR Comment Handling** | Evaluate, fix, and respond to PR review comments |
 | **Custom Agent Creation** | Create specialized agents with custom expertise and skills |
-| **Self-Update System** | Check for and apply wf-system updates |
 | **Browser E2E Testing** | Ad-hoc and suite-based browser testing with screenshots |
-| **Design Integration** | Figma, design systems, and design tokens support |
 | **Multi-Platform** | Works with both GitHub Issues and Jira |
 
 ---
 
-## Installation
+## Install (v2.0+)
 
-```bash
-git clone https://github.com/matheusslg/wf-system.git ~/wf-system
-~/wf-system/install.sh
-```
+Inside Claude Code:
 
-The installer will ask:
+    /plugin marketplace add matheusslg/wf-system
+    /plugin install wf-core@wf-system
 
-| Option | Choices | Description |
-|--------|---------|-------------|
-| **Scope** | `Global` (default) / `Project` | Global: `~/.claude/commands/` • Project: `./.claude/commands/` |
-| **Method** | `Symlink` (default) / `Copy` | Symlink auto-updates with `git pull` |
+That's it. The plugin auto-loads commands, agents, skills, hooks, and the orchestrator script.
 
-> **Note**: Global install includes the orchestrator hook for context monitoring. Restart Claude Code after installation.
+Restart Claude Code when prompted, then run `/wf-init` in any project to scaffold a workflow.
+
+## Migrating from v1.x (install.sh users)
+
+If you previously installed wf-system via `install.sh`, run the one-shot migration helper before installing the plugin:
+
+    curl -fsSL https://raw.githubusercontent.com/matheusslg/wf-system/main/scripts/migrate-to-plugin.sh | bash
+
+This removes the old `~/.claude/hooks/wf-orchestrator.py`, surgically prunes wf-system entries from `~/.claude/settings.json`, and clears `.wf-version` / `.wf-source` metadata. Then install the plugin as above.
+
+The migration helper creates a timestamped backup at `~/.claude/wf-system-backup-<UTC>/` before making any changes. See `docs/v2.0-rollback.md` for rollback instructions.
+
+## Coming soon
+
+- `wf-brain` (v2.1) — RAG knowledge layer with hybrid search
+- `wf-design` (v2.2) — Figma + pixelmatch verification
+- `wf-cockpit` (v2.3+) — Web UI for agent team observability
 
 ---
 
@@ -78,8 +87,6 @@ Best for new projects where you want to define requirements first.
 /wf-init
     ↓
 /wf-create-prd
-    ↓
-/wf-design-setup  ← (optional)
     ↓
 /wf-parse-prd
     ↓
@@ -125,9 +132,7 @@ Once set up, your daily workflow looks like this:
 |---------|-------------|
 | `/wf-init` | Bootstrap minimal workflow structure (checks for required MCPs) |
 | `/wf-generate` | Generate agents and skills based on detected tech stack |
-| `/wf-design-setup` | Configure design resources (Figma, design system, tokens) |
 | `/wf-create-agent` | Create a custom agent with specified expertise |
-| `/wf-update` | Check for and apply wf-system updates |
 
 ### PRD & Planning
 
@@ -311,7 +316,7 @@ Team Lead (orchestrator)
 |-------------|---------|
 | [Claude Code CLI](https://claude.ai/code) | Required - The AI-powered CLI |
 | Python 3.x | Required - For orchestrator hook |
-| `jq` | Optional - For settings merge |
+| `jq` | Required by migration helper |
 | `gh` CLI | Optional - For GitHub operations |
 
 ### MCP Servers (Recommended)
@@ -331,7 +336,7 @@ WF System works best with these MCP servers installed:
 
 **Without MCPs:**
 - **No GitHub MCP**: Manual issue management (copy/paste)
-- **No Figma MCP**: `/wf-design-setup` will skip Figma integration
+- **No Figma MCP**: Design features deferred to wf-design (v2.2)
 
 ---
 
@@ -360,9 +365,9 @@ your-project/
 
 ## Uninstall
 
-```bash
-~/wf-system/uninstall.sh
-```
+In Claude Code:
+
+    /plugin uninstall wf-core@wf-system
 
 ---
 
