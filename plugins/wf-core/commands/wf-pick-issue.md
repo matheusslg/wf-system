@@ -94,5 +94,5 @@ gh issue edit [number] --add-assignee @me
 **Acceptance Criteria**:
 - [ ] [criteria from issue]
 
-Ready to start. Use `/wf-implement` or begin working on the issue.
+Ready to start. Use `/wf-core:wf-implement` or begin working on the issue.
 ```

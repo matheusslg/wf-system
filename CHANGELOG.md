@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Per-project opt-out for the context monitor** via `workflow.json`:
+
+      {
+        "contextMonitor": { "enabled": false }
+      }
+
+  Mirrors the resolution layering used elsewhere — `WF_DISABLE_CONTEXT_CHECK=true`
+  still wins, then the `workflow.json` field, then the default-on behaviour.
+  Useful for repos where the host environment already manages context (Ralph,
+  external loops, custom monitoring) without forcing every contributor to
+  export an env var.
+
+### Changed
+
+- **User-facing slash references updated to plugin-namespaced form.** All
+  `/wf-<cmd>` strings in command markdown, skill SKILL.md files, agent prompts,
+  and orchestrator system messages now use `/wf-core:wf-<cmd>` to match the
+  Claude Code plugin format introduced in v2.0.0. Bare-form references would
+  have rendered as broken links / unrecognised commands inside Claude Code
+  sessions; the prefixed form is what the runtime actually exposes.
+
 ### Fixed
 
 - **Context monitor reliability** (`plugins/wf-core/scripts/wf-orchestrator.py`).

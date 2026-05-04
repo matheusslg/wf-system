@@ -91,5 +91,5 @@ Verify all tests pass:
 
 **Coverage** (if available): X%
 
-Ready to `/wf-commit` if changes were made.
+Ready to `/wf-core:wf-commit` if changes were made.
 ```

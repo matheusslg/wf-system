@@ -366,6 +366,22 @@ class TestDisableFlag(ContextMonitorTestBase):
         orch = self._make_orch(transcript_path=path)
         self.assertIsNone(orch.handle_context_check())
 
+    def test_workflow_json_disable_short_circuits(self):
+        # Per-project opt-out via workflow.json — no env-var gymnastics.
+        # Even at 95% of a 200K window, contextMonitor.enabled=false wins.
+        os.environ["WF_CONTEXT_LIMIT"] = "200000"
+        wf = {
+            "contextMonitor": {"enabled": False},
+            "github": {"owner": "x", "repo": "y"},
+        }
+        (self.tmp / "workflow.json").write_text(json.dumps(wf))
+        path = self._write_transcript([_usage_entry(input_tokens=190_000)])  # 95%
+        orch = self._make_orch(transcript_path=path, cwd=str(self.tmp))
+        self.assertIsNone(orch.handle_context_check())
+        # State must not have been mutated either — opt-out is a clean no-op.
+        self.assertFalse(orch.state["warning_shown"])
+        self.assertFalse(orch.state["pre_compact_ran"])
+
 
 if __name__ == "__main__":
     unittest.main()

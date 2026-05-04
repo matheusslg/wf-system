@@ -5,9 +5,9 @@ allowed-tools: Read, Write, Bash, AskUserQuestion
 
 # Create PRD
 
-Generate a Product Requirements Document (PRD) through an interactive Q&A flow. The output is structured for compatibility with `/wf-parse-prd`.
+Generate a Product Requirements Document (PRD) through an interactive Q&A flow. The output is structured for compatibility with `/wf-core:wf-parse-prd`.
 
-**Prerequisite**: Run `/wf-init` first to set up the project name and workflow structure.
+**Prerequisite**: Run `/wf-core:wf-init` first to set up the project name and workflow structure.
 
 ## 0. Get Project Name from workflow.json
 
@@ -20,7 +20,7 @@ cat .claude/workflow.json 2>/dev/null
 **If workflow.json exists**: Extract the `project` field and use it as the project name.
 
 **If workflow.json doesn't exist**:
-- Display: "Workflow not initialized. Run `/wf-init` first to set up the project."
+- Display: "Workflow not initialized. Run `/wf-core:wf-init` first to set up the project."
 - Exit without creating PRD.
 
 ## 1. Check for Existing PRD
@@ -37,7 +37,7 @@ ls PRD.md 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
 | **Append** | Add new sections to existing PRD (useful for expanding scope) |
 | **Cancel** | Abort and keep existing PRD |
 
-If user selects "Cancel", stop here and suggest reviewing the existing PRD with `/wf-parse-prd`.
+If user selects "Cancel", stop here and suggest reviewing the existing PRD with `/wf-core:wf-parse-prd`.
 
 ## 2. Choose PRD Scope
 
@@ -168,7 +168,7 @@ Using the collected answers and the project name from Step 0, generate `PRD.md` 
 
 ## Tech Stack
 
-{Technologies chosen by the user - this section is used by /wf-generate}
+{Technologies chosen by the user - this section is used by /wf-core:wf-generate}
 
 ### Frontend
 - {e.g., React, Next.js, Vue}
@@ -187,7 +187,7 @@ Using the collected answers and the project name from Step 0, generate `PRD.md` 
 
 ## Design
 
-{Design resources and guidelines - this section is used by /wf-design-setup}
+{Design resources and guidelines - this section is used by /wf-core:wf-design-setup}
 
 ### Design Resources
 - {Figma links, wireframes, mockups, or "None"}
@@ -230,7 +230,7 @@ Using the collected answers and the project name from Step 0, generate `PRD.md` 
 - {Question 2}
 
 ---
-*Generated with /wf-create-prd*
+*Generated with /wf-core:wf-create-prd*
 ```
 
 Use the Write tool to create `PRD.md` in the project root.
@@ -245,7 +245,7 @@ head -50 PRD.md
 
 Verify:
 - All sections are present (based on scope choice)
-- Roadmap has proper `### Phase N` structure for `/wf-parse-prd` parsing
+- Roadmap has proper `### Phase N` structure for `/wf-core:wf-parse-prd` parsing
 - No placeholder text remains
 
 ## 7. Suggest Next Steps
@@ -257,12 +257,12 @@ PRD.md created successfully!
 
 Next steps:
 1. Review and refine the PRD manually if needed
-2. (Optional) Run /wf-design-setup to configure detailed design resources (Figma, tokens, etc.)
-3. Run /wf-parse-prd to create GitHub Issues from the roadmap
-4. Run /wf-generate to create agents and skills based on your tech stack
-5. Run /wf-start-session to begin development
+2. (Optional) Run /wf-core:wf-design-setup to configure detailed design resources (Figma, tokens, etc.)
+3. Run /wf-core:wf-parse-prd to create GitHub Issues from the roadmap
+4. Run /wf-core:wf-generate to create agents and skills based on your tech stack
+5. Run /wf-core:wf-start-session to begin development
 
-Workflow: /wf-create-prd → /wf-design-setup (optional) → /wf-parse-prd → /wf-generate → /wf-start-session
+Workflow: /wf-core:wf-create-prd → /wf-core:wf-design-setup (optional) → /wf-core:wf-parse-prd → /wf-core:wf-generate → /wf-core:wf-start-session
 ```
 
 ---
@@ -272,7 +272,7 @@ Workflow: /wf-create-prd → /wf-design-setup (optional) → /wf-parse-prd → /
 ### No workflow.json
 
 If `.claude/workflow.json` doesn't exist:
-- Display: "Workflow not initialized. Run `/wf-init` first."
+- Display: "Workflow not initialized. Run `/wf-core:wf-init` first."
 - Exit without creating PRD
 
 ### User Provides Incomplete Answers
@@ -293,7 +293,7 @@ If Write tool fails:
 ## Example Flow
 
 ```
-User: /wf-create-prd
+User: /wf-core:wf-create-prd
 
 Claude:
 1. Reads .claude/workflow.json → project = "my-awesome-app"
@@ -302,7 +302,7 @@ Claude:
 4. Asks: Guidance level? → User selects "Light"
 5. Asks 4-5 questions about problem, users, MVP, tech stack
 6. Generates PRD.md with "# PRD: my-awesome-app" (includes Tech Stack section)
-7. Suggests next steps → /wf-parse-prd then /wf-generate
+7. Suggests next steps → /wf-core:wf-parse-prd then /wf-core:wf-generate
 ```
 
-Tech Stack in PRD enables `/wf-generate` to create appropriate agents and skills.
+Tech Stack in PRD enables `/wf-core:wf-generate` to create appropriate agents and skills.

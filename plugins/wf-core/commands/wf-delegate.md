@@ -110,7 +110,7 @@ mcp__github__search_issues(
 
 **Pick a sub-task**:
 ```bash
-/wf-delegate {issue_key}
+/wf-core:wf-delegate {issue_key}
 ```
 ```
 
@@ -221,7 +221,7 @@ Verify:
 
 List available sub-tasks:
 ```bash
-/wf-delegate --list
+/wf-core:wf-delegate --list
 ```
 ```
 
@@ -242,12 +242,12 @@ Check issue has required labels:
 ```markdown
 Error: Issue {key} is not a breakdown sub-task
 
-This command only works with issues created by `/wf-breakdown`.
+This command only works with issues created by `/wf-core:wf-breakdown`.
 Sub-tasks have the `sub-task` label.
 
 To create sub-tasks from a source issue:
 ```bash
-/wf-breakdown {parent_issue_key}
+/wf-core:wf-breakdown {parent_issue_key}
 ```
 ```
 
@@ -264,7 +264,7 @@ ls .claude/agents/*.md
 
 **To fix**, add the appropriate label to the issue in {platform}.
 
-Then run `/wf-delegate {key}` again.
+Then run `/wf-core:wf-delegate {key}` again.
 ```
 
 ## 5. Extract Agent Name
@@ -298,12 +298,12 @@ Issue #{number} depends on:
 
 Complete the blocking issues first:
 ```bash
-/wf-delegate {dep_1}
+/wf-core:wf-delegate {dep_1}
 ```
 
 Or override if you know what you're doing:
 ```bash
-/wf-delegate {number} --force
+/wf-core:wf-delegate {number} --force
 ```
 ```
 
@@ -328,7 +328,7 @@ ls .claude/agents/*.md
 ```
 
 **Options**:
-1. Create the agent using `/wf-init` (adds standard agents)
+1. Create the agent using `/wf-core:wf-init` (adds standard agents)
 2. Manually create `.claude/agents/{agent_name}.md`
 3. Re-assign to existing agent:
    ```bash
@@ -749,7 +749,7 @@ mcp__github__add_issue_comment(
 </details>
 
 ---
-*Completed by `{agent_name}` via `/wf-delegate`*
+*Completed by `{agent_name}` via `/wf-core:wf-delegate`*
 ```
 
 **Note**: Only include the Screenshots section if screenshots were taken. Use `<details>` to keep the comment collapsible and clean.
@@ -1180,12 +1180,12 @@ mcp__github__update_issue(
 
 **Check parent issue progress**:
 ```bash
-/wf-ticket-status #{parent_number}
+/wf-core:wf-ticket-status #{parent_number}
 ```
 
 **Pick up next sub-task**:
 ```bash
-/wf-delegate --list
+/wf-core:wf-delegate --list
 ```
 ```
 
@@ -1238,7 +1238,7 @@ Possible causes:
 
 **The issue remains open for retry**:
 ```bash
-/wf-delegate {number}
+/wf-core:wf-delegate {number}
 ```
 ```
 
@@ -1248,8 +1248,8 @@ Possible causes:
 2. **Parallel Mode**: Use `--parallel` with multiple issues to execute independent tasks concurrently
 3. **Pipeline is Mandatory**: Developer → Reviewer → QA flow is enforced when those agents exist
 4. **Dependencies**: Always check dependencies are complete first
-5. **Parallel First**: Check `/wf-breakdown` output for parallel-eligible tasks before starting
-6. **Progress Tracking**: Use `/wf-ticket-status` to see overall progress
+5. **Parallel First**: Check `/wf-core:wf-breakdown` output for parallel-eligible tasks before starting
+6. **Progress Tracking**: Use `/wf-core:wf-ticket-status` to see overall progress
 7. **Manual Override**: Use `--force` to skip dependency checks if needed
 8. **Re-run**: If agent fails, you can re-run the delegate command
 9. **Skip Pipeline**: Use `--skip-pipeline` only if you need to bypass review/QA (not recommended)
@@ -1440,7 +1440,7 @@ When no more tasks are available:
 | #128 | Integration | #129 (still open) |
 
 ### Next Steps
-- Check parent issue: `/wf-ticket-status #{parent}`
+- Check parent issue: `/wf-core:wf-ticket-status #{parent}`
 - Review all changes: `git log --oneline -20`
 - Run full test suite: `npm run test`
 
@@ -1478,16 +1478,16 @@ If a task fails during autonomous execution:
 **Options**:
 1. Fix the issue manually, then resume:
    ```bash
-   /wf-delegate --until-done
+   /wf-core:wf-delegate --until-done
    ```
 2. Skip this task and continue:
    ```bash
    gh issue edit {number} --add-label "blocked"
-   /wf-delegate --until-done
+   /wf-core:wf-delegate --until-done
    ```
 3. Investigate the error:
    ```bash
-   /wf-debug "#{number} failed: {error}"
+   /wf-core:wf-debug "#{number} failed: {error}"
    ```
 ```
 
@@ -1495,13 +1495,13 @@ If a task fails during autonomous execution:
 
 ```bash
 # Start autonomous mode from scratch (finds first available task)
-/wf-delegate --until-done
+/wf-core:wf-delegate --until-done
 
 # Start with specific task, then continue with rest
-/wf-delegate 125 --until-done
+/wf-core:wf-delegate 125 --until-done
 
 # Force start even if some dependencies are unmet
-/wf-delegate --until-done --force
+/wf-core:wf-delegate --until-done --force
 ```
 
 ## 17. Parallel Mode (--parallel)
@@ -1510,7 +1510,7 @@ Execute multiple independent tasks concurrently using parallel Task tool calls.
 
 ### When to Use
 
-Use parallel mode when `/wf-breakdown` identifies tasks that can run simultaneously:
+Use parallel mode when `/wf-core:wf-breakdown` identifies tasks that can run simultaneously:
 
 ```
 Execution Order:
@@ -1712,8 +1712,8 @@ Review all changes together → QA all → Close all
 ### Next Steps
 1. Run full test suite: `npm run test`
 2. Review all changes: `git diff HEAD~4`
-3. Continue with dependent task: `/wf-delegate 108`
-4. Check overall progress: `/wf-ticket-status 106`
+3. Continue with dependent task: `/wf-core:wf-delegate 108`
+4. Check overall progress: `/wf-core:wf-ticket-status 106`
 ```
 
 ### Parallel Mode Rules
@@ -1728,31 +1728,31 @@ Review all changes together → QA all → Close all
 
 ```bash
 # Execute specific tasks in parallel (from breakdown output)
-/wf-delegate 107 109 110 111 --parallel
+/wf-core:wf-delegate 107 109 110 111 --parallel
 
 # Parallel with force (skip dependency check)
-/wf-delegate 107 108 109 --parallel --force
+/wf-core:wf-delegate 107 108 109 --parallel --force
 
 # Auto-detect parallel tasks (finds all with no deps)
-/wf-delegate --parallel --auto
+/wf-core:wf-delegate --parallel --auto
 ```
 
 ### Recommended Workflow
 
-Based on `/wf-breakdown` output:
+Based on `/wf-core:wf-breakdown` output:
 
 ```bash
 # Step 1: Run parallel group
-/wf-delegate 107 109 110 111 --parallel
+/wf-core:wf-delegate 107 109 110 111 --parallel
 
 # Step 2: Run sequential tasks
-/wf-delegate 108
+/wf-core:wf-delegate 108
 
 # Step 3: Run QA
-/wf-delegate 112
+/wf-core:wf-delegate 112
 ```
 
 ## Related Commands
-- `/wf-breakdown` - Create new sub-tasks from Jira ticket or GitHub issue
-- `/wf-ticket-status` - Check implementation progress
-- `/wf-commit` - Create conventional commit after implementation
+- `/wf-core:wf-breakdown` - Create new sub-tasks from Jira ticket or GitHub issue
+- `/wf-core:wf-ticket-status` - Check implementation progress
+- `/wf-core:wf-commit` - Create conventional commit after implementation

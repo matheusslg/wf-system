@@ -18,7 +18,7 @@ cat ~/.claude/hooks/.wf-update-available 2>/dev/null || echo ""
 If the file exists and contains a version transition (e.g., "1.0.0->1.1.0"):
 
 > **wf-system update available**: v{old} -> v{new}
-> Run `/wf-update` to update.
+> Run `/wf-core:wf-update` to update.
 
 Continue with session start regardless - this is just a non-blocking notice.
 
@@ -42,7 +42,7 @@ Silently verify available MCP servers to understand what features are available 
 ```
 mcp__github__get_me()
 ```
-If fails: Note that issue-related commands (`/wf-breakdown`, `/wf-parse-prd`, etc.) won't work.
+If fails: Note that issue-related commands (`/wf-core:wf-breakdown`, `/wf-core:wf-parse-prd`, etc.) won't work.
 
 **Figma MCP** (if design is configured in workflow.json):
 Only check if `workflow.json` has `design.figma` configured:
@@ -61,7 +61,7 @@ If fails and Figma is configured: Warn user that design context features are una
 
 If critical MCPs are missing, add to session summary:
 ```markdown
-**Note**: Some workflow commands require MCP servers. Run `/wf-init` for setup instructions.
+**Note**: Some workflow commands require MCP servers. Run `/wf-core:wf-init` for setup instructions.
 ```
 
 ## 1.6. Brain Status Check
@@ -172,4 +172,4 @@ After gathering this information, provide a summary:
 - #N: Issue title
 ```
 
-Ready to work. Use `/wf-pick-issue` to select a task or describe what you'd like to work on.
+Ready to work. Use `/wf-core:wf-pick-issue` to select a task or describe what you'd like to work on.

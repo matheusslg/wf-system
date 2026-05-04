@@ -7,14 +7,14 @@ note: "Edit and Write are INTENTIONALLY excluded - orchestrator must delegate, n
 
 # Team Pipeline Delegation
 
-Execute sub-tasks using Claude Code's Agent Teams feature. Unlike `/wf-delegate` which spawns stateless subagents, this command creates persistent teammates that retain context across retries and communicate directly with each other.
+Execute sub-tasks using Claude Code's Agent Teams feature. Unlike `/wf-core:wf-delegate` which spawns stateless subagents, this command creates persistent teammates that retain context across retries and communicate directly with each other.
 
-**When to use this vs `/wf-delegate`:**
-- Use `/wf-team-delegate` when tasks require review/QA feedback loops (teammates keep context)
-- Use `/wf-team-delegate --until-done` for multi-task pipelines (parallel developer teammates)
-- Use `/wf-delegate` as a stable fallback if Agent Teams misbehaves
-- Use `/wf-team-delegate --relay #101 #102 #103` for sequential tasks where each agent needs context from the previous
-- Use `/wf-team-delegate --relay --until-done` to auto-detect relay chains from dependency graph
+**When to use this vs `/wf-core:wf-delegate`:**
+- Use `/wf-core:wf-team-delegate` when tasks require review/QA feedback loops (teammates keep context)
+- Use `/wf-core:wf-team-delegate --until-done` for multi-task pipelines (parallel developer teammates)
+- Use `/wf-core:wf-delegate` as a stable fallback if Agent Teams misbehaves
+- Use `/wf-core:wf-team-delegate --relay #101 #102 #103` for sequential tasks where each agent needs context from the previous
+- Use `/wf-core:wf-team-delegate --relay --until-done` to auto-detect relay chains from dependency graph
 
 ## CRITICAL: ORCHESTRATOR BOUNDARIES
 
@@ -79,7 +79,7 @@ MAX_DEVS=$(cat .claude/workflow.json 2>/dev/null | jq -r '.teams.maxDeveloperTea
 
 If `teams.enabled` is `false`, tell the user:
 ```
-Agent Teams is disabled in workflow.json. Use /wf-delegate instead, or set teams.enabled to true.
+Agent Teams is disabled in workflow.json. Use /wf-core:wf-delegate instead, or set teams.enabled to true.
 ```
 Exit.
 
@@ -122,22 +122,22 @@ mcp__github__search_issues(
 
 **Run a single task:**
 ```bash
-/wf-team-delegate 125
+/wf-core:wf-team-delegate 125
 ```
 
 **Run all tasks autonomously:**
 ```bash
-/wf-team-delegate --until-done
+/wf-core:wf-team-delegate --until-done
 ```
 
 **Run independent tasks in parallel:**
 ```bash
-/wf-team-delegate 125 126
+/wf-core:wf-team-delegate 125 126
 ```
 
 **Run tasks as a relay (sequential with handoffs):**
 ```bash
-/wf-team-delegate --relay 125 126 127
+/wf-core:wf-team-delegate --relay 125 126 127
 ```
 ```
 
@@ -153,8 +153,8 @@ If `--relay` is present in `$ARGUMENTS`:
 - If NO explicit issue numbers AND `--until-done` is NOT present → error:
   ```
   Error: --relay requires either explicit issue numbers or --until-done flag.
-  Usage: /wf-team-delegate --relay #101 #102 #103
-         /wf-team-delegate --relay --until-done
+  Usage: /wf-core:wf-team-delegate --relay #101 #102 #103
+         /wf-core:wf-team-delegate --relay --until-done
   ```
 - Parse `--on-failure` value. If not provided, default to `continue`. If value is not `continue` or `stop` → error:
   ```
@@ -1299,7 +1299,7 @@ To clean up manually: `rm -rf {RELAY_DIR}`
 
 **Check parent issue progress:**
 ```bash
-/wf-ticket-status #{parent_number}
+/wf-core:wf-ticket-status #{parent_number}
 ```
 ```
 
@@ -1332,7 +1332,7 @@ To clean up manually: `rm -rf {RELAY_DIR}`
 - Independent tasks #{125} and #{126} ran in parallel
 
 ### Next Steps
-- Check parent issue: `/wf-ticket-status #{parent}`
+- Check parent issue: `/wf-core:wf-ticket-status #{parent}`
 - Review all changes: `git log --oneline -20`
 - Run full test suite
 ```
@@ -1392,7 +1392,7 @@ Agent Teams tools not available in this environment.
 
 Falling back to standard delegation:
 ```bash
-/wf-delegate {original_arguments}
+/wf-core:wf-delegate {original_arguments}
 ```
 ```
 
@@ -1436,14 +1436,14 @@ TeamDelete()
 
 ### Ticketing Platform MCP Not Available
 
-Same handling as `/wf-delegate` — fall back to jira-cli.sh for Jira, or report GitHub MCP unavailability.
+Same handling as `/wf-core:wf-delegate` — fall back to jira-cli.sh for Jira, or report GitHub MCP unavailability.
 
 ## Tips
 
-1. **Context Retention**: The main advantage over `/wf-delegate` — developers keep their full context when fixing reviewer/QA feedback
+1. **Context Retention**: The main advantage over `/wf-core:wf-delegate` — developers keep their full context when fixing reviewer/QA feedback
 2. **Direct Communication**: Reviewers DM developers directly — no nuance lost through orchestrator relay
 3. **Parallel Developers**: Use `--until-done` with independent tasks to run multiple developers simultaneously
-4. **Fallback**: If Agent Teams has issues, `/wf-delegate` remains as a stable alternative
+4. **Fallback**: If Agent Teams has issues, `/wf-core:wf-delegate` remains as a stable alternative
 5. **Cost**: Persistent teammates use more tokens per session but fewer retry loops and no re-discovery overhead
 6. **File Conflicts**: If multiple developers work in parallel, wf-breakdown should have assigned different file sets. The lead warns if file overlap is detected in task descriptions
 7. **One Team Per Session**: Each invocation creates one team — this is by design

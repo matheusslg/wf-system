@@ -112,10 +112,10 @@ gh issue list --state all --limit 100 2>/dev/null
 {extracted from user stories if available, otherwise leave for breakdown}
 
 ## Next Steps
-Use `/wf-breakdown #{this_issue_number}` to create sub-tasks.
+Use `/wf-core:wf-breakdown #{this_issue_number}` to create sub-tasks.
 
 ---
-*Generated from PRD via `/wf-parse-prd`*
+*Generated from PRD via `/wf-core:wf-parse-prd`*
 ```
 
 **Labels to apply**:
@@ -139,15 +139,15 @@ After creating issues:
 ## Next Steps
 
 **If agents not yet created** (empty `.claude/agents/` directory):
-1. Run `/wf-generate` to create agents and skills based on your tech stack
-2. Run `/wf-start-session` to begin development
+1. Run `/wf-core:wf-generate` to create agents and skills based on your tech stack
+2. Run `/wf-core:wf-start-session` to begin development
 
 **If agents already exist**:
-1. **Break down issues**: Use `/wf-breakdown #N` to create sub-tasks
-2. **Start working**: Use `/wf-pick-issue` to select first task
-3. **Track progress**: Use `/wf-ticket-status #N` to monitor
+1. **Break down issues**: Use `/wf-core:wf-breakdown #N` to create sub-tasks
+2. **Start working**: Use `/wf-core:wf-pick-issue` to select first task
+3. **Track progress**: Use `/wf-core:wf-ticket-status #N` to monitor
 
-**Workflow**: `/wf-parse-prd` → `/wf-generate` → `/wf-start-session` → `/wf-pick-issue`
+**Workflow**: `/wf-core:wf-parse-prd` → `/wf-core:wf-generate` → `/wf-core:wf-start-session` → `/wf-core:wf-pick-issue`
 ```
 
 ## 6. Handle Edge Cases
@@ -176,22 +176,22 @@ Offer to:
 
 **Parse PRD and create issues**:
 ```
-/wf-parse-prd
-/wf-parse-prd docs/PRD.md
+/wf-core:wf-parse-prd
+/wf-core:wf-parse-prd docs/PRD.md
 ```
 
 **Typical workflow**:
 ```
-/wf-parse-prd                    # Create parent issues from PRD
-/wf-breakdown #1           # Break first issue into sub-tasks
-/wf-delegate #5            # Execute a sub-task
-/wf-ticket-status #1       # Check progress on parent issue
+/wf-core:wf-parse-prd                    # Create parent issues from PRD
+/wf-core:wf-breakdown #1           # Break first issue into sub-tasks
+/wf-core:wf-delegate #5            # Execute a sub-task
+/wf-core:wf-ticket-status #1       # Check progress on parent issue
 ```
 
 ## Notes
 
 - Creates **parent-level issues only** (epics/features)
-- Use `/wf-breakdown` to create sub-tasks for each parent
+- Use `/wf-core:wf-breakdown` to create sub-tasks for each parent
 - Always confirms before creating issues
 - Skips duplicate detection to avoid creating redundant issues
 - Works with any PRD structure - adapts parsing to content

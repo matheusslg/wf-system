@@ -94,5 +94,5 @@ If possible, verify manually that behavior is identical.
 
 **Tests**: All passing, behavior unchanged
 
-Ready to `/wf-commit` with message like: "refactor(scope): [description]"
+Ready to `/wf-core:wf-commit` with message like: "refactor(scope): [description]"
 ```

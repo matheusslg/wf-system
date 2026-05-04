@@ -93,7 +93,7 @@ Present summary:
 
 **View specific feature**:
 ```bash
-/wf-ticket-status {issue_key}
+/wf-core:wf-ticket-status {issue_key}
 ```
 ```
 
@@ -175,11 +175,11 @@ Verify it's a parent issue (has `tech-lead` label, not `sub-task` label).
 Error: Could not find tracked feature for `{input}`
 
 **Search options**:
-- List all: `/wf-ticket-status --all`
+- List all: `/wf-core:wf-ticket-status --all`
 
 **Create sub-tasks for a ticket**:
 ```bash
-/wf-breakdown {issue_key}
+/wf-core:wf-breakdown {issue_key}
 ```
 ```
 
@@ -332,7 +332,7 @@ For each open sub-task:
 
 ```bash
 # Execute next ready sub-task
-/wf-delegate {ready_issue_number}
+/wf-core:wf-delegate {ready_issue_number}
 
 # View specific sub-task
 gh issue view {sub_task_number}
@@ -354,12 +354,12 @@ gh issue view {parent_number}
 This parent issue has no linked sub-tasks.
 
 **Options**:
-1. The issue may have been created manually (not via `/wf-breakdown`)
+1. The issue may have been created manually (not via `/wf-core:wf-breakdown`)
 2. Sub-tasks may not be linked properly
 
 **Re-analyze and create sub-tasks**:
 ```bash
-/wf-breakdown {reference}
+/wf-core:wf-breakdown {reference}
 ```
 ```
 
@@ -382,7 +382,7 @@ All sub-tasks have been completed!
 gh issue close {parent_number}
 
 # Create PR if needed
-/wf-commit
+/wf-core:wf-commit
 ```
 ```
 
@@ -397,7 +397,7 @@ No sub-tasks have been started yet.
 
 **Pick up first task**:
 ```bash
-/wf-delegate {first_sub_task_number}
+/wf-core:wf-delegate {first_sub_task_number}
 ```
 ```
 
@@ -458,6 +458,6 @@ For GitHub:
 4. **Progress File**: Also update `progress.md` for session continuity
 
 ## Related Commands
-- `/wf-breakdown` - Create new sub-tasks from Jira ticket or GitHub issue
-- `/wf-delegate` - Execute a specific sub-task
-- `/wf-overview` - General project status (not just tech-lead issues)
+- `/wf-core:wf-breakdown` - Create new sub-tasks from Jira ticket or GitHub issue
+- `/wf-core:wf-delegate` - Execute a specific sub-task
+- `/wf-core:wf-overview` - General project status (not just tech-lead issues)

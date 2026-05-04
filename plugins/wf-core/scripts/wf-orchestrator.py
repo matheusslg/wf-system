@@ -4,7 +4,7 @@ WF Orchestrator - Global Workflow Hook for Claude Code
 =======================================================
 Handles:
 1. SessionStart simulation (first PostToolUse detection)
-2. Context monitoring: warning at 75%, /wf-end-session trigger at 90% (configurable)
+2. Context monitoring: warning at 75%, /wf-core:wf-end-session trigger at 90% (configurable)
 3. Stop hook with autonomy mode support (interactive checkpoint)
 4. Workflow routing (Jira vs GitHub)
 
@@ -45,7 +45,7 @@ STANDARD_TIERS: Tuple[int, ...] = (200_000, 1_000_000, 2_000_000)
 
 # Default thresholds (can be overridden via env vars below)
 DEFAULT_WARNING_THRESHOLD = 75   # Friendly heads-up
-DEFAULT_CRITICAL_THRESHOLD = 90  # Trigger /wf-end-session
+DEFAULT_CRITICAL_THRESHOLD = 90  # Trigger /wf-core:wf-end-session
 # State dir lives outside the plugin so it survives reinstalls/updates.
 STATE_DIR = Path(os.path.expanduser("~/.wf-state"))
 STATE_MAX_AGE_DAYS = 7      # Cleanup old state files
@@ -377,7 +377,7 @@ class WFOrchestrator:
             self._save_state()
             msg = (
                 "SESSION START: No workflow configuration detected.\n"
-                "Run `/wf-init` to set up progress tracking, standards, and agents."
+                "Run `/wf-core:wf-init` to set up progress tracking, standards, and agents."
             )
             return {
                 "systemMessage": msg,
@@ -410,7 +410,7 @@ class WFOrchestrator:
         if progress_lines:
             progress_warning = (
                 f"\n\n⚠️ WARNING: progress.md has {progress_lines} lines (limit: {PROGRESS_LINE_LIMIT}). "
-                f"Run `/wf-end-session` to archive old sessions."
+                f"Run `/wf-core:wf-end-session` to archive old sessions."
             )
 
         # Brain integration
@@ -421,15 +421,15 @@ class WFOrchestrator:
 
 
 
-        msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-start-session or provide ticket"
+        msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-core:wf-start-session or provide ticket"
         full_context = (
             f"SESSION START - Jira Workflow Detected\n"
             f"Project: {project_name}\n"
             f"Jira Project: {jira_project}\n\n"
             f"Would you like to work on a Jira ticket?\n"
-            f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-breakdown`\n"
+            f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-core:wf-breakdown`\n"
             f"- Or describe what you'd like to work on\n"
-            f"- Or run `/wf-start-session` for full context load{progress_warning}"
+            f"- Or run `/wf-core:wf-start-session` for full context load{progress_warning}"
             f"{brain_context}"
         )
         return {
@@ -454,7 +454,7 @@ class WFOrchestrator:
         if progress_lines:
             progress_warning = (
                 f"\n\n⚠️ WARNING: progress.md has {progress_lines} lines (limit: {PROGRESS_LINE_LIMIT}). "
-                f"Run `/wf-end-session` to archive old sessions."
+                f"Run `/wf-core:wf-end-session` to archive old sessions."
             )
 
         # Brain integration — inject relevant knowledge
@@ -472,8 +472,8 @@ class WFOrchestrator:
                 f"SESSION START - Work In Progress Detected\n"
                 f"Repository: {repo_display}\n\n"
                 f"WIP: {wip}\n\n"
-                f"Recommended: Run `/wf-delegate` to continue with the assigned sub-task, "
-                f"or `/wf-start-session` for full context.{progress_warning}"
+                f"Recommended: Run `/wf-core:wf-delegate` to continue with the assigned sub-task, "
+                f"or `/wf-core:wf-start-session` for full context.{progress_warning}"
                 f"{brain_context}"
             )
             return {
@@ -484,13 +484,13 @@ class WFOrchestrator:
                 }
             }
         else:
-            msg = f"[WF] {repo_display} - No WIP. Run /wf-start-session or /wf-pick-issue"
+            msg = f"[WF] {repo_display} - No WIP. Run /wf-core:wf-start-session or /wf-core:wf-pick-issue"
             full_context = (
                 f"SESSION START - GitHub Workflow\n"
                 f"Repository: {repo_display}\n\n"
                 f"No work in progress detected.\n"
-                f"Recommended: Run `/wf-pick-issue` to select the next task, "
-                f"or `/wf-start-session` for full context.{progress_warning}"
+                f"Recommended: Run `/wf-core:wf-pick-issue` to select the next task, "
+                f"or `/wf-core:wf-start-session` for full context.{progress_warning}"
                 f"{brain_context}"
             )
             return {
@@ -518,10 +518,29 @@ class WFOrchestrator:
             pass
         return default
 
+    def _context_monitor_disabled(self) -> bool:
+        """Resolve the disable flag in priority order.
+
+        1. `WF_DISABLE_CONTEXT_CHECK=true` env var (existing escape hatch).
+        2. `workflow.json` field `contextMonitor.enabled: false` —
+           per-project opt-out without env-var gymnastics. Default
+           `enabled: true` when the field is absent.
+
+        Returns True when the monitor should NOT run.
+        """
+        if os.environ.get("WF_DISABLE_CONTEXT_CHECK", "false") == "true":
+            return True
+        config = self._get_workflow_config()
+        if config:
+            cm = config.get("contextMonitor")
+            if isinstance(cm, dict) and cm.get("enabled") is False:
+                return True
+        return False
+
     def handle_context_check(self) -> Optional[Dict]:
         """Check context usage and emit tiered warning/critical messages."""
-        # Skip if session-handoff.py handles context monitoring
-        if os.environ.get("WF_DISABLE_CONTEXT_CHECK", "false") == "true":
+        # Disable flag (env or workflow.json) — full opt-out.
+        if self._context_monitor_disabled():
             return None
         # Skip context warnings in external loop mode (Ralph handles restarts)
         if os.environ.get("WF_EXTERNAL_LOOP", "false") == "true":
@@ -565,7 +584,7 @@ class WFOrchestrator:
                 f"Tokens: {tokens:,}/{limit:,}\n\n"
                 f"You're past the comfortable working zone. Consider:\n"
                 f"- Finishing the current task before starting a new one\n"
-                f"- Running /wf-end-session when you reach a natural stopping point\n\n"
+                f"- Running /wf-core:wf-end-session when you reach a natural stopping point\n\n"
                 f"Critical threshold is {critical_threshold}% — I'll remind you again then."
             )
             return {
@@ -579,17 +598,17 @@ class WFOrchestrator:
             self.state["pre_compact_ran"] = True
             self._save_state()
 
-            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST CALL SKILL /wf-end-session NOW"
+            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST CALL SKILL /wf-core:wf-end-session NOW"
             full_context = (
                 f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
                 f"Tokens: {tokens:,}/{limit:,}\n\n"
                 f"INVOKE THE SKILL: Use the Skill tool with skill='wf-end-session'\n"
                 f"DO NOT manually update progress.md - the skill handles everything.\n\n"
-                f"The /wf-end-session skill will:\n"
+                f"The /wf-core:wf-end-session skill will:\n"
                 f"1. Save progress to progress.md\n"
                 f"2. Commit current work\n"
                 f"3. Archive session state\n\n"
-                f"After /wf-end-session completes, run /compact to summarize."
+                f"After /wf-core:wf-end-session completes, run /compact to summarize."
             )
             return {
                 "systemMessage": msg,

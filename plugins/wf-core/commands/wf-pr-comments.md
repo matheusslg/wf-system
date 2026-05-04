@@ -359,6 +359,6 @@ Please ensure you have write access to the repository.
 ```
 
 ## Related Commands
-- `/wf-review` - Manual code review
-- `/wf-commit` - Commit after fixes
-- `/wf-test` - Run tests after fixes
+- `/wf-core:wf-review` - Manual code review
+- `/wf-core:wf-commit` - Commit after fixes
+- `/wf-core:wf-test` - Run tests after fixes

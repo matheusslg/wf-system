@@ -202,7 +202,7 @@ After creation:
 ---
 
 Next steps:
-- `/wf-pick-issue` to start working on it
+- `/wf-core:wf-pick-issue` to start working on it
 - Add to project board if using GitHub Projects
 - Assign to team member
 ```

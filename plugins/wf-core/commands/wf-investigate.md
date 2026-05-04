@@ -9,7 +9,7 @@ argument-hint: "<question or --deep topic>"
 Proactive codebase exploration for understanding and planning.
 
 **Use this when**: You need to understand how something works, not fix something broken.
-**Use `/wf-debug` when**: Something is broken and needs fixing.
+**Use `/wf-core:wf-debug` when**: Something is broken and needs fixing.
 
 ## Arguments
 - `$ARGUMENTS` - Question to answer OR `--deep <topic>` for architectural analysis
@@ -180,14 +180,14 @@ List the most important files and their responsibilities.
 
 **Quick mode**:
 ```
-/wf-investigate "how does user authentication work"
-/wf-investigate "where are API routes defined"
-/wf-investigate "what state management does this use"
+/wf-core:wf-investigate "how does user authentication work"
+/wf-core:wf-investigate "where are API routes defined"
+/wf-core:wf-investigate "what state management does this use"
 ```
 
 **Deep mode**:
 ```
-/wf-investigate --deep authentication
-/wf-investigate --deep "payment processing"
-/wf-investigate --deep "api layer"
+/wf-core:wf-investigate --deep authentication
+/wf-core:wf-investigate --deep "payment processing"
+/wf-core:wf-investigate --deep "api layer"
 ```
