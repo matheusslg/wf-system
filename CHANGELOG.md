@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Fixed
+
+- **Context monitor reliability** (`plugins/wf-core/scripts/wf-orchestrator.py`).
+  Reported by Pietro Pilau: Sonnet 4.6 sessions on 1M-token windows tripped the
+  `CRITICAL Context at 280%` lockdown immediately, skipping the 75% warning entirely
+  ("Tokens: 562,888 / 200,000"). Three compounding root causes:
+
+  1. **Hardcoded 200K window** — Sonnet 4.6 ships with 1M; a 560K-token session
+     in a 1M window (real ~56%) was computing as 280% against the wrong divisor.
+     Now self-calibrates from observed peak transcript usage against the standard
+     Anthropic tiers `[200K, 1M, 2M]`. New `WF_CONTEXT_LIMIT` env var and
+     `contextLimit` field in `workflow.json` for explicit overrides. No model-name
+     dict — works across model releases without code updates.
+  2. **Missing `cache_creation_input_tokens` in token math** — the fallback path
+     summed only `input_tokens + cache_read_input_tokens`, undercounting
+     occupancy. Now sums all three usage fields per Anthropic's API contract.
+  3. **Brittle subprocess `/context` extraction dropped** — recursive `claude -p
+     -r <session>` spawn with regex-parsed markdown output was timing out and
+     leaking env vars. JSONL-only extraction is now the sole source of truth.
+  4. **Threshold ordering** — when a session resumed already past critical, the
+     warning never fired (`if pct >= critical / elif pct >= warning` skipped the
+     elif). Reordered so warning takes priority on the first crossing; critical
+     fires on subsequent ticks.
+  5. **Auto-reset post-`/compact`** — `warning_shown` and `pre_compact_ran` flags
+     now clear when usage drops below `warning * 0.9`, so a fresh expansion gets
+     a fresh warning instead of sticking on `True` forever.
+
+  Test suite added: `tests/orchestrator/test_context_monitor.py` (24 tests
+  covering token math, window resolution priority order, threshold ordering,
+  auto-reset, and the disable flag). Runner: `tests/orchestrator/run-tests.sh`.
+
+
 ## [2.0.0] - 2026-04-14
 
 ### ⚠ BREAKING CHANGES
