@@ -48,6 +48,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Release workflow now uses the lockstep version bumper.**
+  `.github/workflows/release.yml` previously inlined a single
+  `echo "<new>" > VERSION` step and committed only `VERSION CHANGELOG.md`,
+  bypassing `scripts/bump-version.sh` entirely. As a result, the v2.1.0
+  release commit (`219d26b`) bumped only `VERSION` while
+  `plugins/wf-core/.claude-plugin/plugin.json` and
+  `.claude-plugin/marketplace.json` stayed at `2.0.0`. Claude Code's
+  `/plugin update wf-core` is keyed on the plugin manifest's own
+  `version` field, so users who installed v2.0.0 saw the manager
+  report "up to date" and never received the v2.1.0 hook fixes.
+  The workflow now calls `bash scripts/bump-version.sh "$NEW_VERSION"`
+  (which already writes all three files in one shot) and adds the
+  two JSON paths to the release commit's `git add`. Backfilled both
+  JSONs to `2.1.0` in this commit so the next workflow run starts
+  from a consistent state.
 - **Context monitor reliability** (`plugins/wf-core/scripts/wf-orchestrator.py`).
   Reported by Pietro Pilau: Sonnet 4.6 sessions on 1M-token windows tripped the
   `CRITICAL Context at 280%` lockdown immediately, skipping the 75% warning entirely

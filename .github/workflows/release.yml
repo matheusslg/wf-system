@@ -126,10 +126,10 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-      - name: Update VERSION file
+      - name: Bump version (VERSION + plugin.json + marketplace.json)
         if: steps.bump.outputs.bump != 'none'
         run: |
-          echo "${{ steps.new_version.outputs.version }}" > VERSION
+          bash scripts/bump-version.sh "${{ steps.new_version.outputs.version }}"
 
       - name: Update CHANGELOG.md
         if: steps.bump.outputs.bump != 'none'
@@ -147,7 +147,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add VERSION CHANGELOG.md
+          git add VERSION CHANGELOG.md plugins/wf-core/.claude-plugin/plugin.json .claude-plugin/marketplace.json
           git commit -m "chore(release): v${{ steps.new_version.outputs.version }}"
           git tag "v${{ steps.new_version.outputs.version }}"
           git push
