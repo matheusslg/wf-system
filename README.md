@@ -27,9 +27,9 @@
 
 WF System turns Claude Code into a managed development environment. Every session is tracked, every task flows through a developer → reviewer → QA pipeline, and context monitoring ensures nothing is lost when a session ends.
 
-- **Session lifecycle** — `/wf-start-session` loads previous context; `/wf-end-session` saves progress, commits, and archives. Context monitoring auto-triggers wrap-up before you hit the limit.
+- **Session lifecycle** — `/wf-core:wf-start-session` loads previous context; `/wf-core:wf-end-session` saves progress, commits, and archives. Context monitoring auto-triggers wrap-up before you hit the limit.
 - **Agent teams** — Spin up parallel developer teammates with a shared reviewer and QA. Teammates retain context across retries and communicate via direct messages.
-- **Dev pipeline** — `/wf-implement`, `/wf-fix-bug`, and `/wf-improve` each run a full agent chain: branch safety → implementation → code review → QA → commit.
+- **Dev pipeline** — `/wf-core:wf-implement`, `/wf-core:wf-fix-bug`, and `/wf-core:wf-improve` each run a full agent chain: branch safety → implementation → code review → QA → commit.
 - **Autonomous delegation** — Break tickets into sub-tasks and delegate with `--until-done` to process them without intervention.
 - **GitHub & Jira** — Pick issues, create tickets, post QA plans, handle PR comments — all from slash commands.
 
@@ -44,14 +44,14 @@ Inside Claude Code:
 
 Restart when prompted. Then in any project:
 
-    /wf-init
+    /wf-core:wf-init
 
 ---
 
 ## Daily workflow
 
 ```
-/wf-start-session → /wf-pick-issue → /wf-implement → /wf-commit → /wf-end-session
+/wf-core:wf-start-session → /wf-core:wf-pick-issue → /wf-core:wf-implement → /wf-core:wf-commit → /wf-core:wf-end-session
 ```
 
 ---
@@ -62,65 +62,65 @@ Restart when prompted. Then in any project:
 
 | Command | Description |
 |---------|-------------|
-| `/wf-init` | Bootstrap workflow structure |
-| `/wf-generate` | Generate agents and skills for your stack |
-| `/wf-create-agent` | Create a custom agent |
+| `/wf-core:wf-init` | Bootstrap workflow structure |
+| `/wf-core:wf-generate` | Generate agents and skills for your stack |
+| `/wf-core:wf-create-agent` | Create a custom agent |
 
 ### Session
 
 | Command | Description |
 |---------|-------------|
-| `/wf-start-session` | Load progress, verify environment |
-| `/wf-end-session` | Save progress, commit, archive |
-| `/wf-overview` | Quick status of current work |
+| `/wf-core:wf-start-session` | Load progress, verify environment |
+| `/wf-core:wf-end-session` | Save progress, commit, archive |
+| `/wf-core:wf-overview` | Quick status of current work |
 
 ### Development
 
 | Command | Description |
 |---------|-------------|
-| `/wf-pick-issue` | Select next issue by priority |
-| `/wf-implement` | Build a feature (agent pipeline) |
-| `/wf-fix-bug` | Debug and fix an issue |
-| `/wf-improve` | Enhance existing code |
-| `/wf-test` | Run tests and fix failures |
-| `/wf-refactor` | Restructure without behavior change |
-| `/wf-debug` | Deep investigation |
-| `/wf-investigate` | Explore how things work |
+| `/wf-core:wf-pick-issue` | Select next issue by priority |
+| `/wf-core:wf-implement` | Build a feature (agent pipeline) |
+| `/wf-core:wf-fix-bug` | Debug and fix an issue |
+| `/wf-core:wf-improve` | Enhance existing code |
+| `/wf-core:wf-test` | Run tests and fix failures |
+| `/wf-core:wf-refactor` | Restructure without behavior change |
+| `/wf-core:wf-debug` | Deep investigation |
+| `/wf-core:wf-investigate` | Explore how things work |
 
 ### Tickets & Delegation
 
 | Command | Description |
 |---------|-------------|
-| `/wf-delegate` | Execute sub-task with agent |
-| `/wf-team-delegate` | Team pipeline with persistent teammates |
-| `/wf-breakdown` | Break ticket into sub-tasks |
-| `/wf-create-ticket` | Create GitHub/Jira ticket |
-| `/wf-ticket-status` | Check implementation progress |
+| `/wf-core:wf-delegate` | Execute sub-task with agent |
+| `/wf-core:wf-team-delegate` | Team pipeline with persistent teammates |
+| `/wf-core:wf-breakdown` | Break ticket into sub-tasks |
+| `/wf-core:wf-create-ticket` | Create GitHub/Jira ticket |
+| `/wf-core:wf-ticket-status` | Check implementation progress |
 
 ### Code Quality
 
 | Command | Description |
 |---------|-------------|
-| `/wf-review` | Review changes or a PR |
-| `/wf-pre-prod-review` | Multi-agent pre-production audit |
-| `/wf-team-review` | Adversarial cross-examination review |
-| `/wf-pr-comments` | Handle PR review comments |
-| `/wf-qa-plan` | Generate structured QA plan |
-| `/wf-e2e` | Browser-based E2E testing |
-| `/wf-commit` | Conventional commit |
+| `/wf-core:wf-review` | Review changes or a PR |
+| `/wf-core:wf-pre-prod-review` | Multi-agent pre-production audit |
+| `/wf-core:wf-team-review` | Adversarial cross-examination review |
+| `/wf-core:wf-pr-comments` | Handle PR review comments |
+| `/wf-core:wf-qa-plan` | Generate structured QA plan |
+| `/wf-core:wf-e2e` | Browser-based E2E testing |
+| `/wf-core:wf-commit` | Conventional commit |
 
 ### Planning
 
 | Command | Description |
 |---------|-------------|
-| `/wf-create-prd` | Create a PRD from scratch |
-| `/wf-parse-prd` | Parse PRD into GitHub Issues |
+| `/wf-core:wf-create-prd` | Create a PRD from scratch |
+| `/wf-core:wf-parse-prd` | Parse PRD into GitHub Issues |
 
 ---
 
 ## Configuration
 
-`/wf-init` creates `.claude/workflow.json`:
+`/wf-core:wf-init` creates `.claude/workflow.json`:
 
 ```json
 {

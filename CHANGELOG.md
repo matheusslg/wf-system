@@ -26,10 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **User-facing slash references updated to plugin-namespaced form.** All
   `/wf-<cmd>` strings in command markdown, skill SKILL.md files, agent prompts,
-  and orchestrator system messages now use `/wf-core:wf-<cmd>` to match the
-  Claude Code plugin format introduced in v2.0.0. Bare-form references would
-  have rendered as broken links / unrecognised commands inside Claude Code
+  orchestrator system messages, the top-level `README.md` (Quick Start, command
+  tables, examples), and `docs/ralph-integration.md` (shell snippets and
+  inline references) now use `/wf-core:wf-<cmd>` to match the Claude Code
+  plugin format introduced in v2.0.0. Bare-form references would have
+  rendered as broken links / unrecognised commands inside Claude Code
   sessions; the prefixed form is what the runtime actually exposes.
+  Historical mentions in `CHANGELOG.md`'s `[2.0.0]` section,
+  `docs/2026-04-07-system-audit.md`, and `tests/migration/fixtures/v1.x/`
+  intentionally remain on the bare form — those describe pre-v2 state for
+  posterity and migration testing.
 
 ### Fixed
 
