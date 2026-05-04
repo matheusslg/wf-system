@@ -1,12 +1,12 @@
 ---
 name: wf-dev-pipeline
-description: Shared developer pipeline used by /wf-implement, /wf-fix-bug, and /wf-improve. Handles branch safety, context gathering, agent delegation, review/QA loops, issue updates, and progress logging.
+description: Shared developer pipeline used by /wf-core:wf-implement, /wf-core:wf-fix-bug, and /wf-core:wf-improve. Handles branch safety, context gathering, agent delegation, review/QA loops, issue updates, and progress logging.
 ---
 
 # wf-dev-pipeline
 
-You are the **wf-system dev pipeline**. Three commands (`/wf-implement`,
-`/wf-fix-bug`, `/wf-improve`) share your logic. The calling command tells you
+You are the **wf-system dev pipeline**. Three commands (`/wf-core:wf-implement`,
+`/wf-core:wf-fix-bug`, `/wf-core:wf-improve`) share your logic. The calling command tells you
 which mode to run in: `feature`, `bug`, or `improve`.
 
 ## Mode table
@@ -363,7 +363,7 @@ mcp__github__add_issue_comment(
 **First, check whether archiving is needed.** If `progress.md` exceeds
 **450 lines**, run the archive procedure (keep the last 5 sessions; move the
 rest to `.claude/session-archive/`) before adding a new entry. See
-`/wf-end-session` section 3 for the full procedure.
+`/wf-core:wf-end-session` section 3 for the full procedure.
 
 **Then append a new entry under the mode-specific header** (`the header` from
 the mode table):
@@ -414,7 +414,7 @@ the mode table):
 ### Next Steps
 **Commit the change**:
 ```bash
-/wf-commit
+/wf-core:wf-commit
 ```
 
 Suggested message: `{prefix}({scope}): {short description}`
@@ -427,7 +427,7 @@ Suggested message: `{prefix}({scope}): {short description}`
 ```markdown
 Error: No agents found in `.claude/agents/`
 
-Run `/wf-generate` first to create agents for your project.
+Run `/wf-core:wf-generate` first to create agents for your project.
 ```
 
 ### Full-stack work
@@ -466,7 +466,7 @@ Could not auto-detect which agent should handle this work.
 **Options**:
 1. Retry the same command with the same arguments
 2. Try a different agent via `--agent {other}`
-3. Debug manually with `/wf-debug "{short description}"`
+3. Debug manually with `/wf-core:wf-debug "{short description}"`
 ```
 
 ### Cannot locate code (improve mode)
@@ -481,7 +481,7 @@ Could not locate code related to: {area}
 ```
 
 ## Related Commands
-- `/wf-implement`, `/wf-fix-bug`, `/wf-improve` — Thin shims that call this skill
-- `/wf-delegate` — Execute one-off sub-tasks with agents
-- `/wf-commit` — Commit the change using the suggested prefix
-- `/wf-test` — Run the test suite
+- `/wf-core:wf-implement`, `/wf-core:wf-fix-bug`, `/wf-core:wf-improve` — Thin shims that call this skill
+- `/wf-core:wf-delegate` — Execute one-off sub-tasks with agents
+- `/wf-core:wf-commit` — Commit the change using the suggested prefix
+- `/wf-core:wf-test` — Run the test suite

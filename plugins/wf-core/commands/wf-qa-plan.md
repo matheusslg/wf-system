@@ -28,7 +28,7 @@ Extract:
 
 ## 1. Parse Input & Fetch Ticket
 
-Parse `$ARGUMENTS` to determine source type using the same detection logic as `/wf-breakdown`:
+Parse `$ARGUMENTS` to determine source type using the same detection logic as `/wf-core:wf-breakdown`:
 
 **GitHub Issue patterns**:
 - `#42` or `42` — Issue number
@@ -101,7 +101,7 @@ Spawn sub-agents to understand the implementation from different angles. Each ag
 
 **IMPORTANT**: All Task() calls must be made in a SINGLE response to run in parallel.
 
-The agents to spawn depend on what changed (same logic as `/wf-pre-prod-review` dimension selection). At minimum, spawn agents for each distinct area of the codebase that was touched.
+The agents to spawn depend on what changed (same logic as `/wf-core:wf-pre-prod-review` dimension selection). At minimum, spawn agents for each distinct area of the codebase that was touched.
 
 **Example agents based on changes detected:**
 
@@ -345,7 +345,7 @@ The QA plan has been posted as a comment on the ticket.
 Could not find a branch or PR for ticket {ticket_key}.
 
 Please specify the branch:
-/wf-qa-plan {ticket_key} --branch feature/my-branch
+/wf-core:wf-qa-plan {ticket_key} --branch feature/my-branch
 ```
 
 ### Jira CLI Not Configured
@@ -379,7 +379,7 @@ Make sure the code has been committed and pushed.
 ```
 
 ## Related Commands
-- `/wf-breakdown` - Break down ticket into sub-tasks
-- `/wf-pre-prod-review` - Multi-agent pre-production audit
-- `/wf-review` - Code review for a PR
-- `/wf-ticket-status` - Check implementation progress
+- `/wf-core:wf-breakdown` - Break down ticket into sub-tasks
+- `/wf-core:wf-pre-prod-review` - Multi-agent pre-production audit
+- `/wf-core:wf-review` - Code review for a PR
+- `/wf-core:wf-ticket-status` - Check implementation progress

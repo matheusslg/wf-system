@@ -80,9 +80,9 @@ If `$ARGUMENTS` doesn't match any pattern and default branch detection fails:
 Could not determine review scope.
 
 Please specify one of:
-- PR number: `/wf-pre-prod-review 123`
-- Branch name: `/wf-pre-prod-review feature/my-branch`
-- Commit range: `/wf-pre-prod-review abc123..def456`
+- PR number: `/wf-core:wf-pre-prod-review 123`
+- Branch name: `/wf-core:wf-pre-prod-review feature/my-branch`
+- Commit range: `/wf-core:wf-pre-prod-review abc123..def456`
 ```
 Exit.
 
@@ -746,9 +746,9 @@ No changes detected between [base] and [head]. Nothing to review.
 Could not determine review scope from: "$ARGUMENTS"
 
 Please specify:
-- PR number: `/wf-pre-prod-review 123`
-- Branch: `/wf-pre-prod-review feature/my-branch`
-- Commit range: `/wf-pre-prod-review abc123..def456`
+- PR number: `/wf-core:wf-pre-prod-review 123`
+- Branch: `/wf-core:wf-pre-prod-review feature/my-branch`
+- Commit range: `/wf-core:wf-pre-prod-review abc123..def456`
 - Or run from your feature branch with no arguments to diff against main.
 ```
 

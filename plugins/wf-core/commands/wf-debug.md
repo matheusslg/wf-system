@@ -107,5 +107,5 @@ Options (choose appropriate):
 **Files Affected**:
 - file.tsx:42 - [issue location]
 
-Ready to `/wf-fix-bug` or implement the solution.
+Ready to `/wf-core:wf-fix-bug` or implement the solution.
 ```

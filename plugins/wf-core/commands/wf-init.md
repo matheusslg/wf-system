@@ -6,7 +6,7 @@ argument-hint: "<project-name>"
 
 # Initialize Project Workflow
 
-Set up the minimal Claude workflow structure for this project. Creates generic templates that can be customized later by `/wf-generate`.
+Set up the minimal Claude workflow structure for this project. Creates generic templates that can be customized later by `/wf-core:wf-generate`.
 
 ## Arguments
 - `$ARGUMENTS` - Optional project name (defaults to directory name)
@@ -69,9 +69,9 @@ Display warning and ask user:
 ⚠️ **GitHub MCP Not Detected**
 
 The GitHub MCP server is recommended for full workflow functionality:
-- Creating and managing issues (`/wf-create-ticket`, `/wf-breakdown`)
-- Parsing PRDs into issues (`/wf-parse-prd`)
-- Tracking ticket status (`/wf-ticket-status`)
+- Creating and managing issues (`/wf-core:wf-create-ticket`, `/wf-core:wf-breakdown`)
+- Parsing PRDs into issues (`/wf-core:wf-parse-prd`)
+- Tracking ticket status (`/wf-core:wf-ticket-status`)
 
 **To install GitHub MCP**:
 1. Add to your Claude Code MCP settings
@@ -95,11 +95,11 @@ Inform user about other helpful MCPs (don't block on these):
 
 | MCP | Purpose | When Needed |
 |-----|---------|-------------|
-| **Figma** | Design context, screenshots, tokens | If using Figma designs (`/wf-design-setup`) |
+| **Figma** | Design context, screenshots, tokens | If using Figma designs (`/wf-core:wf-design-setup`) |
 | **Context7** | Up-to-date library documentation | For framework/library lookups |
 | **Firecrawl** | Web scraping for research | For gathering external docs |
 
-Run `/wf-design-setup` later to configure Figma integration.
+Run `/wf-core:wf-design-setup` later to configure Figma integration.
 ```
 
 ## 2. Get Project Info
@@ -135,7 +135,7 @@ Ask user: "Which ticketing system do you use for issue tracking?"
 Ask user: "Do you want to configure GitHub integration now?"
 
 **If No**:
-- Leave blank (can be set later by `/wf-generate`)
+- Leave blank (can be set later by `/wf-core:wf-generate`)
 - Skip to Step 3
 
 **If Yes**, follow this flow:
@@ -253,7 +253,7 @@ Create `.claude/workflow.json` with generic template:
 }
 ```
 
-Note: The `design` section is populated by `/wf-design-setup`.
+Note: The `design` section is populated by `/wf-core:wf-design-setup`.
 
 Fill in:
 - `project`: From user input or directory name
@@ -265,9 +265,9 @@ Fill in:
 - `github.owner`: From user input or leave empty
 - `github.repo`: From user input or leave empty
 
-**Important**: The `ticketing` section determines which system `/wf-delegate`, `/wf-breakdown`, and `/wf-ticket-status` will use.
+**Important**: The `ticketing` section determines which system `/wf-core:wf-delegate`, `/wf-core:wf-breakdown`, and `/wf-core:wf-ticket-status` will use.
 
-Note: `scopes` and `agents` will be populated by `/wf-generate`.
+Note: `scopes` and `agents` will be populated by `/wf-core:wf-generate`.
 
 ## 5. Create progress.md
 
@@ -290,7 +290,7 @@ Create `progress.md` in project root:
 **Completed**:
 - Created workflow configuration
 - Set up progress tracking
-**Next**: Run /wf-generate to create agents and skills
+**Next**: Run /wf-core:wf-generate to create agents and skills
 
 ---
 
@@ -303,7 +303,7 @@ Create `progress.md` in project root:
 - None
 
 ## Next Session Should
-- [ ] Run /wf-generate to create agents based on tech stack
+- [ ] Run /wf-core:wf-generate to create agents based on tech stack
 - [ ] Begin development
 
 ## Decisions Made
@@ -321,7 +321,7 @@ Create `standards.md` with generic template:
 # Code Standards
 
 > This file contains coding standards for the project.
-> Stack-specific conventions will be added by `/wf-generate`.
+> Stack-specific conventions will be added by `/wf-core:wf-generate`.
 
 ## General
 
@@ -353,15 +353,15 @@ refactor(users): extract validation logic
 
 ## Code Style
 
-[To be updated by /wf-generate based on detected stack]
+[To be updated by /wf-core:wf-generate based on detected stack]
 
 ## Testing
 
-[To be updated by /wf-generate based on detected stack]
+[To be updated by /wf-core:wf-generate based on detected stack]
 
 ## File Organization
 
-[To be updated by /wf-generate based on project structure]
+[To be updated by /wf-core:wf-generate based on project structure]
 ```
 
 ## 7. Git Integration (Optional)
@@ -396,20 +396,20 @@ If no:
 - `.claude/session-archive/` - Archived sessions (empty)
 
 **Next Steps**:
-1. **Option A (PRD-first)**: Run `/wf-create-prd` to define your project and tech stack
-2. **Option B (Existing code)**: Run `/wf-generate` to detect stack and create agents
+1. **Option A (PRD-first)**: Run `/wf-core:wf-create-prd` to define your project and tech stack
+2. **Option B (Existing code)**: Run `/wf-core:wf-generate` to detect stack and create agents
 
 **Typical Workflows**:
 
 ```
 # Starting fresh (PRD-first):
-/wf-init → /wf-create-prd → /wf-design-setup (optional) → /wf-parse-prd → /wf-generate → /wf-start-session
+/wf-core:wf-init → /wf-core:wf-create-prd → /wf-core:wf-design-setup (optional) → /wf-core:wf-parse-prd → /wf-core:wf-generate → /wf-core:wf-start-session
 
 # Existing codebase:
-/wf-init → /wf-generate → /wf-start-session
+/wf-core:wf-init → /wf-core:wf-generate → /wf-core:wf-start-session
 ```
 
-**Note**: Agents and skills will be created by `/wf-generate` based on your tech stack.
+**Note**: Agents and skills will be created by `/wf-core:wf-generate` based on your tech stack.
 ```
 
 ---

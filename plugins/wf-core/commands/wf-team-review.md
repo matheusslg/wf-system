@@ -2,7 +2,7 @@
 description: Adversarial multi-agent pre-production review with cross-examination
 allowed-tools: Read, Bash, Grep, Glob, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, TeamCreate, TeamDelete, SendMessage
 argument-hint: "[PR number, branch, or commit range] [--no-debate]"
-note: "Uses Agent Teams for persistent reviewers that cross-examine each other's findings. Fallback: /wf-pre-prod-review"
+note: "Uses Agent Teams for persistent reviewers that cross-examine each other's findings. Fallback: /wf-core:wf-pre-prod-review"
 ---
 
 # Adversarial Pre-Production Review
@@ -11,10 +11,10 @@ Multi-agent audit that goes beyond independent reviews. After each reviewer comp
 
 **This is READ-ONLY. No code is modified.**
 
-**When to use this vs `/wf-pre-prod-review`:**
-- Use `/wf-team-review` for thorough reviews where cross-dimensional insights matter
-- Use `/wf-pre-prod-review` for quick independent reviews or as a stable fallback
-- Use `--no-debate` to skip cross-examination (behaves like `/wf-pre-prod-review` but with Agent Teams)
+**When to use this vs `/wf-core:wf-pre-prod-review`:**
+- Use `/wf-core:wf-team-review` for thorough reviews where cross-dimensional insights matter
+- Use `/wf-core:wf-pre-prod-review` for quick independent reviews or as a stable fallback
+- Use `--no-debate` to skip cross-examination (behaves like `/wf-core:wf-pre-prod-review` but with Agent Teams)
 
 ## Arguments
 - `$ARGUMENTS` - Optional PR number, branch name, or commit range (defaults to current branch vs main)
@@ -37,7 +37,7 @@ TEAMS_ENABLED=$(cat .claude/workflow.json 2>/dev/null | jq -r '.teams.enabled //
 
 If `teams.enabled` is `false`:
 ```
-Agent Teams is disabled in workflow.json. Use /wf-pre-prod-review instead, or set teams.enabled to true.
+Agent Teams is disabled in workflow.json. Use /wf-core:wf-pre-prod-review instead, or set teams.enabled to true.
 ```
 Exit.
 
@@ -160,7 +160,7 @@ TeamCreate(
 
 ## 5. Spawn Reviewer Teammates
 
-Spawn one teammate per selected dimension. Each receives the same review prompt structure as `/wf-pre-prod-review` PLUS cross-examination instructions.
+Spawn one teammate per selected dimension. Each receives the same review prompt structure as `/wf-core:wf-pre-prod-review` PLUS cross-examination instructions.
 
 **IMPORTANT**: All teammate spawns should happen in a SINGLE response for maximum parallelism.
 
@@ -234,7 +234,7 @@ Task(
 
 ### Dimension-Specific Prompts
 
-Use the SAME dimension-specific content as `/wf-pre-prod-review` Section 4 (Code Quality, Security, Performance, Error Handling, Testing, Database, API Contract, Infrastructure, Dependency Audit, Accessibility). The only additions are the Team Communication Protocol section appended to each.
+Use the SAME dimension-specific content as `/wf-core:wf-pre-prod-review` Section 4 (Code Quality, Security, Performance, Error Handling, Testing, Database, API Contract, Infrastructure, Dependency Audit, Accessibility). The only additions are the Team Communication Protocol section appended to each.
 
 ## 6. Phase 1 — Independent Review
 
@@ -500,9 +500,9 @@ No changes detected between [base] and [head]. Nothing to review.
 Could not determine review scope from: "$ARGUMENTS"
 
 Please specify:
-- PR number: `/wf-team-review 123`
-- Branch: `/wf-team-review feature/my-branch`
-- Commit range: `/wf-team-review abc123..def456`
+- PR number: `/wf-core:wf-team-review 123`
+- Branch: `/wf-core:wf-team-review feature/my-branch`
+- Commit range: `/wf-core:wf-team-review abc123..def456`
 - Or run from your feature branch with no arguments to diff against main.
 ```
 
@@ -514,7 +514,7 @@ Agent Teams tools not available in this environment.
 
 Falling back to standard review:
 ```bash
-/wf-pre-prod-review {original_arguments}
+/wf-core:wf-pre-prod-review {original_arguments}
 ```
 ```
 
@@ -551,6 +551,6 @@ TeamDelete()
 1. **Cross-Examination Value**: The adversarial phase catches false positives and cross-cutting issues that independent reviews miss
 2. **Time Cost**: Cross-examination adds ~30% more time but produces significantly better findings
 3. **Skip Debate**: Use `--no-debate` when you want Agent Teams parallelism without cross-examination overhead
-4. **Fallback**: `/wf-pre-prod-review` remains as a stable fallback for independent reviews
+4. **Fallback**: `/wf-core:wf-pre-prod-review` remains as a stable fallback for independent reviews
 5. **Dimension Count**: More dimensions = more cross-examination value, but also more token cost
 6. **Dispute Resolution**: Unresolved disputes in the report signal areas that need human judgment

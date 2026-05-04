@@ -6,7 +6,7 @@ argument-hint: [agent-description]
 
 # Create Custom Agent
 
-Create a specialized agent with custom expertise, tools, and skills. Agents are autonomous specialists that can be delegated tasks via `/wf-delegate` or other workflow commands.
+Create a specialized agent with custom expertise, tools, and skills. Agents are autonomous specialists that can be delegated tasks via `/wf-core:wf-delegate` or other workflow commands.
 
 ## Arguments
 
@@ -25,7 +25,7 @@ ls .claude/workflow.json 2>/dev/null || echo "NO_WORKFLOW"
 ```
 
 **If workflow.json doesn't exist**:
-- Display error: "Workflow not initialized. Run `/wf-init` first."
+- Display error: "Workflow not initialized. Run `/wf-core:wf-init` first."
 - Exit without changes
 
 Get project name:
@@ -350,19 +350,19 @@ Write any new skills created in step 5.
 
 **Delegate tasks directly**:
 ```
-/wf-delegate --agent {agent-name} "task description"
+/wf-core:wf-delegate --agent {agent-name} "task description"
 ```
 
 **Reference in issues**:
 Add `agent: {agent-name}` to issue labels or body.
 
 **Invoke from other commands**:
-Commands like `/wf-implement`, `/wf-improve` will auto-select this agent when tasks match its specialty.
+Commands like `/wf-core:wf-implement`, `/wf-core:wf-improve` will auto-select this agent when tasks match its specialty.
 
 ### Next Steps
 - Review the generated agent file and customize if needed
-- Test the agent with a simple task: `/wf-delegate --agent {agent-name} "test task"`
-- Add more skills later with `/wf-create-agent --add-skill {agent-name}`
+- Test the agent with a simple task: `/wf-core:wf-delegate --agent {agent-name} "test task"`
+- Add more skills later with `/wf-core:wf-create-agent --add-skill {agent-name}`
 ```
 
 ---
@@ -372,7 +372,7 @@ Commands like `/wf-implement`, `/wf-improve` will auto-select this agent when ta
 ### Security Specialist
 
 ```
-/wf-create-agent security specialist for vulnerability scanning and secure code practices
+/wf-core:wf-create-agent security specialist for vulnerability scanning and secure code practices
 ```
 
 Creates:
@@ -383,7 +383,7 @@ Creates:
 ### Database Expert
 
 ```
-/wf-create-agent database administrator for migrations, query optimization, and schema design
+/wf-core:wf-create-agent database administrator for migrations, query optimization, and schema design
 ```
 
 Creates:
@@ -394,7 +394,7 @@ Creates:
 ### Documentation Writer
 
 ```
-/wf-create-agent technical writer for API docs and user guides
+/wf-core:wf-create-agent technical writer for API docs and user guides
 ```
 
 Creates:
@@ -411,7 +411,7 @@ Creates:
 ```
 Error: Workflow not initialized.
 
-Run `/wf-init` first to create the base workflow files.
+Run `/wf-core:wf-init` first to create the base workflow files.
 ```
 
 ### Agent Already Exists
@@ -438,7 +438,7 @@ Suggested: {sanitized-name}
 
 ## Related Commands
 
-- `/wf-generate` - Auto-generate agents from tech stack
-- `/wf-delegate` - Delegate tasks to agents
-- `/wf-implement` - Implement features (auto-selects agent)
-- `/wf-init` - Initialize workflow (prerequisite)
+- `/wf-core:wf-generate` - Auto-generate agents from tech stack
+- `/wf-core:wf-delegate` - Delegate tasks to agents
+- `/wf-core:wf-implement` - Implement features (auto-selects agent)
+- `/wf-core:wf-init` - Initialize workflow (prerequisite)

@@ -6,12 +6,12 @@ argument-hint: "--from-prd | --from-code | --ask"
 
 # Generate Workflow Agents & Skills
 
-Generate project-specific agents and skills based on the detected or specified tech stack. This command UPDATES existing workflow files created by `/wf-init`.
+Generate project-specific agents and skills based on the detected or specified tech stack. This command UPDATES existing workflow files created by `/wf-core:wf-init`.
 
 ## Prerequisites
 
-- Run `/wf-init` first to create the base workflow files
-- Optionally run `/wf-create-prd` to define tech stack in PRD
+- Run `/wf-core:wf-init` first to create the base workflow files
+- Optionally run `/wf-core:wf-create-prd` to define tech stack in PRD
 
 ## Arguments
 
@@ -32,7 +32,7 @@ ls standards.md 2>/dev/null || echo "NO_STANDARDS"
 ```
 
 **If workflow.json doesn't exist**:
-- Display error: "Workflow not initialized. Run `/wf-init` first."
+- Display error: "Workflow not initialized. Run `/wf-core:wf-init` first."
 - Exit without changes
 
 ## 2. Check Existing Agents and Skills
@@ -67,7 +67,7 @@ Read PRD.md for tech stack:
 cat PRD.md 2>/dev/null | head -100
 ```
 
-Look for `## Tech Stack` section (created by `/wf-create-prd`):
+Look for `## Tech Stack` section (created by `/wf-core:wf-create-prd`):
 - Frontend (React, Next.js, Vue, etc.)
 - Backend (NestJS, Express, FastAPI, Django, etc.)
 - Database (PostgreSQL, MongoDB, MySQL, etc.)
@@ -1138,7 +1138,7 @@ fi
 
 This ensures the project gets the latest visual-verify with agent-browser as the primary browser option.
 
-**Note on Merge mode**: When re-running `/wf-generate` with "Merge" selected, if `.claude/skills/agent-browser/` or `.claude/skills/visual-verify/` already exist, **overwrite them** — these are vendor-managed skills, not user-customized. This keeps them in sync with wf-system updates.
+**Note on Merge mode**: When re-running `/wf-core:wf-generate` with "Merge" selected, if `.claude/skills/agent-browser/` or `.claude/skills/visual-verify/` already exist, **overwrite them** — these are vendor-managed skills, not user-customized. This keeps them in sync with wf-system updates.
 
 ### Skill Generation Logic
 
@@ -1320,9 +1320,9 @@ Summarize what was generated:
 1. Review generated agents in `.claude/agents/`
 2. Review generated skills in `.claude/skills/`
 3. Customize as needed
-4. Run `/wf-start-session` to begin working
+4. Run `/wf-core:wf-start-session` to begin working
 
-**Recommended**: `/wf-start-session` or `/wf-pick-issue` to start development.
+**Recommended**: `/wf-core:wf-start-session` or `/wf-core:wf-pick-issue` to start development.
 ```
 
 ## 11. Suggest Workflow
@@ -1335,14 +1335,14 @@ PLATFORM=$(cat .claude/workflow.json 2>/dev/null | jq -r '.ticketing.platform //
 Based on project state, suggest next command:
 
 **If platform is "jira"**:
-- If PRD.md exists but no Jira tickets → `/wf-parse-prd` (will create Jira tickets)
-- If Jira tickets exist → `/wf-pick-issue`
-- Otherwise → `/wf-start-session`
+- If PRD.md exists but no Jira tickets → `/wf-core:wf-parse-prd` (will create Jira tickets)
+- If Jira tickets exist → `/wf-core:wf-pick-issue`
+- Otherwise → `/wf-core:wf-start-session`
 
 **If platform is "github"**:
-- If PRD.md exists but no GitHub issues → `/wf-parse-prd`
-- If GitHub issues exist → `/wf-pick-issue`
-- Otherwise → `/wf-start-session`
+- If PRD.md exists but no GitHub issues → `/wf-core:wf-parse-prd`
+- If GitHub issues exist → `/wf-core:wf-pick-issue`
+- Otherwise → `/wf-core:wf-start-session`
 
 ---
 
@@ -1352,7 +1352,7 @@ Based on project state, suggest next command:
 ```
 Error: Workflow not initialized.
 
-Run `/wf-init` first to create the base workflow files.
+Run `/wf-core:wf-init` first to create the base workflow files.
 ```
 
 ### Can't detect stack

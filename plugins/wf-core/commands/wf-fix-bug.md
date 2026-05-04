@@ -6,7 +6,7 @@ argument-hint: <bug description or issue number>
 
 # Fix Bug
 
-This command shares its orchestration logic with `/wf-implement` and `/wf-improve`.
+This command shares its orchestration logic with `/wf-core:wf-implement` and `/wf-core:wf-improve`.
 The pipeline lives in the `wf-dev-pipeline` skill.
 
 **Read** `${CLAUDE_PLUGIN_ROOT}/skills/wf-dev-pipeline/SKILL.md` and **follow its

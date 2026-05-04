@@ -17,7 +17,7 @@ Ralph is an external bash loop that repeatedly invokes Claude Code to process ta
 | **Memory** | Git commits + task file | `progress.md` + git |
 | **Task queue** | `tasks.md` (file) | GitHub Issues |
 | **Test gate** | Bash checks `$?` | QA agent in pipeline |
-| **Session boundary** | Each Claude invocation | `/wf-end-session` + `/compact` |
+| **Session boundary** | Each Claude invocation | `/wf-core:wf-end-session` + `/compact` |
 
 ---
 
@@ -63,7 +63,7 @@ done
 # ralph.sh
 while true; do
   # Start Claude with wf-system context
-  claude --print "/wf-delegate --until-done"
+  claude --print "/wf-core:wf-delegate --until-done"
 
   # After Claude exits (context full or tasks done)
   sleep 5
@@ -90,7 +90,7 @@ Strip wf-system down to just:
 
 ### Option C: Pure wf-system (No Ralph)
 
-Current approach - rely on `/wf-end-session` + `/compact` to handle context limits.
+Current approach - rely on `/wf-core:wf-end-session` + `/compact` to handle context limits.
 
 **Pros**: Already works, no external script needed
 **Cons**: Context limits still problematic, can't run truly unattended overnight
@@ -169,11 +169,11 @@ def handle_stop(self) -> int:
 
 ### Phase 2: Task Sync
 1. Modify Ralph to use `gh issue list --label sub-task --state open`
-2. Or create `/wf-export-tasks` command that writes GitHub Issues to `tasks.md`
+2. Or create `/wf-core:wf-export-tasks` command that writes GitHub Issues to `tasks.md`
 
 ### Phase 3: Pipeline Persistence
 1. Add `.claude/pipeline-state.json` for cross-session state
-2. Modify `/wf-delegate` to resume pipeline on restart
+2. Modify `/wf-core:wf-delegate` to resume pipeline on restart
 
 ---
 
@@ -192,7 +192,7 @@ while true; do
   echo "$(date): Starting Claude session"
 
   # Run wf-system to pick and execute next task
-  claude --print "/wf-pick-issue && /wf-delegate --until-done" 2>&1 | tee -a ralph.log
+  claude --print "/wf-core:wf-pick-issue && /wf-core:wf-delegate --until-done" 2>&1 | tee -a ralph.log
 
   EXIT_CODE=$?
   echo "$(date): Claude exited with code $EXIT_CODE"

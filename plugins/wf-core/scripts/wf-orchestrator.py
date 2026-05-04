@@ -4,9 +4,15 @@ WF Orchestrator - Global Workflow Hook for Claude Code
 =======================================================
 Handles:
 1. SessionStart simulation (first PostToolUse detection)
-2. Context monitoring: warning at 75%, /wf-end-session trigger at 90% (configurable)
+2. Context monitoring: warning at 75%, /wf-core:wf-end-session trigger at 90% (configurable)
 3. Stop hook with autonomy mode support (interactive checkpoint)
 4. Workflow routing (Jira vs GitHub)
+
+Context monitoring reads token usage straight from the transcript JSONL —
+no subprocess `claude -p -r /context` extraction (recursive, brittle, format
+drifts). The window size auto-calibrates from observed peak usage against
+standard Anthropic tiers (200K / 1M / 2M); override via the `WF_CONTEXT_LIMIT`
+env var or a `contextLimit` field in `workflow.json` for per-project pinning.
 
 Usage:
   PostToolUse: python3 wf-orchestrator.py
@@ -16,7 +22,6 @@ Usage:
 import sys
 import json
 import os
-import re
 import subprocess
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -26,10 +31,21 @@ from typing import Optional, Dict, Any, Tuple
 # CONFIGURATION
 # =============================================================================
 
-CONTEXT_LIMIT = 200_000
+# Conservative default when no override applies and observed usage hasn't yet
+# tripped self-calibration past the 200K mark. Resolved per-call via
+# `_resolve_context_window`, never read directly by the hook output paths.
+DEFAULT_CONTEXT_LIMIT = 200_000
+
+# Standard Anthropic context-window tiers, ascending. When observed peak
+# usage exceeds the previous tier we infer the next-up — handles new models
+# and extended-context variants without a model-name maintenance dict.
+# Update this tuple if Anthropic ships a new tier (one-line data change,
+# not a code change).
+STANDARD_TIERS: Tuple[int, ...] = (200_000, 1_000_000, 2_000_000)
+
 # Default thresholds (can be overridden via env vars below)
 DEFAULT_WARNING_THRESHOLD = 75   # Friendly heads-up
-DEFAULT_CRITICAL_THRESHOLD = 90  # Trigger /wf-end-session
+DEFAULT_CRITICAL_THRESHOLD = 90  # Trigger /wf-core:wf-end-session
 # State dir lives outside the plugin so it survives reinstalls/updates.
 STATE_DIR = Path(os.path.expanduser("~/.wf-state"))
 STATE_MAX_AGE_DAYS = 7      # Cleanup old state files
@@ -135,58 +151,108 @@ class WFOrchestrator:
     # Context Monitoring
     # -------------------------------------------------------------------------
 
-    def _get_context_usage(self) -> Tuple[int, float]:
-        """Get current context usage via Claude Code /context command.
+    def _resolve_context_window(self, observed_max: int) -> int:
+        """Resolve the active context-window size in tokens.
 
-        Primary: runs `claude -p -r <session_id> "/context"` to get
-        authoritative token data directly from Claude Code.
-        Fallback: parses transcript JSONL if the CLI call fails.
+        Resolution order (first match wins):
+
+        1. `WF_CONTEXT_LIMIT` env var when set + parseable as a positive int.
+           Hard escape hatch — overrides everything else.
+        2. `contextLimit` field in the project's `workflow.json` if present
+           and a positive int. Per-project pin without env-var gymnastics.
+        3. Self-calibration: when `observed_max` exceeds 200K we know the
+           session is on an extended-context tier; pick the smallest
+           `STANDARD_TIERS` entry that is >= observed_max. Falls through
+           to the largest tier when observed exceeds even that.
+        4. Default 200K — conservative, matches the standard tier most
+           sessions still ship with.
+
+        The function takes only `observed_max` by design — Claude Code's
+        on-disk transcript / stats-cache do NOT expose the active window
+        anywhere reliable, and a model-name dict would need updating on
+        every release. Self-calibration handles new models for free.
         """
-        # Primary: ask Claude Code for real context data
-        if self.session_id and self.session_id != "unknown":
+        env = os.environ.get("WF_CONTEXT_LIMIT")
+        if env:
             try:
-                result = subprocess.run(
-                    ["claude", "-p", "-r", self.session_id, "/context", "--output-format", "json"],
-                    capture_output=True, text=True, timeout=5,
-                    env={k: v for k, v in os.environ.items() if k != "CLAUDECODE"},
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    data = json.loads(result.stdout)
-                    text = data.get("result", "")
-                    m = re.search(r'\*\*Tokens:\*\*\s+([\d.]+)k?\s*/\s*([\d.]+)k?\s*\((\d+)%\)', text)
-                    if m:
-                        pct = float(m.group(3))
-                        current_str, max_str = m.group(1), m.group(2)
-                        current = int(float(current_str) * 1000)
-                        max_tokens = int(float(max_str) * 1000)
-                        return current, pct
-            except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError, Exception):
+                n = int(env)
+                if n > 0:
+                    return n
+            except ValueError:
                 pass
 
-        # Fallback: parse transcript JSONL
+        config = self._get_workflow_config()
+        if config:
+            cl = config.get("contextLimit")
+            if isinstance(cl, int) and cl > 0:
+                return cl
+
+        if observed_max > 200_000:
+            for tier in STANDARD_TIERS:
+                if tier >= observed_max:
+                    return tier
+            return STANDARD_TIERS[-1]
+
+        return DEFAULT_CONTEXT_LIMIT
+
+    def _get_context_usage(self) -> Tuple[int, float, int]:
+        """Read token usage from the transcript JSONL.
+
+        Walks the transcript and finds the LAST entry carrying
+        `message.usage`. The running context occupancy at that turn is:
+
+            input_tokens + cache_creation_input_tokens + cache_read_input_tokens
+
+        Per Anthropic's API docs that sum is "tokens the model received
+        this turn" — equivalent to the model's context occupancy at that
+        turn (system prompt + tools + history + new input + cache). The
+        previous implementation missed `cache_creation_input_tokens`
+        entirely.
+
+        Also tracks the running max across the whole transcript so the
+        window resolver can self-calibrate even mid-conversation when
+        the latest turn happens to be small.
+
+        Returns `(latest, percent, resolved_window)`. Empty/missing
+        transcript → `(0, 0.0, default_window)`.
+        """
         if not self.transcript_path or not os.path.exists(self.transcript_path):
-            return 0, 0.0
+            window = self._resolve_context_window(observed_max=0)
+            return 0, 0.0, window
 
         latest_context = 0
+        observed_max = 0
         try:
-            with open(self.transcript_path, 'r') as f:
+            with open(self.transcript_path, "r") as f:
                 for line in f:
-                    if not line.strip():
+                    line = line.strip()
+                    if not line:
                         continue
                     try:
                         entry = json.loads(line)
-                        usage = entry.get("message", {}).get("usage", {})
-                        input_tokens = usage.get("input_tokens", 0)
-                        cache_read = usage.get("cache_read_input_tokens", 0)
-                        if input_tokens > 0 or cache_read > 0:
-                            latest_context = input_tokens + cache_read
                     except json.JSONDecodeError:
+                        # Malformed line — skip; partial-write tail is the
+                        # common case here, not a hard failure.
                         continue
+                    usage = entry.get("message", {}).get("usage")
+                    if not isinstance(usage, dict):
+                        continue
+                    total = (
+                        int(usage.get("input_tokens", 0) or 0)
+                        + int(usage.get("cache_creation_input_tokens", 0) or 0)
+                        + int(usage.get("cache_read_input_tokens", 0) or 0)
+                    )
+                    if total <= 0:
+                        continue
+                    latest_context = total
+                    if total > observed_max:
+                        observed_max = total
         except (IOError, FileNotFoundError):
             pass
 
-        pct = (latest_context / CONTEXT_LIMIT) * 100 if CONTEXT_LIMIT > 0 else 0
-        return latest_context, pct
+        window = self._resolve_context_window(observed_max=observed_max)
+        pct = (latest_context / window) * 100 if window > 0 else 0.0
+        return latest_context, pct, window
 
     # -------------------------------------------------------------------------
     # Progress Detection
@@ -311,7 +377,7 @@ class WFOrchestrator:
             self._save_state()
             msg = (
                 "SESSION START: No workflow configuration detected.\n"
-                "Run `/wf-init` to set up progress tracking, standards, and agents."
+                "Run `/wf-core:wf-init` to set up progress tracking, standards, and agents."
             )
             return {
                 "systemMessage": msg,
@@ -344,7 +410,7 @@ class WFOrchestrator:
         if progress_lines:
             progress_warning = (
                 f"\n\n⚠️ WARNING: progress.md has {progress_lines} lines (limit: {PROGRESS_LINE_LIMIT}). "
-                f"Run `/wf-end-session` to archive old sessions."
+                f"Run `/wf-core:wf-end-session` to archive old sessions."
             )
 
         # Brain integration
@@ -355,15 +421,15 @@ class WFOrchestrator:
 
 
 
-        msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-start-session or provide ticket"
+        msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-core:wf-start-session or provide ticket"
         full_context = (
             f"SESSION START - Jira Workflow Detected\n"
             f"Project: {project_name}\n"
             f"Jira Project: {jira_project}\n\n"
             f"Would you like to work on a Jira ticket?\n"
-            f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-breakdown`\n"
+            f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-core:wf-breakdown`\n"
             f"- Or describe what you'd like to work on\n"
-            f"- Or run `/wf-start-session` for full context load{progress_warning}"
+            f"- Or run `/wf-core:wf-start-session` for full context load{progress_warning}"
             f"{brain_context}"
         )
         return {
@@ -388,7 +454,7 @@ class WFOrchestrator:
         if progress_lines:
             progress_warning = (
                 f"\n\n⚠️ WARNING: progress.md has {progress_lines} lines (limit: {PROGRESS_LINE_LIMIT}). "
-                f"Run `/wf-end-session` to archive old sessions."
+                f"Run `/wf-core:wf-end-session` to archive old sessions."
             )
 
         # Brain integration — inject relevant knowledge
@@ -406,8 +472,8 @@ class WFOrchestrator:
                 f"SESSION START - Work In Progress Detected\n"
                 f"Repository: {repo_display}\n\n"
                 f"WIP: {wip}\n\n"
-                f"Recommended: Run `/wf-delegate` to continue with the assigned sub-task, "
-                f"or `/wf-start-session` for full context.{progress_warning}"
+                f"Recommended: Run `/wf-core:wf-delegate` to continue with the assigned sub-task, "
+                f"or `/wf-core:wf-start-session` for full context.{progress_warning}"
                 f"{brain_context}"
             )
             return {
@@ -418,13 +484,13 @@ class WFOrchestrator:
                 }
             }
         else:
-            msg = f"[WF] {repo_display} - No WIP. Run /wf-start-session or /wf-pick-issue"
+            msg = f"[WF] {repo_display} - No WIP. Run /wf-core:wf-start-session or /wf-core:wf-pick-issue"
             full_context = (
                 f"SESSION START - GitHub Workflow\n"
                 f"Repository: {repo_display}\n\n"
                 f"No work in progress detected.\n"
-                f"Recommended: Run `/wf-pick-issue` to select the next task, "
-                f"or `/wf-start-session` for full context.{progress_warning}"
+                f"Recommended: Run `/wf-core:wf-pick-issue` to select the next task, "
+                f"or `/wf-core:wf-start-session` for full context.{progress_warning}"
                 f"{brain_context}"
             )
             return {
@@ -452,10 +518,29 @@ class WFOrchestrator:
             pass
         return default
 
+    def _context_monitor_disabled(self) -> bool:
+        """Resolve the disable flag in priority order.
+
+        1. `WF_DISABLE_CONTEXT_CHECK=true` env var (existing escape hatch).
+        2. `workflow.json` field `contextMonitor.enabled: false` —
+           per-project opt-out without env-var gymnastics. Default
+           `enabled: true` when the field is absent.
+
+        Returns True when the monitor should NOT run.
+        """
+        if os.environ.get("WF_DISABLE_CONTEXT_CHECK", "false") == "true":
+            return True
+        config = self._get_workflow_config()
+        if config:
+            cm = config.get("contextMonitor")
+            if isinstance(cm, dict) and cm.get("enabled") is False:
+                return True
+        return False
+
     def handle_context_check(self) -> Optional[Dict]:
         """Check context usage and emit tiered warning/critical messages."""
-        # Skip if session-handoff.py handles context monitoring
-        if os.environ.get("WF_DISABLE_CONTEXT_CHECK", "false") == "true":
+        # Disable flag (env or workflow.json) — full opt-out.
+        if self._context_monitor_disabled():
             return None
         # Skip context warnings in external loop mode (Ralph handles restarts)
         if os.environ.get("WF_EXTERNAL_LOOP", "false") == "true":
@@ -468,23 +553,39 @@ class WFOrchestrator:
             "WF_CONTEXT_CRITICAL_THRESHOLD", DEFAULT_CRITICAL_THRESHOLD
         )
 
-        tokens, pct = self._get_context_usage()
+        tokens, pct, limit = self._get_context_usage()
 
-        if pct >= critical_threshold and not self.state["pre_compact_ran"]:
-            self.state["pre_compact_ran"] = True
+        # Auto-reset state when usage drops well below the warning floor.
+        # After a /compact the running token count drops; on the next
+        # tick the warning/critical flags should clear so a fresh
+        # expansion gets a fresh warning. The 0.9 buffer prevents
+        # oscillation when usage hovers near the threshold.
+        reset_floor = warning_threshold * 0.9
+        if pct < reset_floor and (
+            self.state.get("warning_shown", False)
+            or self.state.get("pre_compact_ran", False)
+        ):
+            self.state["warning_shown"] = False
+            self.state["pre_compact_ran"] = False
             self._save_state()
 
-            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST CALL SKILL /wf-end-session NOW"
+        # Warning takes priority on the FIRST crossing — even if the
+        # session resumes already past critical, the user gets the
+        # 75% heads-up before the 90% lockdown. Earlier ordering
+        # (`critical` first) caused inflated readings to skip the
+        # warning entirely, which was Pietro's reported symptom.
+        if pct >= warning_threshold and not self.state.get("warning_shown", False):
+            self.state["warning_shown"] = True
+            self._save_state()
+
+            msg = f"[WF] Context at {pct:.0f}% — consider wrapping up this task soon."
             full_context = (
-                f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
-                f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
-                f"INVOKE THE SKILL: Use the Skill tool with skill='wf-end-session'\n"
-                f"DO NOT manually update progress.md - the skill handles everything.\n\n"
-                f"The /wf-end-session skill will:\n"
-                f"1. Save progress to progress.md\n"
-                f"2. Commit current work\n"
-                f"3. Archive session state\n\n"
-                f"After /wf-end-session completes, run /compact to summarize."
+                f"⚠️ Context usage: {pct:.0f}%\n"
+                f"Tokens: {tokens:,}/{limit:,}\n\n"
+                f"You're past the comfortable working zone. Consider:\n"
+                f"- Finishing the current task before starting a new one\n"
+                f"- Running /wf-core:wf-end-session when you reach a natural stopping point\n\n"
+                f"Critical threshold is {critical_threshold}% — I'll remind you again then."
             )
             return {
                 "systemMessage": msg,
@@ -493,18 +594,21 @@ class WFOrchestrator:
                     "additionalContext": full_context
                 }
             }
-        elif pct >= warning_threshold and not self.state.get("warning_shown", False):
-            self.state["warning_shown"] = True
+        elif pct >= critical_threshold and not self.state["pre_compact_ran"]:
+            self.state["pre_compact_ran"] = True
             self._save_state()
 
-            msg = f"[WF] Context at {pct:.0f}% — consider wrapping up this task soon."
+            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST CALL SKILL /wf-core:wf-end-session NOW"
             full_context = (
-                f"⚠️ Context usage: {pct:.0f}%\n"
-                f"Tokens: {tokens:,}/{CONTEXT_LIMIT:,}\n\n"
-                f"You're past the comfortable working zone. Consider:\n"
-                f"- Finishing the current task before starting a new one\n"
-                f"- Running /wf-end-session when you reach a natural stopping point\n\n"
-                f"Critical threshold is {critical_threshold}% — I'll remind you again then."
+                f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
+                f"Tokens: {tokens:,}/{limit:,}\n\n"
+                f"INVOKE THE SKILL: Use the Skill tool with skill='wf-end-session'\n"
+                f"DO NOT manually update progress.md - the skill handles everything.\n\n"
+                f"The /wf-core:wf-end-session skill will:\n"
+                f"1. Save progress to progress.md\n"
+                f"2. Commit current work\n"
+                f"3. Archive session state\n\n"
+                f"After /wf-core:wf-end-session completes, run /compact to summarize."
             )
             return {
                 "systemMessage": msg,
@@ -544,7 +648,7 @@ class WFOrchestrator:
             return 0  # Autonomy disabled - allow stop
 
         # Autonomy enabled - interactive checkpoint
-        tokens, pct = self._get_context_usage()
+        tokens, pct, _limit = self._get_context_usage()
 
         # Play notification sound (macOS only; silent on Linux/Windows)
         if sys.platform == "darwin":
