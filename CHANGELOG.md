@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.0] - 2026-05-04
+
+### Added
+- /wf-core: prefix in user-facing strings + workflow.json contextMonitor.enabled opt-out (96cf48d)
+
+### Fixed
+- reliable context monitor — JSONL-only extraction, model-aware window, warning-first threshold ordering (81f9b8a)
+
+
 ## [Unreleased]
 
 ### Added
