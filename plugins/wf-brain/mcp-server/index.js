@@ -39,7 +39,7 @@ async function loadEmbed() {
 
 function notInitialized() {
   return {
-    error: 'No brain.db found. Initialize one with `/wf-core:wf-init` inside the project (creates .claude/brain.db).',
+    error: 'No brain.db found. Initialize one with `/wf-brain:init` inside the project (creates .claude/brain.db).',
   };
 }
 
