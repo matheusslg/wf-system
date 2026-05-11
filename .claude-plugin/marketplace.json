@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "wf-system: workflow management plugins for Claude Code",
-    "version": "2.3.0"
+    "version": "2.3.1"
   },
   "plugins": [
     {
