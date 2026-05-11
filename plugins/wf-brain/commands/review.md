@@ -55,9 +55,24 @@ Use `AskUserQuestion` (single-select) with the four options:
 - **Approve:** call `brain_pending_approve` with the entry's `id`. Track in the running tally.
 - **Reject:** call `brain_pending_reject` with the entry's `id`. Track in the running tally.
 - **Skip:** no MCP call. Track in the running tally.
-- **Approve all remaining:** call `brain_pending_approve` for the current entry, then for every subsequent entry within the 20-item window — without asking again. Track each in the tally.
+- **Approve all remaining:** confirm first, then bulk-approve (see below).
 
-If any individual MCP call returns an `error` payload, note it inline (`[#42] approve failed: <error>`) and continue with the next entry. Do not abort the whole review on one bad row.
+### 2c-bis. Confirmation gate for bulk-approve
+
+Auto-approving up to 19 sub-agent-proposed entries on a single keystroke is a viable foot-gun (fat-finger, fatigue, screen-share). Before the bulk loop kicks in, ask one extra question via `AskUserQuestion` (single-select):
+
+> About to bulk-approve {N} remaining entries (IDs {first}–{last}). Confirm?
+
+Options:
+
+- **Yes — bulk-approve** — proceed with the bulk loop. Call `brain_pending_approve` for the **current** entry, then for every subsequent entry within the 20-item window, without asking again. Track each in the tally.
+- **No — back to per-entry prompts** — fall through to the per-entry prompt for the **next** entry. The **current** entry is treated as `Skip` (no MCP call, row stays pending for next run). The original "Approve all remaining" click is effectively withdrawn.
+
+The bulk path stays available for trusted-source scenarios (e.g., the user pre-scanned the queue and is approving in batch), but the single confirm closes the unintentional-click hole.
+
+### 2d. Error tolerance
+
+If any individual MCP call returns an `error` payload, note it inline (`[#42] approve failed: <error>`) and continue with the next entry. Do not abort the whole review on one bad row. This applies to both the per-entry path and the post-confirm bulk path.
 
 ---
 
