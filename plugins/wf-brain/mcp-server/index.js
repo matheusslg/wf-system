@@ -64,7 +64,7 @@ function withConnection(handler) {
   };
 }
 
-const server = new McpServer({ name: 'wf-brain', version: '0.1.0' });
+const server = new McpServer({ name: 'wf-brain', version: '0.2.0' });
 
 server.tool(
   'brain_search',
@@ -144,6 +144,45 @@ server.tool(
   'Get brain statistics: entry count by category, pending count',
   {},
   withConnection(async (_input, conn) => db.getStats(conn))
+);
+
+server.tool(
+  'brain_pending_list',
+  'List pending knowledge entries awaiting human review (oldest first)',
+  {
+    limit: z.number().optional().default(50).describe('Max results'),
+  },
+  withConnection(async ({ limit }, conn) => {
+    // lib/db.listPending takes no limit argument — it returns all rows
+    // ordered by id ASC. The pending table is small in practice
+    // (queued, not archival), so reading-then-slicing is cheap and
+    // keeps lib/db.js unchanged.
+    return db.listPending(conn).slice(0, limit);
+  })
+);
+
+server.tool(
+  'brain_pending_approve',
+  'Approve a pending entry — moves it from `pending` into `entries` (searchable)',
+  {
+    id: z.number().describe('Pending row id'),
+  },
+  withConnection(async ({ id }, conn) => {
+    const entryId = db.approvePending(conn, id);
+    return { approved: id, entryId };
+  })
+);
+
+server.tool(
+  'brain_pending_reject',
+  'Reject a pending entry — marks it rejected in `pending` (no copy into entries)',
+  {
+    id: z.number().describe('Pending row id'),
+  },
+  withConnection(async ({ id }, conn) => {
+    db.rejectPending(conn, id);
+    return { rejected: id };
+  })
 );
 
 async function main() {

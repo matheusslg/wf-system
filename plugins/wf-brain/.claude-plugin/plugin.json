@@ -1,7 +1,7 @@
 {
   "name": "wf-brain",
-  "version": "0.1.0",
-  "description": "Optional knowledge brain for wf-system: semantic search + persistent memory exposed as MCP tools (brain_search, brain_store, brain_propose, brain_stats).",
+  "version": "0.2.0",
+  "description": "Optional knowledge brain for wf-system: semantic search + persistent memory exposed as MCP tools (brain_search, brain_store, brain_propose, brain_stats, brain_pending_list, brain_pending_approve, brain_pending_reject) plus /wf-brain:init and /wf-brain:review commands.",
   "author": {
     "name": "Matheus Cavallini",
     "email": "matheus@gnarlysoft.io",
