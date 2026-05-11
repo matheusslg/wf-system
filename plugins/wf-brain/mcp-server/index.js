@@ -64,7 +64,7 @@ function withConnection(handler) {
   };
 }
 
-const server = new McpServer({ name: 'wf-brain', version: '0.2.0' });
+const server = new McpServer({ name: 'wf-brain', version: '0.2.1' });
 
 server.tool(
   'brain_search',
