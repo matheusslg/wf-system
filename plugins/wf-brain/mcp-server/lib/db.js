@@ -3,12 +3,6 @@
 const path = require('node:path');
 const fs = require('node:fs');
 
-// Resolve deps from the shared wf-brain node_modules
-const MODULE_PATH = path.join(__dirname, '..', '..', '.claude', 'mcp-servers', 'wf-brain', 'node_modules');
-if (fs.existsSync(MODULE_PATH)) {
-  module.paths.unshift(MODULE_PATH);
-}
-
 const Database = require('better-sqlite3');
 
 const CURRENT_SCHEMA_VERSION = '1';

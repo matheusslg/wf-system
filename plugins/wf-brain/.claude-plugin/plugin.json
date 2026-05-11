@@ -1,0 +1,22 @@
+{
+  "name": "wf-brain",
+  "version": "0.1.0",
+  "description": "Optional knowledge brain for wf-system: semantic search + persistent memory exposed as MCP tools (brain_search, brain_store, brain_propose, brain_stats).",
+  "author": {
+    "name": "Matheus Cavallini",
+    "email": "matheus@gnarlysoft.io",
+    "url": "https://github.com/matheusslg"
+  },
+  "homepage": "https://github.com/matheusslg/wf-system",
+  "repository": "https://github.com/matheusslg/wf-system",
+  "license": "MIT",
+  "keywords": [
+    "knowledge",
+    "memory",
+    "mcp",
+    "search",
+    "embeddings",
+    "wf-system",
+    "optional"
+  ]
+}

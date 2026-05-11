@@ -1,0 +1,4 @@
+mcp-server/node_modules/
+brain.db
+brain.db-shm
+brain.db-wal
