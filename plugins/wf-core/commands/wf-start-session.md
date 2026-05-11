@@ -64,22 +64,28 @@ If critical MCPs are missing, add to session summary:
 **Note**: Some workflow commands require MCP servers. Run `/wf-core:wf-init` for setup instructions.
 ```
 
-## 1.6. Brain Status Check
+## 1.6. Brain Status Check (Optional Plugin)
 
-Check if the project brain is available:
+The knowledge brain is an optional `wf-brain@wf-system` plugin. Probe it via the wrapper — exit 127 means "not installed", any other failure means an installed brain misbehaved.
 
 ```bash
-node ~/.claude/scripts/wf-brain.js stats 2>/dev/null || echo "BRAIN_NOT_FOUND"
+bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" stats 2>/dev/null
+brain_status=$?
 ```
 
-**If brain exists**: Include stats in the session summary:
+**If `brain_status == 0`**: Include stats in the session summary:
 ```markdown
 **Brain**: {totalEntries} entries
 ```
 
-**If brain doesn't exist**: Auto-initialize:
-```bash
-node ~/.claude/scripts/wf-brain.js init
+**If `brain_status == 127`** (not installed): Surface as optional, do NOT auto-initialize (brain isn't shipped as part of wf-core@v2.1.x yet):
+```markdown
+**Brain**: not installed (optional — install via `/plugin install wf-brain@wf-system` when available)
+```
+
+**If `brain_status` is anything else**: brain is installed but errored; report the exit code and skip stats:
+```markdown
+**Brain**: ⚠️ installed but stats call failed (exit {brain_status}); skipping
 ```
 
 ## 2. Read Progress Log

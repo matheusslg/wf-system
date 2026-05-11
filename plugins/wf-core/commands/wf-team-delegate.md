@@ -417,7 +417,7 @@ Read each agent file and spawn as persistent teammates with Agent Teams communic
 For each unique developer agent needed, first search the brain for relevant context:
 
 ```bash
-node ~/.claude/scripts/wf-brain.js search "{issue_title}" --limit 3 2>/dev/null
+bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" search "{issue_title}" --limit 3 2>/dev/null
 ```
 
 Format each result as: `- [{category}] {content}`. Store as `brain_search_results` (empty string if brain not available or no results).
@@ -1022,7 +1022,7 @@ For each completed pipeline, consider:
 
 For each entry worth preserving (0-2 per pipeline):
 ```bash
-node ~/.claude/scripts/wf-brain.js store --category <category> --tags "<tags>" --source "issue:{issue_number}" "<content>"
+bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" store --category <category> --tags "<tags>" --source "issue:{issue_number}" "<content>" 2>/dev/null || true
 ```
 
 On exit, proceed to **Section 8 (Post-Pipeline Verification)**.

@@ -380,7 +380,7 @@ The following comments may contain additional context, clarifications, or requir
 Search the brain for relevant context:
 
 ```bash
-node ~/.claude/scripts/wf-brain.js search "{issue_title}" --limit 3 2>/dev/null
+bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" search "{issue_title}" --limit 3 2>/dev/null
 ```
 
 If results found, include in the task context:

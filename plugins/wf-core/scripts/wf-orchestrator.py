@@ -327,13 +327,17 @@ class WFOrchestrator:
         if not keywords or not keywords.strip():
             return None
         try:
-            cli_path = Path.home() / ".claude" / "scripts" / "wf-brain.js"
+            # v2 brain lives at the MCP-server path; the v1
+            # `~/.claude/scripts/wf-brain.js` location no longer exists.
+            # The brain plugin is optional and may not be installed —
+            # callers must tolerate a clean miss.
+            brain_path = Path.home() / ".claude" / "mcp-servers" / "wf-brain" / "index.js"
 
-            if not cli_path.exists():
+            if not brain_path.exists():
                 return None
 
             result = subprocess.run(
-                ["node", str(cli_path), "search", keywords, "--limit", str(limit)],
+                ["node", str(brain_path), "search", keywords, "--limit", str(limit)],
                 capture_output=True, text=True, timeout=10, cwd=self.cwd
             )
             if result.returncode != 0:

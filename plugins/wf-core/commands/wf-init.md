@@ -183,18 +183,17 @@ mkdir -p .claude/skills
 mkdir -p .claude/session-archive
 ```
 
-### 3.5. Initialize Brain
+### 3.5. Initialize Brain (Optional)
 
-Initialize the knowledge brain for the project:
+The knowledge brain is an optional v2.x plugin (`wf-brain@wf-system`). If installed, initialize it for the project:
 
 ```bash
-node ~/.claude/scripts/wf-brain.js init --project-dir "$(pwd)"
+bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" init --project-dir "$(pwd)" || true
 ```
 
-This creates `.claude/brain.db` and seeds from `standards.md` and `progress.md` if they exist.
+The wrapper exits 127 silently when brain isn't installed, so the `|| true` keeps `/wf-core:wf-init` succeeding either way. When brain IS installed, this creates `.claude/brain.db` and seeds from `standards.md` and `progress.md` if they exist.
 
-If `node` is not available, skip with a warning:
-> **Note**: Brain not initialized (Node.js not found). Install Node.js to enable project knowledge features.
+> **Note**: Brain is not yet shipped as part of wf-core@v2.1.x. Install it separately via `/plugin install wf-brain@wf-system` once available. The other v2 workflow commands work fine without it.
 
 ### 3.6. Register Brain MCP Server
 
