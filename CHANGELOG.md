@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.2] - 2026-05-11
+
+### Fixed
+- migrate stale ~/.claude/scripts/wf-brain.js path to v2 MCP location + graceful unavailability (60ca3d7)
+
+
 ## [2.1.1] - 2026-05-04
 
 ### Fixed
