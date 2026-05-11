@@ -93,7 +93,7 @@ Review this session's work and extract knowledge worth preserving.
 For each entry worth preserving (0-3 per session):
 
 ```bash
-node ~/.claude/scripts/wf-brain.js store --category <category> --tags "<tags>" --source "session-end" "<content>"
+bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" store --category <category> --tags "<tags>" --source "session-end" "<content>" 2>/dev/null || true
 ```
 
 **Categories**: architecture, domain, convention, gotcha, decision, history

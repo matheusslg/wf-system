@@ -54,6 +54,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **wf-brain path migrated to v2 MCP location + honest unavailability messaging.**
+  Eight call sites still hard-coded `node ~/.claude/scripts/wf-brain.js …`,
+  the v1.x install path. On v2 installs that file doesn't exist, so every
+  command that touched "the brain" emitted a misleading
+  "Brain: ⚠️ wf-brain.js script not found at ~/.claude/scripts/ — feature
+  unavailable" warning even on perfectly-configured v2 setups. The v2 brain
+  lives at `~/.claude/mcp-servers/wf-brain/index.js` and is shipped as an
+  optional plugin (`wf-brain@wf-system`) that isn't bundled with `wf-core`
+  yet. Fix has two layers:
+    * **Layer A — centralized wrapper.** New
+      `plugins/wf-core/scripts/wf-brain-cli.sh` checks the v2 MCP path,
+      exits 127 silently when brain isn't installed, and otherwise execs
+      `node <brain> "$@"`. All 5 command files (`wf-init.md`,
+      `wf-start-session.md`, `wf-end-session.md`, `wf-delegate.md`,
+      `wf-team-delegate.md`) route through it via
+      `bash "${CLAUDE_PLUGIN_ROOT:-…}/scripts/wf-brain-cli.sh"`. The
+      orchestrator's `_brain_search` already had an
+      `if not cli_path.exists(): return None` guard — just updated the
+      path constant to the v2 MCP location.
+    * **Layer B — honest messaging.** `wf-start-session.md`'s "Brain Status
+      Check" section now reports brain as an optional plugin and points
+      users at `/plugin install wf-brain@wf-system` when they want it.
+      It no longer auto-initializes (since brain isn't shipped as part
+      of wf-core@v2.1.x yet) and distinguishes "not installed" (exit 127)
+      from "installed but errored" (any other non-zero exit code).
+      `wf-init.md`'s section 3.5 carries the same framing.
+
 - **Release workflow now uses the lockstep version bumper.**
   `.github/workflows/release.yml` previously inlined a single
   `echo "<new>" > VERSION` step and committed only `VERSION CHANGELOG.md`,
