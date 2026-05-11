@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "wf-system: workflow management plugins for Claude Code",
-    "version": "2.1.2"
+    "version": "2.2.0"
   },
   "plugins": [
     {
@@ -23,7 +23,7 @@
     {
       "name": "wf-brain",
       "source": "./plugins/wf-brain",
-      "description": "Optional knowledge brain — semantic search + persistent memory via MCP",
+      "description": "Optional knowledge brain \u2014 semantic search + persistent memory via MCP",
       "category": "productivity",
       "tags": [
         "knowledge",

@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.2.0] - 2026-05-11
+
+### Added
+- port v1 source tree into plugin layout (18de649)
+- plugin skeleton (manifest + MCP descriptor + marketplace entry) (8c730a2)
+
+### Fixed
+- clean dead path resolver + restore brain_propose alias (690f4fb)
+
+### Changed
+- drop CLI shell-out, import lib functions directly (a42aa75)
+
+
 ## [2.1.2] - 2026-05-11
 
 ### Fixed
