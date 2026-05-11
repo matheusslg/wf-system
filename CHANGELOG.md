@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.3.0] - 2026-05-11
+
+### Added
+- /wf-brain:review command (interactive pending-queue triage) (404816f)
+- /wf-brain:init command (bootstrap .claude/brain.db) (3d83aa9)
+- pending-queue MCP tools (list / approve / reject) (b0a4157)
+
+
 ## [2.2.0] - 2026-05-11
 
 ### Added
