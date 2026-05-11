@@ -1,13 +1,5 @@
 'use strict';
 
-const path = require('path');
-const fs = require('fs');
-
-const MODULE_PATH = path.join(__dirname, '..', '..', '.claude', 'mcp-servers', 'wf-brain', 'node_modules');
-if (fs.existsSync(MODULE_PATH)) {
-  module.paths.unshift(MODULE_PATH);
-}
-
 let _pipeline = null;
 
 async function _getEmbedder() {

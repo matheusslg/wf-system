@@ -112,7 +112,7 @@ server.tool(
 
 server.tool(
   'brain_propose',
-  'Propose knowledge for human review before it lands in the brain (sub-agents)',
+  'Store knowledge in the brain (alias for brain_store, kept for backward compatibility). The pending-review queue ships in a coordinated PR with commands/wf-brain-review.md.',
   {
     content: z.string().describe('Knowledge content (2-4 sentences)'),
     category: z.enum(['architecture', 'domain', 'convention', 'gotcha', 'decision', 'history']),
@@ -128,15 +128,14 @@ server.tool(
       return { error: `Similar entry already exists (id: ${dup.id})`, duplicate: dup.id };
     }
 
-    const id = db.insertPending(conn, {
+    const id = db.insertEntry(conn, {
       content,
       category,
       tags: tags || '',
-      source: source || '',
-      proposedBy: source || '',
+      source: source || 'agent:unknown',
       embedding,
     });
-    return { id, proposed: true };
+    return { id, stored: true };
   })
 );
 
