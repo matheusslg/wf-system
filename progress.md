@@ -4,8 +4,60 @@
 > **Keep this file under 400 lines** - archive old sessions to `.claude/session-archive/`
 
 ## Current Status
-**Phase**: Plugin Migration v2.0 — **All phases complete. `v2.0.0-rc.1` tagged and pushed.** Dogfood period started 2026-04-14, runs through at least 2026-04-17. Plugin installed locally, hooks firing. Remaining smoke test items verified during dogfood.
-**Last Updated**: 2026-04-14
+**Phase**: v2.1.x reliability/UX stability series shipped. Context monitor reliable + slash-prefix migrated + release workflow lockstep-bumped + brain references cleaned. Three GA patches (v2.1.0/1/2) tagged, released, installable end-to-end via `/plugin update wf-core`. Next: build wf-brain plugin per `docs/superpowers/plans/2026-03-12-wf-brain.md` (paused at Task 2/10).
+**Last Updated**: 2026-05-11
+
+---
+
+### Session 23 (2026-05-11)
+**Focus**: Triage + fix three compounding reliability bugs in v2.0 orchestrator + release workflow. Three PRs merged, three patch releases shipped.
+
+**Completed**:
+- [x] **PR #21 (`fix/context-monitor-reliable` → v2.1.0)** — `81f9b8a`, `96cf48d`, `4c0aee2` (squash via `60abbb3`). Three commits stacked.
+  - Dropped subprocess `claude -p -r /context` extraction (brittle, recursion-prone, 5s timeout, regex-vulnerable).
+  - Token math now sums `input + cache_creation + cache_read` per Anthropic API contract; was previously summing only `input + cache_read` (missing the cache_creation tokens the model actually saw).
+  - Context window resolution: env (`WF_CONTEXT_LIMIT`) → `workflow.json.contextLimit` → next-tier-up self-calibration from observed transcript max (tiers: 200K, 1M, 2M) → 200K default. **No model→window dict** — survives new Anthropic model releases without code changes. The hardcoded `CONTEXT_LIMIT = 200_000` divided 1M-window Sonnet 4.6 sessions by 5× and reported 280%, hitting CRITICAL on first tick.
+  - Threshold reorder: warning fires before critical even when both crossed on first tick; auto-reset after `/compact` (when `pct < warning * 0.9`).
+  - All user-facing `/wf-<cmd>` strings migrated to `/wf-core:wf-<cmd>` across 24 markdown files + orchestrator messages + README + docs/ralph-integration.md (47 substitutions across user-instructional prose; CHANGELOG historical refs + migration test fixtures intentionally exempt).
+  - New `workflow.json.contextMonitor.enabled: false` per-project opt-out alongside the existing `WF_DISABLE_CONTEXT_CHECK` env var.
+  - 25 stdlib `unittest` tests at `tests/orchestrator/test_context_monitor.py` covering bucketing, tier inference, threshold ordering (incl. Pietro regression — 800K observed → 1M window → 80% → warning fires NOT critical), auto-reset, env/config disable.
+
+- [x] **PR #22 (`fix/release-workflow-lockstep-bump` → v2.1.1)** — `3d99e3c` (squash via `71bc308`).
+  - Root cause: `.github/workflows/release.yml` inlined `echo "$NEW_VERSION" > VERSION` instead of calling `scripts/bump-version.sh`. Result: v2.1.0 release commit (`219d26b`) only bumped VERSION + CHANGELOG; `plugins/wf-core/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` stayed at "2.0.0". `/plugin update wf-core` is keyed on plugin.json's own version field → users who installed 2.0.0 saw "up to date" and never received the v2.1.0 hook fixes.
+  - Fix: workflow now calls `bash scripts/bump-version.sh "$NEW_VERSION"`. `git add` extended to include both JSON paths. Backfilled both JSONs from "2.0.0" → "2.1.0" so the next workflow run starts aligned.
+
+- [x] **PR #23 (`fix/wf-brain-path-migration-and-graceful-degradation` → v2.1.2)** — `60ca3d7` (squash via `ca13251`).
+  - 8 stale references to v1 path `~/.claude/scripts/wf-brain.js` migrated. v2 path is `~/.claude/mcp-servers/wf-brain/index.js` (MCP server).
+  - New `plugins/wf-core/scripts/wf-brain-cli.sh` wrapper: stats brain path, exits 127 silently when absent, otherwise `exec node`. All 5 markdown call sites + orchestrator Python `_brain_search` routed through equivalent check.
+  - Honest unavailability messaging: "Brain: not installed (optional — install via /plugin install wf-brain@wf-system when available)" replaces the misleading "wf-brain.js not found at ~/.claude/scripts/" warning.
+
+- [x] **End-to-end install verified on local Mac**. `/plugin update wf-core` flow tested:
+  - v2.0.0 → v2.1.1 (after PR #22) → v2.1.2 (after PR #23). All three versions installable; cache dirs aligned at correct version each step.
+  - Discovered the user's wf-system marketplace is a **local-directory marketplace** (`/Users/cavallini/wf-system` path-based, not GitHub URL). The plugin manager reads version metadata from the local working tree's `marketplace.json`, not from GitHub. Required `git pull` in `~/wf-system` to advance the local clone before `/plugin update` could see the new version. Worth documenting for other contributors who clone the repo.
+
+- [x] **Validated the context monitor fix in production** — the v2.1.2 hook fired its first real 75% warning at exactly 75% of a 1M-token window in this session. First time the warning path was reached (had never fired correctly before due to the 280% inflation bug). End-to-end proof.
+
+**Commits (this session, all merged)**:
+- `60abbb3` Merge PR #21 → context monitor reliability
+- `71bc308` Merge PR #22 → release workflow lockstep bump
+- `ca13251` Merge PR #23 → wf-brain path migration
+- (auto-bot) `219d26b` v2.1.0, `4501ba6` v2.1.1, `f81b95d` v2.1.2 — release-commits with tags
+
+**Blockers**: None.
+
+**Decisions**:
+- **No model→window dict in Python**. Hardcoding `claude-sonnet-4-6 → 1M`, `claude-opus-4-7 → 200K`, etc. is a maintenance trap — every new model release would need a code update. Self-calibration from observed transcript max (combined with env/config override) survives new releases for free. Three standard tier integers (200K / 1M / 2M) are the only "magic data" in the file.
+- **Drop subprocess `claude -p -r /context`** entirely. JSONL transcript parsing is the sole source of truth. Eliminates recursion risk, 5s blocking, regex format drift, env-var leakage.
+- **Wrapper-script seam for brain detection**. Centralizes the path check + degradation logic in `plugins/wf-core/scripts/wf-brain-cli.sh`. Single grep finds all brain callers; future v2-brain plugin can swap in.
+- **wf-brain v2 plugin: build in fresh session.** Plan exists at `docs/superpowers/plans/2026-03-12-wf-brain.md` (Tasks 1-2 done in 2026-03; 8 tasks remaining). Current session at 75% — starting a 2300-line plan would risk hitting critical mid-flight. Resume from a fresh session.
+
+**Workflow-team coordination**:
+This session used the **claude-bus team-coordination pattern** (orchestrator + wf-developer + wf-reviewer as separate Claude Code sessions on `claude-bus` MCP). 3 PRs gated through cycles of dispatch → developer commit → reviewer audit → orchestrator merge. One Cat-A finding caught pre-merge (CodeRabbit flag on glob metacharacter injection in SSE handler — was already fixed). One B-tier finding on README doc sweep gap closed via 3rd commit on same branch.
+
+**Next Session Should**:
+- Build wf-brain v2 plugin. Resume `docs/superpowers/plans/2026-03-12-wf-brain.md` from Task 3. Tasks 1-2 (db.js + embed.js) at `~/wf-system/scripts/wf-brain/` already done; port into v2 plugin shape at `plugins/wf-brain/` per the marketplace pattern wf-core uses. Tasks 3-10 (search, store, MCP server, brain-review command, orchestrator integration) remain.
+- Consider claude-bus integration (Layer 1 — `cockpit.eventLog` field accepts `"claude-bus"`). Small lift, replaces ~80% of planned wf-cockpit scope. Skipped this session due to context budget; spec discussion notes survive in conversation transcript.
+- Adjacent bug (non-blocking): `.github/workflows/release.yml` "Update CHANGELOG.md" step inserts auto-generated `[<new>]` section ABOVE existing `[Unreleased]` instead of consuming it. Currently visible on main: sparse auto-generated `[2.1.2]` co-exists with rich `[Unreleased]` describing the same release. Worth a small workflow fix.
 
 ---
 
@@ -248,13 +300,13 @@
 - **Sessions 1-16** (2026-01-08 → 2026-01-15): see `.claude/session-archive/sessions-1-16.md` — project init, agent/skill generation, wf-brain Phase 0-2, Ralph sub-task handling.
 
 ## In Progress
-- `v2.0.0-rc.1` dogfood period (started 2026-04-14, target: 2026-04-17+). Plugin installed locally, hooks firing. Verifying remaining smoke test items during daily use.
+- wf-brain v2 plugin build — partial v1 code at `~/wf-system/scripts/wf-brain/` (Tasks 1-2 of 10 done from 2026-03). Plan at `docs/superpowers/plans/2026-03-12-wf-brain.md`. Resume in fresh session with claude-bus team.
 
 ## Next Session Should
-- [ ] Continue dogfooding — use `/wf-start-session`, `/wf-implement`, `/wf-fix-bug`, `/wf-end-session` in real work
-- [ ] Complete remaining smoke test items (Categories 2, 4, 5) in `tests/smoke/v2.0-smoke-test.md`
-- [ ] If 3+ clean days: fill `<release-date>` in CHANGELOG, tag `v2.0.0`, open cutover PR to `main`
-- [ ] (carry-over) Create `gh issue` tickets for deferred items (wf-brain v2.1, wf-design v2.2, wf-cockpit v2.3+)
+- [ ] Build wf-brain v2 plugin per plan (Tasks 3-10). Port existing v1 partial build (db.js, embed.js) into v2 plugin shape at `plugins/wf-brain/` + add search, store, MCP server, brain-review command, orchestrator integration.
+- [ ] Consider claude-bus integration as `cockpit.eventLog` transport (Layer 1 of brainstormed integration — replaces ~80% of planned wf-cockpit scope).
+- [ ] Fix release workflow CHANGELOG-insertion gap (auto-generated `[<new>]` should consume existing `[Unreleased]` instead of inserting above it).
+- [ ] (carry-over) Create `gh issue` tickets for deferred items (wf-design v2.2, wf-cockpit v2.3+)
 - [ ] (carry-over) Improve Ralph logging visibility (stream Claude output in real-time)
 - [ ] (carry-over) Test `/wf-delegate --parallel` with real parallel tasks
 
