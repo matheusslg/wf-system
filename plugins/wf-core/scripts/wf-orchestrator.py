@@ -31,10 +31,17 @@ from typing import Optional, Dict, Any, Tuple
 # CONFIGURATION
 # =============================================================================
 
-# Conservative default when no override applies and observed usage hasn't yet
-# tripped self-calibration past the 200K mark. Resolved per-call via
-# `_resolve_context_window`, never read directly by the hook output paths.
-DEFAULT_CONTEXT_LIMIT = 200_000
+# Default window when no override applies and observed usage hasn't yet
+# tripped self-calibration. Set to 1M (the modern Claude tier — Sonnet
+# 4.6+, Opus 4.6+) rather than the smaller 200K, because the false-alarm
+# cost of defaulting too low on a 1M-tier session is high (WARNING/CRITICAL
+# fires at ~195K usage even though the session is actually 19.5% full —
+# the bug window where observed_max hasn't yet crossed 200K so calibration
+# can't escalate). Sessions on 200K-only models that need early warnings
+# should pin via `WF_CONTEXT_LIMIT=200000` or `contextLimit` in
+# `workflow.json`. Resolved per-call via `_resolve_context_window`, never
+# read directly by the hook output paths.
+DEFAULT_CONTEXT_LIMIT = 1_000_000
 
 # Standard Anthropic context-window tiers, ascending. When observed peak
 # usage exceeds the previous tier we infer the next-up — handles new models
@@ -164,8 +171,9 @@ class WFOrchestrator:
            session is on an extended-context tier; pick the smallest
            `STANDARD_TIERS` entry that is >= observed_max. Falls through
            to the largest tier when observed exceeds even that.
-        4. Default 200K — conservative, matches the standard tier most
-           sessions still ship with.
+        4. Default 1M — matches the modern Claude tier (Sonnet 4.6+,
+           Opus 4.6+). Sessions on 200K-only models that want early
+           warnings pin via env / workflow.json.
 
         The function takes only `observed_max` by design — Claude Code's
         on-disk transcript / stats-cache do NOT expose the active window
