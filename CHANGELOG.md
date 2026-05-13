@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.3.2] - 2026-05-13
+
+### Fixed
+- migrate 7 brain call sites from shell-out to MCP prose (9941694)
+- drop 'brain injection' from hook description (abb7fb9)
+- delete dead brain shell-out path (Python + wrapper) (053d472)
+
+
 ## [2.3.1] - 2026-05-11
 
 ### Fixed
