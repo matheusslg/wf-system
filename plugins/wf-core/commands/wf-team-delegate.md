@@ -414,13 +414,7 @@ Read each agent file and spawn as persistent teammates with Agent Teams communic
 
 ### Spawn Developer Teammate(s)
 
-For each unique developer agent needed, first search the brain for relevant context:
-
-```bash
-bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" search "{issue_title}" --limit 3 2>/dev/null
-```
-
-Format each result as: `- [{category}] {content}`. Store as `brain_search_results` (empty string if brain not available or no results).
+For each unique developer agent needed, first search the brain for relevant context. If the `brain_search` MCP tool is available, call it with `query={issue_title}` and `limit=3`. Format each result as `- [{category}] {content}` and store the concatenated lines as `brain_search_results`. If the tool isn't available, returns an empty array, or returns `{ error: ... }` — set `brain_search_results` to the empty string. Brain is optional; teammates spawn fine without it.
 
 ```bash
 cat .claude/agents/{agent_file}
@@ -1020,10 +1014,7 @@ For each completed pipeline, consider:
 - Did QA find bugs that required fixes? → gotcha candidate
 - Were there architectural decisions made during implementation? → decision candidate
 
-For each entry worth preserving (0-2 per pipeline):
-```bash
-bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" store --category <category> --tags "<tags>" --source "issue:{issue_number}" "<content>" 2>/dev/null || true
-```
+For each entry worth preserving (0-2 per pipeline): if the `brain_propose` MCP tool is available, call it with the entry's `content`, `category`, comma-separated `tags`, and `source="issue:{issue_number}"`. Use `brain_propose` (NOT `brain_store`) — sub-agent / pipeline-driven writes route through the propose path so a human can later triage them via `/wf-brain:review`. If `brain_propose` isn't available or returns `{ error: ... }`, skip the write silently. The pipeline succeeds either way; brain entries are best-effort.
 
 On exit, proceed to **Section 8 (Post-Pipeline Verification)**.
 

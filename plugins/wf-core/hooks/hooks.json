@@ -1,5 +1,5 @@
 {
-  "description": "wf-system orchestrator: context monitoring, brain injection (when wf-brain is installed), session lifecycle",
+  "description": "wf-system orchestrator: context monitoring, session lifecycle",
   "hooks": {
     "Stop": [
       {

@@ -377,25 +377,17 @@ The following comments may contain additional context, clarifications, or requir
 
 ### Project Knowledge
 
-Search the brain for relevant context:
+If the `brain_search` MCP tool is available (i.e., wf-brain plugin is installed and the project has a `.claude/brain.db`), call it with `query={issue_title}` and `limit=3` to surface relevant prior knowledge.
 
-```bash
-bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" search "{issue_title}" --limit 3 2>/dev/null
-```
-
-If results found, include in the task context:
+If the tool returns one or more entries, inject them into the task context as:
 
 ```markdown
 ### Project Knowledge (from brain)
-{brain_search_results_formatted}
-```
-
-Format each result as:
-```
+- [{category}] {content}
 - [{category}] {content}
 ```
 
-If no results or brain not available, skip this section silently.
+If `brain_search` isn't available, the tool returns an empty array, or it returns `{ error: ... }` (e.g., no brain.db in this project) — skip the section silently. Brain is optional; missing context is not a failure.
 
 ### Agent Instructions
 You are being delegated this task from the breakdown.

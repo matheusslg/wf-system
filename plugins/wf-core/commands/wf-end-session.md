@@ -90,11 +90,7 @@ Review this session's work and extract knowledge worth preserving.
 - Reusable (would help future sessions working in this area)
 - Specific (not generic advice)
 
-For each entry worth preserving (0-3 per session):
-
-```bash
-bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" store --category <category> --tags "<tags>" --source "session-end" "<content>" 2>/dev/null || true
-```
+For each entry worth preserving (0-3 per session): if the `brain_store` MCP tool is available, call it with the entry's `content`, `category`, comma-separated `tags`, and `source="session-end"`. This is the main-agent write path — entries land directly in the searchable `entries` table (skip the propose/review queue, which is for sub-agent writes per `/wf-brain:review`). If `brain_store` isn't available or returns `{ error: ... }`, skip the write silently — the session summary is what matters; brain entries are best-effort.
 
 **Categories**: architecture, domain, convention, gotcha, decision, history
 
