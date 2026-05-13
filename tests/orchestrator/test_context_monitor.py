@@ -117,7 +117,7 @@ class TestUsageMath(ContextMonitorTestBase):
         tokens, pct, limit = orch._get_context_usage()
         self.assertEqual(tokens, 0)
         self.assertEqual(pct, 0.0)
-        self.assertEqual(limit, 200_000)
+        self.assertEqual(limit, 1_000_000)
 
     def test_missing_transcript_file_returns_zero(self):
         orch = self._make_orch(transcript_path=str(self.tmp / "nope.jsonl"))
@@ -126,6 +126,8 @@ class TestUsageMath(ContextMonitorTestBase):
         self.assertEqual(pct, 0.0)
 
     def test_single_entry_tokens(self):
+        # Pin a 200K window so the pct math is decoupled from the default.
+        os.environ["WF_CONTEXT_LIMIT"] = "200000"
         path = self._write_transcript([_usage_entry(input_tokens=50_000)])
         orch = self._make_orch(transcript_path=path)
         tokens, pct, _ = orch._get_context_usage()
@@ -186,9 +188,14 @@ class TestWindowResolution(ContextMonitorTestBase):
     """`_resolve_context_window` priority order."""
 
     def test_default_when_observed_small(self):
+        # No env / workflow.json override, observed_max ≤ 200K → falls
+        # through to DEFAULT_CONTEXT_LIMIT, which is 1M (modern Claude
+        # tier). This is the bug-window fix: previously a 195K-occupied
+        # session on a 1M-tier model would resolve to 200K and trip
+        # false-positive WARNING/CRITICAL.
         orch = self._make_orch()
-        self.assertEqual(orch._resolve_context_window(observed_max=50_000), 200_000)
-        self.assertEqual(orch._resolve_context_window(observed_max=200_000), 200_000)
+        self.assertEqual(orch._resolve_context_window(observed_max=50_000), 1_000_000)
+        self.assertEqual(orch._resolve_context_window(observed_max=200_000), 1_000_000)
 
     def test_observed_above_200k_promotes_to_1m(self):
         orch = self._make_orch()
@@ -213,8 +220,8 @@ class TestWindowResolution(ContextMonitorTestBase):
     def test_env_var_invalid_falls_through(self):
         os.environ["WF_CONTEXT_LIMIT"] = "not-a-number"
         orch = self._make_orch()
-        # Falls through to default since observed is small.
-        self.assertEqual(orch._resolve_context_window(observed_max=50_000), 200_000)
+        # Falls through to default (1M) since observed is small.
+        self.assertEqual(orch._resolve_context_window(observed_max=50_000), 1_000_000)
 
     def test_workflow_json_overrides_observed(self):
         # workflow.json with contextLimit pinned to 750K. Observed is 600K
@@ -251,6 +258,20 @@ class TestThresholdOrdering(ContextMonitorTestBase):
         self.assertNotIn("CRITICAL", msg)
         # Window resolved to 1M via self-calibration (no env / config).
         self.assertTrue(orch.state["warning_shown"])
+        self.assertFalse(orch.state["pre_compact_ran"])
+
+    def test_false_alarm_regression_no_warning_in_bug_window(self):
+        # Bug window: session on a 1M-tier model at 195K usage.
+        # Pre-fix: observed_max (195K) NOT > 200K → falls through to
+        # the old DEFAULT_CONTEXT_LIMIT=200K → pct=97.5% → CRITICAL.
+        # Post-fix: default is 1M → 195K/1M = 19.5% → silent (under
+        # the 75% warning floor). This is the screenshot scenario
+        # from the field report on 2026-05-13.
+        path = self._write_transcript([_usage_entry(input_tokens=195_000)])
+        orch = self._make_orch(transcript_path=path)
+        out = orch.handle_context_check()
+        self.assertIsNone(out)
+        self.assertFalse(orch.state["warning_shown"])
         self.assertFalse(orch.state["pre_compact_ran"])
 
     def test_sequential_warning_then_critical(self):
