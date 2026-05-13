@@ -319,44 +319,15 @@ class WFOrchestrator:
         return None
 
     # -------------------------------------------------------------------------
-    # Brain Integration
+    # Brain Integration (removed — Python hook can't talk MCP)
     # -------------------------------------------------------------------------
-
-    def _brain_search(self, keywords: str, limit: int = 5) -> Optional[str]:
-        """Search the brain for relevant knowledge."""
-        if not keywords or not keywords.strip():
-            return None
-        try:
-            # v2 brain lives at the MCP-server path; the v1
-            # `~/.claude/scripts/wf-brain.js` location no longer exists.
-            # The brain plugin is optional and may not be installed —
-            # callers must tolerate a clean miss.
-            brain_path = Path.home() / ".claude" / "mcp-servers" / "wf-brain" / "index.js"
-
-            if not brain_path.exists():
-                return None
-
-            result = subprocess.run(
-                ["node", str(brain_path), "search", keywords, "--limit", str(limit)],
-                capture_output=True, text=True, timeout=10, cwd=self.cwd
-            )
-            if result.returncode != 0:
-                return None
-
-            entries = json.loads(result.stdout.strip())
-            if not entries or not isinstance(entries, list):
-                return None
-
-            lines = ["Brain Context (auto-retrieved):"]
-            for entry in entries:
-                cat = entry.get("category", "")
-                content = entry.get("content", "")
-                match_pct = entry.get("matchPercent", "")
-                lines.append(f"- [{cat}] ({match_pct}% match) {content}")
-
-            return "\n".join(lines)
-        except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError, Exception):
-            return None
+    #
+    # The old `_brain_search` method shelled out to the wf-brain JS server's
+    # legacy CLI surface, which v2 wf-brain (MCP-only) no longer exposes —
+    # the call returned nothing on every install. Auto-inject of brain
+    # context at session-start is now the slash-command layer's job: see the
+    # `brain_search` MCP-tool prose in wf-start-session / wf-delegate /
+    # wf-team-delegate.
 
     # -------------------------------------------------------------------------
     # Session Start Handling
@@ -417,14 +388,6 @@ class WFOrchestrator:
                 f"Run `/wf-core:wf-end-session` to archive old sessions."
             )
 
-        # Brain integration
-        brain_context = ""
-        brain_search = self._brain_search(project_name)
-        if brain_search:
-            brain_context = f"\n\n{brain_search}"
-
-
-
         msg = f"[WF] Jira: {project_name} ({jira_project}) - Run /wf-core:wf-start-session or provide ticket"
         full_context = (
             f"SESSION START - Jira Workflow Detected\n"
@@ -434,7 +397,6 @@ class WFOrchestrator:
             f"- Provide a ticket number (e.g., `{jira_project}-123`) to break it down with `/wf-core:wf-breakdown`\n"
             f"- Or describe what you'd like to work on\n"
             f"- Or run `/wf-core:wf-start-session` for full context load{progress_warning}"
-            f"{brain_context}"
         )
         return {
             "systemMessage": msg,
@@ -461,15 +423,6 @@ class WFOrchestrator:
                 f"Run `/wf-core:wf-end-session` to archive old sessions."
             )
 
-        # Brain integration — inject relevant knowledge
-        brain_context = ""
-        if wip:
-            brain_search = self._brain_search(wip)
-            if brain_search:
-                brain_context = f"\n\n{brain_search}"
-
-
-
         if wip:
             msg = f"[WF] {repo_display} - WIP: {wip[:50]}{'...' if len(wip) > 50 else ''}"
             full_context = (
@@ -478,7 +431,6 @@ class WFOrchestrator:
                 f"WIP: {wip}\n\n"
                 f"Recommended: Run `/wf-core:wf-delegate` to continue with the assigned sub-task, "
                 f"or `/wf-core:wf-start-session` for full context.{progress_warning}"
-                f"{brain_context}"
             )
             return {
                 "systemMessage": msg,
@@ -495,7 +447,6 @@ class WFOrchestrator:
                 f"No work in progress detected.\n"
                 f"Recommended: Run `/wf-core:wf-pick-issue` to select the next task, "
                 f"or `/wf-core:wf-start-session` for full context.{progress_warning}"
-                f"{brain_context}"
             )
             return {
                 "systemMessage": msg,
