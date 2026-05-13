@@ -66,27 +66,27 @@ If critical MCPs are missing, add to session summary:
 
 ## 1.6. Brain Status Check (Optional Plugin)
 
-The knowledge brain is an optional `wf-brain@wf-system` plugin. Probe it via the wrapper — exit 127 means "not installed", any other failure means an installed brain misbehaved.
+The knowledge brain is an optional `wf-brain@wf-system` plugin. Probe it via the `brain_stats` MCP tool — three cases:
 
-```bash
-bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" stats 2>/dev/null
-brain_status=$?
-```
+- **Tool responds with a `{ totalEntries, totalPending, byCategory }` payload** → brain is installed and bootstrapped. Surface in the session summary:
 
-**If `brain_status == 0`**: Include stats in the session summary:
-```markdown
-**Brain**: {totalEntries} entries
-```
+  ```markdown
+  **Brain**: {totalEntries} entries
+  ```
 
-**If `brain_status == 127`** (not installed): Surface as optional, do NOT auto-initialize (brain isn't shipped as part of wf-core@v2.1.x yet):
-```markdown
-**Brain**: not installed (optional — install via `/plugin install wf-brain@wf-system` when available)
-```
+- **Tool responds with `{ error: "No brain.db found..." }`** → brain plugin is installed but the project hasn't been bootstrapped. Surface and point at the namespaced bootstrap command:
 
-**If `brain_status` is anything else**: brain is installed but errored; report the exit code and skip stats:
-```markdown
-**Brain**: ⚠️ installed but stats call failed (exit {brain_status}); skipping
-```
+  ```markdown
+  **Brain**: installed but no brain.db in this project — run `/wf-brain:init` to bootstrap
+  ```
+
+- **`brain_stats` tool isn't available at all** (no `brain_*` MCP tools surfaced) → wf-brain plugin isn't installed. Surface as optional:
+
+  ```markdown
+  **Brain**: not installed (optional — install via `/plugin install wf-brain@wf-system`)
+  ```
+
+Do not auto-initialize brain from inside `/wf-core:wf-start-session`. The bootstrap path lives in the wf-brain namespace (`/wf-brain:init`).
 
 ## 2. Read Progress Log
 

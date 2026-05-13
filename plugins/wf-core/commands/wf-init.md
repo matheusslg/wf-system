@@ -185,40 +185,12 @@ mkdir -p .claude/session-archive
 
 ### 3.5. Initialize Brain (Optional)
 
-The knowledge brain is an optional v2.x plugin (`wf-brain@wf-system`). If installed, initialize it for the project:
+The knowledge brain is an optional plugin (`wf-brain@wf-system`). To detect whether it's installed, attempt to call the `brain_stats` MCP tool:
 
-```bash
-bash "${CLAUDE_PLUGIN_ROOT:-$HOME/wf-system/plugins/wf-core}/scripts/wf-brain-cli.sh" init --project-dir "$(pwd)" || true
-```
+- If the tool responds with stats (or the structured `{ error: "No brain.db found..." }` payload that brain emits when the plugin is loaded but the project hasn't been bootstrapped) → wf-brain is installed. Recommend the user run `/wf-brain:init` to create `.claude/brain.db`. Don't try to bootstrap it from inside `/wf-core:wf-init` — `/wf-brain:init` lives in the wf-brain namespace for a reason.
+- If the MCP tool isn't available (no `brain_*` tools surfaced at all) → brain isn't installed. Note that brain is optional and skip. The other workflow commands work fine without it.
 
-The wrapper exits 127 silently when brain isn't installed, so the `|| true` keeps `/wf-core:wf-init` succeeding either way. When brain IS installed, this creates `.claude/brain.db` and seeds from `standards.md` and `progress.md` if they exist.
-
-> **Note**: Brain is not yet shipped as part of wf-core@v2.1.x. Install it separately via `/plugin install wf-brain@wf-system` once available. The other v2 workflow commands work fine without it.
-
-### 3.6. Register Brain MCP Server
-
-If `.mcp.json` exists in the project root, add the wf-brain MCP server entry. If `.mcp.json` doesn't exist, create it:
-
-Resolve the user's home directory and use the **absolute path**:
-
-```bash
-echo "$HOME/.claude/mcp-servers/wf-brain/index.js"
-```
-
-Use the resolved path in `.mcp.json` (do NOT use `~` or `$HOME` — neither gets expanded):
-
-```json
-{
-  "mcpServers": {
-    "wf-brain": {
-      "command": "node",
-      "args": ["/absolute/path/to/.claude/mcp-servers/wf-brain/index.js"]
-    }
-  }
-}
-```
-
-If `.mcp.json` already exists and already has a `wf-brain` entry, skip.
+> **Note**: wf-brain is shipped separately. Install via `/plugin install wf-brain@wf-system`. The brain plugin auto-registers its own MCP server via its bundled `.mcp.json`; no manual `.mcp.json` editing is needed in this project.
 
 ## 4. Create workflow.json
 
