@@ -4,7 +4,7 @@ WF Orchestrator - Global Workflow Hook for Claude Code
 =======================================================
 Handles:
 1. SessionStart simulation (first PostToolUse detection)
-2. Context monitoring: warning at 75%, /wf-core:wf-end-session trigger at 90% (configurable)
+2. Context monitoring: warning at 75%, /wf-core:wf-end-session reminder at 90% (configurable, non-blocking — auto-compact handles overflow)
 3. Stop hook with autonomy mode support (interactive checkpoint)
 4. Workflow routing (Jira vs GitHub)
 
@@ -52,7 +52,7 @@ STANDARD_TIERS: Tuple[int, ...] = (200_000, 1_000_000, 2_000_000)
 
 # Default thresholds (can be overridden via env vars below)
 DEFAULT_WARNING_THRESHOLD = 75   # Friendly heads-up
-DEFAULT_CRITICAL_THRESHOLD = 90  # Trigger /wf-core:wf-end-session
+DEFAULT_CRITICAL_THRESHOLD = 90  # Remind to run /wf-core:wf-end-session (non-blocking)
 # State dir lives outside the plugin so it survives reinstalls/updates.
 STATE_DIR = Path(os.path.expanduser("~/.wf-state"))
 STATE_MAX_AGE_DAYS = 7      # Cleanup old state files
@@ -561,17 +561,16 @@ class WFOrchestrator:
             self.state["pre_compact_ran"] = True
             self._save_state()
 
-            msg = f"[WF] ⛔ CRITICAL: Context at {pct:.0f}% - MUST CALL SKILL /wf-core:wf-end-session NOW"
+            msg = f"[WF] Context at {pct:.0f}% — run /wf-core:wf-end-session at your next natural stopping point"
             full_context = (
-                f"⛔ CONTEXT LIMIT CRITICAL - {pct:.0f}%\n"
+                f"⚠️ Context usage high: {pct:.0f}%\n"
                 f"Tokens: {tokens:,}/{limit:,}\n\n"
-                f"INVOKE THE SKILL: Use the Skill tool with skill='wf-end-session'\n"
-                f"DO NOT manually update progress.md - the skill handles everything.\n\n"
-                f"The /wf-core:wf-end-session skill will:\n"
-                f"1. Save progress to progress.md\n"
-                f"2. Commit current work\n"
-                f"3. Archive session state\n\n"
-                f"After /wf-core:wf-end-session completes, run /compact to summarize."
+                f"When you reach a natural stopping point, invoke the Skill tool with "
+                f"skill='wf-end-session' to save progress, commit work, and archive "
+                f"session state (don't update progress.md manually — the skill handles it).\n\n"
+                f"This is NOT a hard stop: do not abandon or rush the current task. "
+                f"If context runs out first, auto-compact will summarize the session "
+                f"and work continues normally."
             )
             return {
                 "systemMessage": msg,

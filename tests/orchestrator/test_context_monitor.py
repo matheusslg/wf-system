@@ -255,7 +255,7 @@ class TestThresholdOrdering(ContextMonitorTestBase):
         self.assertIsNotNone(out)
         msg = out["systemMessage"]
         self.assertIn("80%", msg)
-        self.assertNotIn("CRITICAL", msg)
+        self.assertNotIn("wf-end-session", msg)  # warning tier, not the 90% reminder
         # Window resolved to 1M via self-calibration (no env / config).
         self.assertTrue(orch.state["warning_shown"])
         self.assertFalse(orch.state["pre_compact_ran"])
@@ -291,7 +291,7 @@ class TestThresholdOrdering(ContextMonitorTestBase):
         orch.transcript_path = new_path
         second = orch.handle_context_check()
         self.assertIsNotNone(second)
-        self.assertIn("CRITICAL", second["systemMessage"])
+        self.assertIn("wf-end-session", second["systemMessage"])
         self.assertTrue(orch.state["pre_compact_ran"])
 
     def test_under_threshold_no_output(self):
