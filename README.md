@@ -25,9 +25,9 @@
 
 ## What it does
 
-WF System turns Claude Code into a managed development environment. Every session is tracked, every task flows through a developer → reviewer → QA pipeline, and context monitoring ensures nothing is lost when a session ends.
+WF System turns Claude Code into a managed development environment. Every session is tracked, every task flows through a developer → reviewer → QA pipeline, and `/wf-core:wf-end-session` makes sure nothing is lost when a session ends.
 
-- **Session lifecycle** — `/wf-core:wf-start-session` loads previous context; `/wf-core:wf-end-session` saves progress, commits, and archives. Context monitoring auto-triggers wrap-up before you hit the limit.
+- **Session lifecycle** — `/wf-core:wf-start-session` loads previous context; `/wf-core:wf-end-session` saves progress, commits, and archives.
 - **Agent teams** — Spin up parallel developer teammates with a shared reviewer and QA. Teammates retain context across retries and communicate via direct messages.
 - **Dev pipeline** — `/wf-core:wf-implement`, `/wf-core:wf-fix-bug`, and `/wf-core:wf-improve` each run a full agent chain: branch safety → implementation → code review → QA → commit.
 - **Autonomous delegation** — Break tickets into sub-tasks and delegate with `--until-done` to process them without intervention.
@@ -147,7 +147,6 @@ This cleans up the old hook, prunes settings.json, and creates a backup. Then in
 
 ## Roadmap
 
-- **wf-brain** (v2.1) — RAG knowledge layer with hybrid search
 - **wf-design** (v2.2) — Figma + pixelmatch verification
 - **wf-cockpit** (v2.3+) — Web UI for agent team observability
 

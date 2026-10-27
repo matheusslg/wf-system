@@ -81,26 +81,6 @@ grep -n "^### Session" progress.md | head -6 | tail -1
 
 **Target file size**: Keep progress file under 400 lines for reliable AI reading.
 
-## 3.5. Brain Knowledge Extraction
-
-Review this session's work and extract knowledge worth preserving.
-
-**Only extract entries that are:**
-- Non-obvious (not derivable by reading the code)
-- Reusable (would help future sessions working in this area)
-- Specific (not generic advice)
-
-For each entry worth preserving (0-3 per session): if the `brain_store` MCP tool is available, call it with the entry's `content`, `category`, comma-separated `tags`, and `source="session-end"`. This is the main-agent write path — entries land directly in the searchable `entries` table (skip the propose/review queue, which is for sub-agent writes per `/wf-brain:review`). If `brain_store` isn't available or returns `{ error: ... }`, skip the write silently — the session summary is what matters; brain entries are best-effort.
-
-**Categories**: architecture, domain, convention, gotcha, decision, history
-
-**Skip if nothing worth preserving** — an empty session is fine. Quality over quantity.
-
-If entries were stored, report:
-```
-Brain: stored {N} entries from this session.
-```
-
 ## 4. Check for Uncommitted Changes
 
 ```bash

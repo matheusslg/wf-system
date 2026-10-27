@@ -375,20 +375,6 @@ The following comments may contain additional context, clarifications, or requir
 {issue_comments}
 {END IF}
 
-### Project Knowledge
-
-If the `brain_search` MCP tool is available (i.e., wf-brain plugin is installed and the project has a `.claude/brain.db`), call it with `query={issue_title}` and `limit=3` to surface relevant prior knowledge.
-
-If the tool returns one or more entries, inject them into the task context as:
-
-```markdown
-### Project Knowledge (from brain)
-- [{category}] {content}
-- [{category}] {content}
-```
-
-If `brain_search` isn't available, the tool returns an empty array, or it returns `{ error: ... }` (e.g., no brain.db in this project) — skip the section silently. Brain is optional; missing context is not a failure.
-
 ### Agent Instructions
 You are being delegated this task from the breakdown.
 

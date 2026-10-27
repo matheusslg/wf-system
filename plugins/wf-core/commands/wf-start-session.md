@@ -64,30 +64,6 @@ If critical MCPs are missing, add to session summary:
 **Note**: Some workflow commands require MCP servers. Run `/wf-core:wf-init` for setup instructions.
 ```
 
-## 1.6. Brain Status Check (Optional Plugin)
-
-The knowledge brain is an optional `wf-brain@wf-system` plugin. Probe it via the `brain_stats` MCP tool — three cases:
-
-- **Tool responds with a `{ totalEntries, totalPending, byCategory }` payload** → brain is installed and bootstrapped. Surface in the session summary:
-
-  ```markdown
-  **Brain**: {totalEntries} entries
-  ```
-
-- **Tool responds with `{ error: "No brain.db found..." }`** → brain plugin is installed but the project hasn't been bootstrapped. Surface and point at the namespaced bootstrap command:
-
-  ```markdown
-  **Brain**: installed but no brain.db in this project — run `/wf-brain:init` to bootstrap
-  ```
-
-- **`brain_stats` tool isn't available at all** (no `brain_*` MCP tools surfaced) → wf-brain plugin isn't installed. Surface as optional:
-
-  ```markdown
-  **Brain**: not installed (optional — install via `/plugin install wf-brain@wf-system`)
-  ```
-
-Do not auto-initialize brain from inside `/wf-core:wf-start-session`. The bootstrap path lives in the wf-brain namespace (`/wf-brain:init`).
-
 ## 2. Read Progress Log
 
 First, check file size to ensure it's readable:

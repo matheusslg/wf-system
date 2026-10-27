@@ -414,7 +414,7 @@ Read each agent file and spawn as persistent teammates with Agent Teams communic
 
 ### Spawn Developer Teammate(s)
 
-For each unique developer agent needed, first search the brain for relevant context. If the `brain_search` MCP tool is available, call it with `query={issue_title}` and `limit=3`. Format each result as `- [{category}] {content}` and store the concatenated lines as `brain_search_results`. If the tool isn't available, returns an empty array, or returns `{ error: ... }` — set `brain_search_results` to the empty string. Brain is optional; teammates spawn fine without it.
+For each unique developer agent needed:
 
 ```bash
 cat .claude/agents/{agent_file}
@@ -523,9 +523,6 @@ Task(
 
   {issue_comments}
   {END IF}
-
-  **Project Knowledge (from brain):**
-  {brain_search_results}
 
   **Acceptance criteria:**
   {acceptance_criteria}
@@ -1004,17 +1001,6 @@ The loop exits when ANY of these is true:
    **Completed steps**: {list}
    **Remaining steps**: {list} (not started)
    ```
-
-### Knowledge Extraction (Post-Pipeline)
-
-After all pipelines complete and before cleanup, review the pipeline outcomes and store knowledge entries:
-
-For each completed pipeline, consider:
-- Did the reviewer find non-obvious issues? → gotcha candidate
-- Did QA find bugs that required fixes? → gotcha candidate
-- Were there architectural decisions made during implementation? → decision candidate
-
-For each entry worth preserving (0-2 per pipeline): if the `brain_propose` MCP tool is available, call it with the entry's `content`, `category`, comma-separated `tags`, and `source="issue:{issue_number}"`. Use `brain_propose` (NOT `brain_store`) — sub-agent / pipeline-driven writes route through the propose path so a human can later triage them via `/wf-brain:review`. If `brain_propose` isn't available or returns `{ error: ... }`, skip the write silently. The pipeline succeeds either way; brain entries are best-effort.
 
 On exit, proceed to **Section 8 (Post-Pipeline Verification)**.
 
