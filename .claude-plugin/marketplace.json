@@ -19,18 +19,6 @@
         "agents",
         "orchestration"
       ]
-    },
-    {
-      "name": "wf-brain",
-      "source": "./plugins/wf-brain",
-      "description": "Optional knowledge brain \u2014 semantic search + persistent memory via MCP",
-      "category": "productivity",
-      "tags": [
-        "knowledge",
-        "memory",
-        "mcp",
-        "optional"
-      ]
     }
   ]
 }

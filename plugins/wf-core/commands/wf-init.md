@@ -183,15 +183,6 @@ mkdir -p .claude/skills
 mkdir -p .claude/session-archive
 ```
 
-### 3.5. Initialize Brain (Optional)
-
-The knowledge brain is an optional plugin (`wf-brain@wf-system`). To detect whether it's installed, attempt to call the `brain_stats` MCP tool:
-
-- If the tool responds with stats (or the structured `{ error: "No brain.db found..." }` payload that brain emits when the plugin is loaded but the project hasn't been bootstrapped) → wf-brain is installed. Recommend the user run `/wf-brain:init` to create `.claude/brain.db`. Don't try to bootstrap it from inside `/wf-core:wf-init` — `/wf-brain:init` lives in the wf-brain namespace for a reason.
-- If the MCP tool isn't available (no `brain_*` tools surfaced at all) → brain isn't installed. Note that brain is optional and skip. The other workflow commands work fine without it.
-
-> **Note**: wf-brain is shipped separately. Install via `/plugin install wf-brain@wf-system`. The brain plugin auto-registers its own MCP server via its bundled `.mcp.json`; no manual `.mcp.json` editing is needed in this project.
-
 ## 4. Create workflow.json
 
 Create `.claude/workflow.json` with generic template:

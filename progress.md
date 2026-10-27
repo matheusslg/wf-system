@@ -4,7 +4,7 @@
 > **Keep this file under 400 lines** - archive old sessions to `.claude/session-archive/`
 
 ## Current Status
-**Phase**: v2.1.x reliability/UX stability series shipped. Context monitor reliable + slash-prefix migrated + release workflow lockstep-bumped + brain references cleaned. Three GA patches (v2.1.0/1/2) tagged, released, installable end-to-end via `/plugin update wf-core`. Next: build wf-brain plugin per `docs/superpowers/plans/2026-03-12-wf-brain.md` (paused at Task 2/10).
+**Phase**: v2.1.x reliability/UX stability series shipped. Context monitor reliable + slash-prefix migrated + release workflow lockstep-bumped + brain references cleaned. Three GA patches (v2.1.0/1/2) tagged, released, installable end-to-end via `/plugin update wf-core`. Since then: context-% warnings and the wf-brain plugin removed (2026-10-26).
 **Last Updated**: 2026-05-11
 
 ---
@@ -55,7 +55,6 @@
 This session used the **claude-bus team-coordination pattern** (orchestrator + wf-developer + wf-reviewer as separate Claude Code sessions on `claude-bus` MCP). 3 PRs gated through cycles of dispatch → developer commit → reviewer audit → orchestrator merge. One Cat-A finding caught pre-merge (CodeRabbit flag on glob metacharacter injection in SSE handler — was already fixed). One B-tier finding on README doc sweep gap closed via 3rd commit on same branch.
 
 **Next Session Should**:
-- Build wf-brain v2 plugin. Resume `docs/superpowers/plans/2026-03-12-wf-brain.md` from Task 3. Tasks 1-2 (db.js + embed.js) at `~/wf-system/scripts/wf-brain/` already done; port into v2 plugin shape at `plugins/wf-brain/` per the marketplace pattern wf-core uses. Tasks 3-10 (search, store, MCP server, brain-review command, orchestrator integration) remain.
 - Consider claude-bus integration (Layer 1 — `cockpit.eventLog` field accepts `"claude-bus"`). Small lift, replaces ~80% of planned wf-cockpit scope. Skipped this session due to context budget; spec discussion notes survive in conversation transcript.
 - Adjacent bug (non-blocking): `.github/workflows/release.yml` "Update CHANGELOG.md" step inserts auto-generated `[<new>]` section ABOVE existing `[Unreleased]` instead of consuming it. Currently visible on main: sparse auto-generated `[2.1.2]` co-exists with rich `[Unreleased]` describing the same release. Worth a small workflow fix.
 
@@ -300,10 +299,9 @@ This session used the **claude-bus team-coordination pattern** (orchestrator + w
 - **Sessions 1-16** (2026-01-08 → 2026-01-15): see `.claude/session-archive/sessions-1-16.md` — project init, agent/skill generation, wf-brain Phase 0-2, Ralph sub-task handling.
 
 ## In Progress
-- wf-brain v2 plugin build — partial v1 code at `~/wf-system/scripts/wf-brain/` (Tasks 1-2 of 10 done from 2026-03). Plan at `docs/superpowers/plans/2026-03-12-wf-brain.md`. Resume in fresh session with claude-bus team.
+- None
 
 ## Next Session Should
-- [ ] Build wf-brain v2 plugin per plan (Tasks 3-10). Port existing v1 partial build (db.js, embed.js) into v2 plugin shape at `plugins/wf-brain/` + add search, store, MCP server, brain-review command, orchestrator integration.
 - [ ] Consider claude-bus integration as `cockpit.eventLog` transport (Layer 1 of brainstormed integration — replaces ~80% of planned wf-cockpit scope).
 - [ ] Fix release workflow CHANGELOG-insertion gap (auto-generated `[<new>]` should consume existing `[Unreleased]` instead of inserting above it).
 - [ ] (carry-over) Create `gh issue` tickets for deferred items (wf-design v2.2, wf-cockpit v2.3+)
