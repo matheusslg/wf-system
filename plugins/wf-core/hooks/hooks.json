@@ -1,5 +1,5 @@
 {
-  "description": "wf-system orchestrator: context monitoring, session lifecycle",
+  "description": "wf-system orchestrator: session lifecycle",
   "hooks": {
     "Stop": [
       {
