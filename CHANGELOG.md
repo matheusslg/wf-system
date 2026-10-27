@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.3.5] - 2026-10-27
+
+### Fixed
+- remove the wf-brain plugin and its wf-core integrations (aea3e86)
+- remove context-usage warning hooks (8e340a6)
+
+
 ## [2.3.4] - 2026-08-07
 
 ### Fixed
